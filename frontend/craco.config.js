@@ -9,7 +9,7 @@ const isDevServer = process.env.NODE_ENV !== "production";
 // Environment variable overrides
 const config = {
   enableHealthCheck: process.env.ENABLE_HEALTH_CHECK === "true",
-  enableVisualEdits: isDevServer, // Only enable during dev server
+  enableVisualEdits: false, // Disabled to prevent overlay blocking UI
 };
 
 // Conditionally load visual edits modules only in dev mode
@@ -82,6 +82,25 @@ webpackConfig.devServer = (devServerConfig) => {
   if (config.enableVisualEdits && setupDevServer) {
     devServerConfig = setupDevServer(devServerConfig);
   }
+
+  // Configure proxy to bypass requests that shouldn't go to backend
+  devServerConfig.proxy = {
+    ...devServerConfig.proxy,
+    bypass: function(req, res, proxyOptions) {
+      // Don't proxy hot-update files
+      if (req.url && req.url.includes('hot-update')) {
+        return req.url;
+      }
+      // Don't proxy static assets
+      if (req.url && (req.url.match(/\.(js|css|png|jpg|jpeg|svg|ico|json|woff|woff2|ttf|eot|map)$/))) {
+        return req.url;
+      }
+      // Don't proxy requests containing %PUBLIC_URL%
+      if (req.url && req.url.includes('%PUBLIC_URL%')) {
+        return req.url;
+      }
+    },
+  };
 
   // Add health check endpoints if enabled
   if (config.enableHealthCheck && setupHealthEndpoints && healthPluginInstance) {
