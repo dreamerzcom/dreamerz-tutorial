@@ -68,7 +68,12 @@ export const Navbar = () => {
           <div className="hidden md:flex items-center gap-2">
             {isAuthenticated ? (
               <>
-                <span className="text-sm text-slate-700">Hi, {user?.username}</span>
+                <Link
+                  to="/profile"
+                  className="rounded-full border border-slate-200 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100"
+                >
+                  Hi, {user?.username}
+                </Link>
                 <button
                   onClick={logout}
                   className="rounded-full border border-slate-200 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100"
@@ -148,9 +153,13 @@ export const Navbar = () => {
               <div className="pt-2 space-y-2">
                 {isAuthenticated ? (
                   <>
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700">
-                      Signed in as {user?.username}
-                    </div>
+                    <Link
+                      to="/profile"
+                      onClick={() => setIsOpen(false)}
+                      className="block rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 hover:bg-slate-100"
+                    >
+                      Hi, {user?.username}
+                    </Link>
                     <button
                       onClick={() => {
                         logout();

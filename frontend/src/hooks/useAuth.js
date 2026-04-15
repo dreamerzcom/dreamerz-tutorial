@@ -21,6 +21,18 @@ const saveAuth = (auth) => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(auth));
 };
 
+const buildUserProfile = ({ username, email, profile, lastLoginAt, createdAt }) => ({
+  username,
+  email,
+  firstName: profile?.firstName || '',
+  lastName: profile?.lastName || '',
+  phone: profile?.phone || '',
+  bio: profile?.bio || '',
+  location: profile?.location || '',
+  lastLoginAt: lastLoginAt || new Date().toISOString(),
+  createdAt: createdAt || new Date().toISOString()
+});
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
@@ -30,7 +42,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const stored = getStoredAuth();
     if (stored?.token && stored?.user) {
-      setUser(stored.user);
+      setUser(buildUserProfile(stored.user));
       setToken(stored.token);
     }
     setIsLoaded(true);
@@ -56,10 +68,13 @@ export const AuthProvider = ({ children }) => {
 
     const auth = {
       token: result.access_token,
-      user: {
+      user: buildUserProfile({
         username: result.username,
-        email: result.email
-      }
+        email: result.email,
+        profile: result.profile,
+        createdAt: result.created_at,
+        lastLoginAt: new Date().toISOString()
+      })
     };
 
     saveAuth(auth);
@@ -83,9 +98,30 @@ export const AuthProvider = ({ children }) => {
     }
 
     await login({ username, email, password });
-    navigate('/settings');
+    navigate('/profile');
     return result;
   }, [login, navigate]);
+
+  const updateProfile = useCallback((updates) => {
+    setUser((currentUser) => {
+      if (!currentUser) return currentUser;
+
+      const nextUser = {
+        ...currentUser,
+        ...updates
+      };
+
+      const stored = getStoredAuth();
+      if (stored?.token) {
+        saveAuth({
+          ...stored,
+          user: nextUser
+        });
+      }
+
+      return nextUser;
+    });
+  }, []);
 
   const logout = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY);
@@ -103,6 +139,7 @@ export const AuthProvider = ({ children }) => {
         isAuthenticated: Boolean(token),
         login,
         register,
+        updateProfile,
         logout
       }}
     >

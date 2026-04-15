@@ -11,6 +11,7 @@ import { ToolJourney } from "./pages/ToolJourney";
 import { PromptLab } from "./pages/PromptLab";
 import { Curriculum } from "./pages/Curriculum";
 import { Parents } from "./pages/Parents";
+import { Profile } from "./pages/Profile";
 import { SettingsPage } from "./pages/Settings";
 import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
@@ -32,6 +33,7 @@ function App() {
                   <Route path="/prompt-lab" element={<PromptLab />} />
                   <Route path="/curriculum" element={<Curriculum />} />
                   <Route path="/parents" element={<Parents />} />
+                  <Route path="/profile" element={<Profile />} />
                   <Route path="/settings" element={<SettingsPage />} />
                   <Route path="/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />

@@ -25,7 +25,7 @@ export const Login = () => {
         email: usernameOrEmail.includes('@') ? usernameOrEmail : undefined,
       };
       await login(payload);
-      navigate('/settings');
+      navigate('/profile');
     } catch (err) {
       setError(err.message || 'Unable to login. Please check your credentials.');
     } finally {
