@@ -1,9 +1,9 @@
-"""AI service — OpenAI integration, safety filters, demo fallbacks."""
+"""AI service — Anthropic Claude integration, safety filters, demo fallbacks."""
 
 import logging
 import re
 
-from config import OPENAI_API_KEY, OPENAI_MODEL
+from config import ANTHROPIC_API_KEY, CLAUDE_MODEL
 
 # ── Safety Filter ─────────────────────────────────────────
 UNSAFE_PATTERNS = [
@@ -115,12 +115,12 @@ TUTOR_SYSTEM_PROMPT = (
 async def get_ai_response(
     prompt: str, context: str = None, mode: str = "default"
 ) -> tuple:
-    """Get AI response using OpenAI SDK, with demo fallback.
+    """Get AI response using Anthropic Claude SDK, with demo fallback.
 
-    SECURITY FIX: Context is passed as a separate user message instead of
+    SECURITY: Context is passed as a separate user message instead of
     being concatenated into the system prompt (prevents prompt injection).
     """
-    if not OPENAI_API_KEY:
+    if not ANTHROPIC_API_KEY:
         # Demo mode
         if mode.startswith("prompt_lab"):
             stage = mode.split("_")[-1] if "_" in mode else "base"
@@ -131,31 +131,37 @@ async def get_ai_response(
         return DEMO_RESPONSES["default"], True
 
     try:
-        from openai import AsyncOpenAI
+        from anthropic import AsyncAnthropic
 
-        messages = [{"role": "system", "content": TUTOR_SYSTEM_PROMPT}]
+        client = AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
+
+        # Build messages list
+        messages = []
 
         # Context goes as a separate message — NOT injected into system prompt
         if context:
             messages.append(
                 {"role": "user", "content": f"[Context for this question: {context}]"}
             )
+            messages.append(
+                {"role": "assistant", "content": "Got it, I'll keep that context in mind."}
+            )
 
         messages.append({"role": "user", "content": prompt})
 
-        client = AsyncOpenAI(api_key=OPENAI_API_KEY)
-        completion = await client.chat.completions.create(
-            model=OPENAI_MODEL,
+        response = await client.messages.create(
+            model=CLAUDE_MODEL,
+            system=TUTOR_SYSTEM_PROMPT,
             messages=messages,
             max_tokens=1024,
             temperature=0.7,
         )
 
-        response = completion.choices[0].message.content
-        return response, False
+        text = response.content[0].text
+        return text, False
 
     except Exception as e:
-        logging.error("AI API error: %s", e)
+        logging.error("Claude AI API error: %s", e)
         if mode.startswith("prompt_lab"):
             stage = mode.split("_")[-1] if "_" in mode else "base"
             return (
@@ -181,35 +187,38 @@ async def get_roleplay_response(
             False,
         )
 
-    if not OPENAI_API_KEY:
+    if not ANTHROPIC_API_KEY:
         return ROLEPLAY_DEMO_REPLIES.get(safe_role, "Great! Keep going!"), True
 
     try:
-        from openai import AsyncOpenAI
+        from anthropic import AsyncAnthropic
 
-        messages = [{"role": "system", "content": system_message}]
+        client = AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
+
+        # Build messages from history
+        messages = []
         for msg in history[-6:]:
             msg_role = "user" if msg.from_field == "user" else "assistant"
             messages.append({"role": msg_role, "content": msg.text})
         messages.append({"role": "user", "content": user_message})
 
-        client = AsyncOpenAI(api_key=OPENAI_API_KEY)
-        completion = await client.chat.completions.create(
-            model=OPENAI_MODEL,
+        response = await client.messages.create(
+            model=CLAUDE_MODEL,
+            system=system_message,
             messages=messages,
             max_tokens=256,
             temperature=0.8,
         )
 
-        response = completion.choices[0].message.content
+        text = response.content[0].text
 
         # Safety check on output
-        is_safe_resp, _ = check_safety(response)
+        is_safe_resp, _ = check_safety(text)
         if not is_safe_resp:
-            response = "Let's keep our practice focused! Can you try saying that differently?"
+            text = "Let's keep our practice focused! Can you try saying that differently?"
 
-        return response, False
+        return text, False
 
     except Exception as e:
-        logging.error("Roleplay AI error: %s", e)
+        logging.error("Roleplay Claude API error: %s", e)
         return ROLEPLAY_DEMO_REPLIES.get(safe_role, "Great! Keep going!"), True

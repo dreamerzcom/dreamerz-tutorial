@@ -46,9 +46,9 @@ _default_origins = "http://localhost:3000,http://127.0.0.1:3000"
 CORS_ORIGINS_RAW = os.environ.get("CORS_ORIGINS", _default_origins)
 CORS_ORIGINS = [o.strip() for o in CORS_ORIGINS_RAW.split(",") if o.strip()]
 
-# ── OpenAI ────────────────────────────────────────────────
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
-OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
+# ── Anthropic (Claude) ────────────────────────────────────
+ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-20250514")
 
 # ── Request Size ──────────────────────────────────────────
 MAX_REQUEST_SIZE = int(os.environ.get("MAX_REQUEST_SIZE", 10_000_000))  # 10 MB
