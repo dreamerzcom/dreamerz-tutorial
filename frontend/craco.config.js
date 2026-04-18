@@ -39,6 +39,10 @@ const webpackConfig = {
       rules: {
         "react-hooks/rules-of-hooks": "error",
         "react-hooks/exhaustive-deps": "warn",
+        "no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
+        "no-eval": "error",
+        "no-implied-eval": "error",
+        "eqeqeq": ["error", "always"],
       },
     },
   },
