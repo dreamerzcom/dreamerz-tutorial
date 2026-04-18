@@ -29,7 +29,7 @@ services:
     region: oregon
     plan: free
     rootDir: frontend
-    buildCommand: yarn install && yarn build
+    buildCommand: CI=false yarn install && yarn build
     staticPublishPath: build
     autoDeploy: true
     envVars:
