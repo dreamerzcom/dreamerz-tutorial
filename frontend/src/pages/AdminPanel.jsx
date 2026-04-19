@@ -5,9 +5,10 @@ import {
   Users, BookOpen, BarChart3, Search, Trash2, Shield,
   ChevronDown, ChevronUp, Edit3, Plus, X, Save, RefreshCw,
   AlertTriangle, GripVertical, Upload, FileText, Image,
-  Download, Paperclip, File
+  Download, Paperclip, File, Globe, Languages, Check
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { LANGUAGES } from '../hooks/useLanguage';
 
 const API_BASE = (process.env.REACT_APP_BACKEND_URL || '').replace(/\/+$/, '');
 
@@ -200,6 +201,14 @@ const ContentTab = ({ token }) => {
   const [toolEditForm, setToolEditForm] = useState({});
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [attachingModule, setAttachingModule] = useState(null);
+  const [moduleAssets, setModuleAssets] = useState({});
+  const [attachUploading, setAttachUploading] = useState(false);
+  const attachFileRef = useRef(null);
+  const [translating, setTranslating] = useState({});
+  const [translateLang, setTranslateLang] = useState('bn');
+
+  const targetLanguages = LANGUAGES.filter((l) => l.code !== 'en');
 
   const loadTools = useCallback(async () => {
     setLoading(true);
@@ -271,6 +280,103 @@ const ContentTab = ({ token }) => {
     } catch (e) { setError(e.message); }
   };
 
+  // Load media assets attached to a specific module/lesson
+  const loadModuleAssets = async (moduleId) => {
+    try {
+      // Query the admin lesson endpoint which includes media_assets
+      const lesson = await adminFetch(`/lessons/${moduleId}`, token);
+      setModuleAssets((prev) => ({ ...prev, [moduleId]: lesson.media_assets || [] }));
+    } catch {
+      // If no LMS lesson exists, try querying media directly
+      setModuleAssets((prev) => ({ ...prev, [moduleId]: [] }));
+    }
+  };
+
+  const toggleAttach = (moduleId) => {
+    if (attachingModule === moduleId) {
+      setAttachingModule(null);
+    } else {
+      setAttachingModule(moduleId);
+      if (!moduleAssets[moduleId]) loadModuleAssets(moduleId);
+    }
+  };
+
+  const handleAttachUpload = async (files, moduleId, toolId) => {
+    if (!files || files.length === 0) return;
+    setAttachUploading(true);
+    setError('');
+    for (const file of files) {
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('lesson_id', moduleId);
+        formData.append('course_id', toolId);
+        const asset = await adminUpload('/media/upload', token, formData);
+        // Also attach it to the lesson
+        await adminFetch(`/media/${asset.id}/attach`, token, {
+          method: 'POST',
+          body: JSON.stringify({ lesson_id: moduleId }),
+        });
+        setModuleAssets((prev) => ({
+          ...prev,
+          [moduleId]: [...(prev[moduleId] || []), asset],
+        }));
+        setSuccess('File attached'); setTimeout(() => setSuccess(''), 3000);
+      } catch (e) {
+        setError(e.message);
+      }
+    }
+    setAttachUploading(false);
+  };
+
+  const handleDetachAsset = async (assetId, moduleId) => {
+    try {
+      await adminFetch(`/media/${assetId}`, token, { method: 'DELETE' });
+      setModuleAssets((prev) => ({
+        ...prev,
+        [moduleId]: (prev[moduleId] || []).filter((a) => a.id !== assetId),
+      }));
+      setSuccess('File removed'); setTimeout(() => setSuccess(''), 3000);
+    } catch (e) {
+      setError(e.message);
+    }
+  };
+
+  // Translation functions
+  const handleTranslateModule = async (moduleId) => {
+    setTranslating((prev) => ({ ...prev, [moduleId]: true }));
+    setError('');
+    try {
+      await adminFetch(`/lessons/${moduleId}/translate`, token, {
+        method: 'POST',
+        body: JSON.stringify({ target_language: translateLang }),
+      });
+      setSuccess(`Translated to ${translateLang}`);
+      setTimeout(() => setSuccess(''), 4000);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setTranslating((prev) => ({ ...prev, [moduleId]: false }));
+    }
+  };
+
+  const handleTranslateTool = async (toolId) => {
+    setTranslating((prev) => ({ ...prev, [toolId]: true }));
+    setError('');
+    try {
+      const result = await adminFetch(`/courses/${toolId}/translate`, token, {
+        method: 'POST',
+        body: JSON.stringify({ target_language: translateLang }),
+      });
+      setSuccess(`Course translated: ${result.translated} lessons done, ${result.skipped} skipped, ${result.errors} errors`);
+      setTimeout(() => setSuccess(''), 6000);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setTranslating((prev) => ({ ...prev, [toolId]: false }));
+    }
+  };
+
   if (loading) return <div className="text-center py-12 text-slate-400"><RefreshCw className="w-5 h-5 animate-spin inline-block mr-2" />Loading content...</div>;
 
   return (
@@ -282,6 +388,26 @@ const ContentTab = ({ token }) => {
         </div>
       )}
       {success && <div className="bg-emerald-50 text-emerald-700 text-sm px-4 py-2 rounded-lg">{success}</div>}
+
+      {/* Translation Controls */}
+      <div className="bg-white rounded-xl border border-slate-200 p-3 flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-2">
+          <Languages className="w-4 h-4 text-primary" />
+          <span className="text-xs font-semibold text-slate-600">Auto-Translate to:</span>
+        </div>
+        <select
+          value={translateLang}
+          onChange={(e) => setTranslateLang(e.target.value)}
+          className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary/30"
+        >
+          {targetLanguages.map((lang) => (
+            <option key={lang.code} value={lang.code}>
+              {lang.flag} {lang.nativeName}
+            </option>
+          ))}
+        </select>
+        <p className="text-[10px] text-slate-400 flex-1">Uses Claude AI to translate English content. Translations are saved as drafts for review.</p>
+      </div>
 
       {tools.map((tool) => (
         <div key={tool.id} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
@@ -304,7 +430,17 @@ const ContentTab = ({ token }) => {
                   <button onClick={() => setEditingTool(null)} className="p-1.5 text-slate-400 hover:bg-slate-100 rounded-lg"><X className="w-4 h-4" /></button>
                 </>
               ) : (
-                <button onClick={() => startEditTool(tool)} className="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-lg" title="Edit tool"><Edit3 className="w-4 h-4" /></button>
+                <>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleTranslateTool(tool.id); }}
+                    disabled={translating[tool.id]}
+                    className="p-1.5 text-slate-400 hover:text-violet-600 hover:bg-violet-50 rounded-lg disabled:opacity-50"
+                    title={`Translate all to ${translateLang}`}
+                  >
+                    {translating[tool.id] ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Globe className="w-4 h-4" />}
+                  </button>
+                  <button onClick={() => startEditTool(tool)} className="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-lg" title="Edit tool"><Edit3 className="w-4 h-4" /></button>
+                </>
               )}
             </div>
           </div>
@@ -321,33 +457,104 @@ const ContentTab = ({ token }) => {
               <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden border-t border-slate-100">
                 <div className="divide-y divide-slate-50">
                   {(modules[tool.id] || []).map((mod) => (
-                    <div key={mod.id} className="px-4 py-2.5 flex items-center gap-3 hover:bg-slate-50/50 text-sm">
-                      <GripVertical className="w-3.5 h-3.5 text-slate-300 flex-shrink-0" />
-                      {editingModule === mod.id ? (
-                        <div className="flex-1 space-y-2">
-                          <input value={editForm.title} onChange={(e) => setEditForm((f) => ({ ...f, title: e.target.value }))} className="w-full border border-slate-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary/30" />
-                          <div className="flex gap-2">
-                            <select value={editForm.level} onChange={(e) => setEditForm((f) => ({ ...f, level: e.target.value }))} className="border border-slate-200 rounded-lg px-2 py-1 text-xs">
-                              <option value="beginner">Beginner</option>
-                              <option value="intermediate">Intermediate</option>
-                              <option value="advanced">Advanced</option>
-                            </select>
-                            <input type="number" value={editForm.minutes} onChange={(e) => setEditForm((f) => ({ ...f, minutes: parseInt(e.target.value) || 0 }))} className="w-20 border border-slate-200 rounded-lg px-2 py-1 text-xs" placeholder="min" />
-                            <button onClick={() => saveModule(mod.id)} className="text-emerald-600 hover:bg-emerald-50 p-1 rounded-lg"><Save className="w-4 h-4" /></button>
-                            <button onClick={() => setEditingModule(null)} className="text-slate-400 hover:bg-slate-100 p-1 rounded-lg"><X className="w-4 h-4" /></button>
+                    <div key={mod.id}>
+                      <div className="px-4 py-2.5 flex items-center gap-3 hover:bg-slate-50/50 text-sm">
+                        <GripVertical className="w-3.5 h-3.5 text-slate-300 flex-shrink-0" />
+                        {editingModule === mod.id ? (
+                          <div className="flex-1 space-y-2">
+                            <input value={editForm.title} onChange={(e) => setEditForm((f) => ({ ...f, title: e.target.value }))} className="w-full border border-slate-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary/30" />
+                            <div className="flex gap-2">
+                              <select value={editForm.level} onChange={(e) => setEditForm((f) => ({ ...f, level: e.target.value }))} className="border border-slate-200 rounded-lg px-2 py-1 text-xs">
+                                <option value="beginner">Beginner</option>
+                                <option value="intermediate">Intermediate</option>
+                                <option value="advanced">Advanced</option>
+                              </select>
+                              <input type="number" value={editForm.minutes} onChange={(e) => setEditForm((f) => ({ ...f, minutes: parseInt(e.target.value) || 0 }))} className="w-20 border border-slate-200 rounded-lg px-2 py-1 text-xs" placeholder="min" />
+                              <button onClick={() => saveModule(mod.id)} className="text-emerald-600 hover:bg-emerald-50 p-1 rounded-lg"><Save className="w-4 h-4" /></button>
+                              <button onClick={() => setEditingModule(null)} className="text-slate-400 hover:bg-slate-100 p-1 rounded-lg"><X className="w-4 h-4" /></button>
+                            </div>
                           </div>
+                        ) : (
+                          <>
+                            <div className="flex-1 min-w-0">
+                              <span className="text-slate-800 font-medium truncate block">{mod.title}</span>
+                              <span className="text-xs text-slate-400">
+                                {mod.level} · {mod.minutes}min{mod.day ? ` · Day ${mod.day}` : ''}
+                                {(moduleAssets[mod.id] || []).length > 0 && (
+                                  <span className="ml-1 text-primary font-semibold">· {moduleAssets[mod.id].length} file{moduleAssets[mod.id].length !== 1 ? 's' : ''}</span>
+                                )}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                              <button
+                                onClick={() => handleTranslateModule(mod.id)}
+                                disabled={translating[mod.id]}
+                                className="p-1 text-slate-400 hover:text-violet-600 hover:bg-violet-50 rounded-lg disabled:opacity-50"
+                                title={`Translate to ${translateLang}`}
+                              >
+                                {translating[mod.id] ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Languages className="w-3.5 h-3.5" />}
+                              </button>
+                              <button onClick={() => toggleAttach(mod.id)} className={`p-1 rounded-lg transition-colors ${attachingModule === mod.id ? 'text-primary bg-primary/10' : 'text-slate-400 hover:text-primary hover:bg-primary/5'}`} title="Attach files"><Paperclip className="w-3.5 h-3.5" /></button>
+                              <button onClick={() => startEditModule(mod)} className="p-1 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-lg" title="Edit"><Edit3 className="w-3.5 h-3.5" /></button>
+                              <button onClick={() => deleteModule(mod.id, tool.id)} className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg" title="Delete"><Trash2 className="w-3.5 h-3.5" /></button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+
+                      {/* File Attachment Panel */}
+                      {attachingModule === mod.id && (
+                        <div className="px-4 pb-3 ml-7 bg-slate-50/80 rounded-lg mx-3 mb-2">
+                          <div className="flex items-center justify-between py-2 border-b border-slate-200 mb-2">
+                            <span className="text-xs font-semibold text-slate-600 flex items-center gap-1">
+                              <Paperclip className="w-3 h-3" /> Attached Files
+                            </span>
+                            <div>
+                              <input
+                                ref={attachFileRef}
+                                type="file"
+                                multiple
+                                accept=".pdf,.docx,.doc,.png,.jpg,.jpeg,.webp,.svg,.xlsx,.pptx"
+                                onChange={(e) => { handleAttachUpload(e.target.files, mod.id, tool.id); e.target.value = ''; }}
+                                className="hidden"
+                              />
+                              <button
+                                onClick={() => attachFileRef.current?.click()}
+                                disabled={attachUploading}
+                                className="text-xs bg-primary text-white px-2.5 py-1 rounded-lg hover:bg-primary/90 disabled:opacity-50 flex items-center gap-1"
+                              >
+                                {attachUploading ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
+                                {attachUploading ? 'Uploading...' : 'Upload & Attach'}
+                              </button>
+                            </div>
+                          </div>
+
+                          {(moduleAssets[mod.id] || []).length === 0 ? (
+                            <p className="text-xs text-slate-400 py-2 text-center">No files attached to this lesson yet</p>
+                          ) : (
+                            <div className="space-y-1.5">
+                              {(moduleAssets[mod.id] || []).map((asset) => {
+                                const IconComp = getFileIcon(asset.type, asset.mime_type);
+                                return (
+                                  <div key={asset.id} className="flex items-center gap-2 bg-white rounded-lg px-2.5 py-1.5 border border-slate-100">
+                                    {asset.type === 'image' ? (
+                                      <img src={`${API_BASE}/api/content/media/${asset.id}`} alt="" className="w-8 h-8 rounded object-cover flex-shrink-0" />
+                                    ) : (
+                                      <IconComp className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                                    )}
+                                    <div className="flex-1 min-w-0">
+                                      <span className="text-xs text-slate-700 font-medium truncate block">{asset.original_filename}</span>
+                                      <span className="text-[10px] text-slate-400">{formatBytes(asset.file_size_bytes)} · {asset.file_extension?.toUpperCase()}</span>
+                                    </div>
+                                    <button onClick={() => handleDetachAsset(asset.id, mod.id)} className="p-1 text-slate-400 hover:text-red-500 rounded" title="Remove">
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
-                      ) : (
-                        <>
-                          <div className="flex-1 min-w-0">
-                            <span className="text-slate-800 font-medium truncate block">{mod.title}</span>
-                            <span className="text-xs text-slate-400">{mod.level} · {mod.minutes}min{mod.day ? ` · Day ${mod.day}` : ''}</span>
-                          </div>
-                          <div className="flex items-center gap-1 flex-shrink-0">
-                            <button onClick={() => startEditModule(mod)} className="p-1 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-lg" title="Edit"><Edit3 className="w-3.5 h-3.5" /></button>
-                            <button onClick={() => deleteModule(mod.id, tool.id)} className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg" title="Delete"><Trash2 className="w-3.5 h-3.5" /></button>
-                          </div>
-                        </>
                       )}
                     </div>
                   ))}

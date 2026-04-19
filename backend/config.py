@@ -65,6 +65,13 @@ ADMIN_EMAILS = [
     if e.strip()
 ]
 
+# ── Languages ─────────────────────────────────────────────
+SUPPORTED_LANGUAGES = [
+    {"code": "en", "name": "English", "native_name": "English"},
+    {"code": "bn", "name": "Bengali", "native_name": "বাংলা"},
+]
+DEFAULT_LANGUAGE = "en"
+
 # ── Course Access ─────────────────────────────────────────
 # All courses are now free — no preview module limits.
 

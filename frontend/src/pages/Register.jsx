@@ -3,7 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { SEO } from '../components/SEO';
 import { useAuth } from '../hooks/useAuth';
-import { Lock, Mail, User } from 'lucide-react';
+import { LANGUAGES } from '../hooks/useLanguage';
+import { Lock, Mail, User, Globe } from 'lucide-react';
 
 export const Register = () => {
   const { register } = useAuth();
@@ -12,6 +13,7 @@ export const Register = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [preferredLanguage, setPreferredLanguage] = useState('en');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -44,7 +46,7 @@ export const Register = () => {
 
     setLoading(true);
     try {
-      await register({ username, email, password });
+      await register({ username, email, password, preferred_language: preferredLanguage });
       navigate('/learn');
     } catch (err) {
       setError(err.message || 'Unable to create account.');
@@ -119,6 +121,25 @@ export const Register = () => {
                   required
                 />
               </div>
+            </label>
+
+            <label className="block text-sm font-medium text-slate-700">
+              Preferred language
+              <div className="mt-2 relative rounded-xl border border-slate-200 bg-slate-50 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary">
+                <Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                <select
+                  value={preferredLanguage}
+                  onChange={(e) => setPreferredLanguage(e.target.value)}
+                  className="w-full rounded-xl border-0 bg-transparent py-3 pl-12 pr-4 text-slate-900 outline-none appearance-none cursor-pointer"
+                >
+                  {LANGUAGES.map((lang) => (
+                    <option key={lang.code} value={lang.code}>
+                      {lang.flag} {lang.nativeName} ({lang.name})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <p className="mt-1 text-xs text-slate-400">You can change this anytime from the navbar</p>
             </label>
 
             {error && <div className="text-sm text-rose-600">{error}</div>}

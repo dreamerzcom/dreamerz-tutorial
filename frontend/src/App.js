@@ -14,6 +14,7 @@ import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
 import { AdminPanel } from "./pages/AdminPanel";
 import { AuthProvider } from "./hooks/useAuth";
+import { LanguageProvider } from "./hooks/useLanguage";
 
 /** Redirect /tools/:toolId → /learn/:toolId preserving the param */
 const ToolRedirect = () => {
@@ -27,6 +28,7 @@ function App() {
       <div className="App flex flex-col min-h-screen">
         <BrowserRouter>
           <AuthProvider>
+          <LanguageProvider>
             <ErrorBoundary>
               <Navbar />
               <main className="flex-grow pt-16">
@@ -55,6 +57,7 @@ function App() {
               <Footer />
             </ErrorBoundary>
             <Toaster position="bottom-right" />
+          </LanguageProvider>
           </AuthProvider>
         </BrowserRouter>
       </div>

@@ -1,16 +1,67 @@
-"""Content routes — tools, modules, categories, media serve."""
+"""Content routes — tools, modules, categories, media serve, language support."""
 
 import io
 from typing import Optional
 
 from bson import ObjectId
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse
 
+from config import DEFAULT_LANGUAGE
 from database import db, fs_bucket, CATEGORIES_DATA
 from utils.sanitizers import sanitize_id
 
 router = APIRouter(prefix="/content", tags=["content"])
+
+
+async def _overlay_localized_content(modules: list, lang: str) -> list:
+    """Overlay translated content onto modules if a non-English language is requested.
+
+    For each module, look up the lesson_contents entry for the requested language.
+    If found and published (or draft), overwrite the module's content fields.
+    Falls back to English if no translation exists.
+    """
+    if lang == "en" or not lang:
+        return modules
+
+    module_ids = [m["id"] for m in modules]
+    if not module_ids:
+        return modules
+
+    # Batch-load translated content for all modules in this language
+    translated = await db.lesson_contents.find(
+        {"lesson_id": {"$in": module_ids}, "language": lang},
+        {"_id": 0},
+    ).to_list(1000)
+
+    # Build lookup by lesson_id
+    trans_map = {t["lesson_id"]: t for t in translated}
+
+    content_fields = [
+        "explanation", "example", "activity", "bengali_tip",
+        "micro_grammar", "speaking_task", "vocab", "dialogue",
+    ]
+
+    for mod in modules:
+        tc = trans_map.get(mod["id"])
+        if not tc:
+            continue  # No translation — keep English
+
+        # Overlay content fields
+        if "content" in mod and isinstance(mod["content"], dict):
+            for field in content_fields:
+                if field in tc and tc[field]:
+                    mod["content"][field] = tc[field]
+        # Also set top-level fields for flat-format modules
+        for field in content_fields:
+            if field in tc and tc[field] and field in mod:
+                mod[field] = tc[field]
+
+        # Add language metadata
+        mod["_display_language"] = lang
+        mod["_translation_status"] = tc.get("status", "draft")
+
+    return modules
 
 
 @router.get("/tools")
@@ -29,27 +80,65 @@ async def get_content_tools():
     ]
     tools = await db.tools.aggregate(pipeline).to_list(100)
 
-    # Remove _id from nested modules
+    # Collect all module IDs for media lookup
+    all_module_ids = []
     for tool in tools:
         tool["modules"] = [
             {k: v for k, v in m.items() if k != "_id"}
             for m in tool.get("modules", [])
         ]
+        all_module_ids.extend(m["id"] for m in tool["modules"])
+
+    # Batch-load media assets for all modules
+    asset_map = {}
+    if all_module_ids:
+        all_assets = await db.media_assets.find(
+            {"used_in_lessons": {"$in": all_module_ids}},
+            {"_id": 0},
+        ).to_list(2000)
+        for asset in all_assets:
+            for lid in asset.get("used_in_lessons", []):
+                asset_map.setdefault(lid, []).append(asset)
+
+    for tool in tools:
+        for mod in tool["modules"]:
+            mod["media_assets"] = asset_map.get(mod["id"], [])
 
     return tools
 
 
 @router.get("/tools/{tool_id}")
-async def get_content_tool(tool_id: str):
+async def get_content_tool(tool_id: str, lang: str = Query(default="en", max_length=5)):
     tool_id = sanitize_id(tool_id, "tool_id")
     tool = await db.tools.find_one({"id": tool_id}, {"_id": 0})
     if not tool:
-        from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Tool not found")
 
     modules = await db.modules.find(
         {"tool_id": tool_id}, {"_id": 0}
     ).to_list(1000)
+
+    # Attach media assets for each module (via lessons collection)
+    module_ids = [m["id"] for m in modules]
+    if module_ids:
+        # Get all media assets linked to any of these modules/lessons
+        all_assets = await db.media_assets.find(
+            {"used_in_lessons": {"$in": module_ids}},
+            {"_id": 0},
+        ).to_list(500)
+
+        # Group assets by lesson/module id
+        asset_map = {}
+        for asset in all_assets:
+            for lid in asset.get("used_in_lessons", []):
+                asset_map.setdefault(lid, []).append(asset)
+
+        for mod in modules:
+            mod["media_assets"] = asset_map.get(mod["id"], [])
+
+    # Overlay translated content if a non-English language is requested
+    modules = await _overlay_localized_content(modules, lang.strip().lower())
+
     return {**tool, "modules": modules}
 
 
@@ -88,11 +177,28 @@ async def get_content_tools_by_category(category_id: str):
     ]
     tools = await db.tools.aggregate(pipeline).to_list(100)
 
+    all_module_ids = []
     for tool in tools:
         tool["modules"] = [
             {k: v for k, v in m.items() if k != "_id"}
             for m in tool.get("modules", [])
         ]
+        all_module_ids.extend(m["id"] for m in tool["modules"])
+
+    # Batch-load media assets
+    asset_map = {}
+    if all_module_ids:
+        all_assets = await db.media_assets.find(
+            {"used_in_lessons": {"$in": all_module_ids}},
+            {"_id": 0},
+        ).to_list(2000)
+        for asset in all_assets:
+            for lid in asset.get("used_in_lessons", []):
+                asset_map.setdefault(lid, []).append(asset)
+
+    for tool in tools:
+        for mod in tool["modules"]:
+            mod["media_assets"] = asset_map.get(mod["id"], [])
 
     return tools
 

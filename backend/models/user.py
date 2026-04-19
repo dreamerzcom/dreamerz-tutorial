@@ -8,6 +8,7 @@ class UserCreate(BaseModel):
     username: str = Field(..., min_length=3, max_length=30)
     email: str = Field(..., max_length=254)
     password: str = Field(..., min_length=8, max_length=128)
+    preferred_language: str = Field("en", max_length=5)
 
     @field_validator("username", "email", "password", mode="before")
     @classmethod
@@ -30,6 +31,10 @@ class UserLogin(BaseModel):
         return v
 
 
+class LanguageUpdate(BaseModel):
+    preferred_language: str = Field(..., max_length=5)
+
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
@@ -37,6 +42,7 @@ class TokenResponse(BaseModel):
     email: str
     created_at: str
     is_admin: bool = False
+    preferred_language: str = "en"
 
 
 class UserInfoResponse(BaseModel):
@@ -44,6 +50,7 @@ class UserInfoResponse(BaseModel):
     email: str
     created_at: str
     is_admin: bool = False
+    preferred_language: str = "en"
 
 
 class AdminUserResponse(BaseModel):
@@ -53,3 +60,4 @@ class AdminUserResponse(BaseModel):
     created_at: str
     last_login: Optional[str] = None
     is_admin: bool = False
+    preferred_language: str = "en"

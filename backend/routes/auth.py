@@ -4,9 +4,9 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
-from config import USERNAME_REGEX, EMAIL_REGEX, ADMIN_EMAILS
+from config import USERNAME_REGEX, EMAIL_REGEX, ADMIN_EMAILS, SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE
 from database import db
-from models.user import UserCreate, UserLogin, TokenResponse, UserInfoResponse
+from models.user import UserCreate, UserLogin, TokenResponse, UserInfoResponse, LanguageUpdate
 from services.auth_service import (
     authenticate_user,
     create_access_token,
@@ -16,6 +16,8 @@ from services.auth_service import (
 )
 from services.email_service import send_welcome_email
 from middleware.rate_limit import check_auth_rate_limit
+
+_VALID_LANG_CODES = {lang["code"] for lang in SUPPORTED_LANGUAGES}
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -50,12 +52,17 @@ async def register_user(user: UserCreate):
             status_code=400, detail="Username or email is already in use."
         )
 
+    lang = user.preferred_language.strip().lower()
+    if lang not in _VALID_LANG_CODES:
+        lang = DEFAULT_LANGUAGE
+
     hashed_password = get_password_hash(password)
     created_at = datetime.now(timezone.utc).isoformat()
     user_doc = {
         "username": username,
         "email": email,
         "hashed_password": hashed_password,
+        "preferred_language": lang,
         "created_at": created_at,
         "updated_at": created_at,
         "last_login": None,
@@ -73,6 +80,7 @@ async def register_user(user: UserCreate):
         "email": email,
         "created_at": created_at,
         "is_admin": email in ADMIN_EMAILS,
+        "preferred_language": lang,
     }
 
 
@@ -97,8 +105,9 @@ async def login_user(credentials: UserLogin, request: Request):
         )
 
     admin = is_admin(user)
+    user_lang = user.get("preferred_language", DEFAULT_LANGUAGE)
     token = create_access_token(
-        {"sub": user["username"], "email": user["email"], "is_admin": admin}
+        {"sub": user["username"], "email": user["email"], "is_admin": admin, "lang": user_lang}
     )
     await db.users.update_one(
         {"_id": user["_id"]},
@@ -111,6 +120,7 @@ async def login_user(credentials: UserLogin, request: Request):
         "email": user["email"],
         "created_at": user["created_at"],
         "is_admin": admin,
+        "preferred_language": user_lang,
     }
 
 
@@ -121,4 +131,30 @@ async def get_profile(current_user: dict = Depends(get_current_user)):
         "email": current_user["email"],
         "created_at": current_user["created_at"],
         "is_admin": is_admin(current_user),
+        "preferred_language": current_user.get("preferred_language", DEFAULT_LANGUAGE),
     }
+
+
+@router.put("/language")
+async def update_language(
+    body: LanguageUpdate,
+    current_user: dict = Depends(get_current_user),
+):
+    """Update the authenticated user's preferred language."""
+    lang = body.preferred_language.strip().lower()
+    if lang not in _VALID_LANG_CODES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported language '{lang}'. Supported: {', '.join(_VALID_LANG_CODES)}",
+        )
+    await db.users.update_one(
+        {"_id": current_user["_id"]},
+        {"$set": {"preferred_language": lang, "updated_at": datetime.now(timezone.utc).isoformat()}},
+    )
+    return {"preferred_language": lang}
+
+
+@router.get("/languages")
+async def get_supported_languages():
+    """Return the list of supported languages."""
+    return SUPPORTED_LANGUAGES

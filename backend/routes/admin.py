@@ -14,6 +14,7 @@ from database import db
 from models.user import AdminUserResponse
 from services.auth_service import get_current_admin, is_admin
 from services import media_service
+from services import translation_service
 
 router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(get_current_admin)])
 
@@ -80,6 +81,10 @@ class LessonContentUpdate(BaseModel):
 
 class AssetAttach(BaseModel):
     lesson_id: str
+
+
+class TranslateRequest(BaseModel):
+    target_language: str = "bn"
 
 
 # ══════════════════════════════════════════════════════════
@@ -481,6 +486,67 @@ async def attach_media_to_lesson(asset_id: str, body: AssetAttach):
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     return {"detail": f"Asset '{asset_id}' attached to lesson '{body.lesson_id}'"}
+
+
+# ══════════════════════════════════════════════════════════
+# TRANSLATION
+# ══════════════════════════════════════════════════════════
+
+@router.post("/lessons/{lesson_id}/translate")
+async def translate_lesson(
+    lesson_id: str,
+    body: TranslateRequest,
+    current_admin: dict = Depends(get_current_admin),
+):
+    """Auto-translate a single lesson's content to the target language."""
+    try:
+        result = await translation_service.translate_lesson_content(
+            lesson_id=lesson_id,
+            target_lang=body.target_language,
+            translated_by=current_admin.get("username", "admin"),
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    return {"detail": f"Lesson '{lesson_id}' translated to {body.target_language}", "content": result}
+
+
+@router.post("/courses/{course_id}/translate")
+async def translate_course(
+    course_id: str,
+    body: TranslateRequest,
+    current_admin: dict = Depends(get_current_admin),
+):
+    """Auto-translate all lessons in a course to the target language."""
+    course = await db.courses.find_one({"id": course_id})
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+    result = await translation_service.translate_course(
+        course_id=course_id,
+        target_lang=body.target_language,
+        translated_by=current_admin.get("username", "admin"),
+    )
+    return result
+
+
+@router.get("/courses/{course_id}/translation-status")
+async def course_translation_status(course_id: str):
+    """Get translation coverage for a course across all supported languages."""
+    course = await db.courses.find_one({"id": course_id})
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+    return await translation_service.get_translation_status(course_id)
+
+
+@router.put("/lessons/{lesson_id}/content/{language}/publish")
+async def publish_translation(lesson_id: str, language: str):
+    """Mark a translated lesson content as published (approve after review)."""
+    result = await db.lesson_contents.update_one(
+        {"lesson_id": lesson_id, "language": language},
+        {"$set": {"status": "published", "updated_at": datetime.now(timezone.utc).isoformat()}},
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail=f"No {language} content for lesson '{lesson_id}'")
+    return {"detail": f"Translation for '{lesson_id}' ({language}) published"}
 
 
 # ══════════════════════════════════════════════════════════

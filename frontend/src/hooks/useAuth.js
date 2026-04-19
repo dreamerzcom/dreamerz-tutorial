@@ -21,10 +21,11 @@ const saveAuth = (auth) => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(auth));
 };
 
-const buildUserProfile = ({ username, email, profile, lastLoginAt, createdAt, isAdmin }) => ({
+const buildUserProfile = ({ username, email, profile, lastLoginAt, createdAt, isAdmin, preferredLanguage }) => ({
   username,
   email,
   isAdmin: isAdmin || false,
+  preferredLanguage: preferredLanguage || 'en',
   firstName: profile?.firstName || '',
   lastName: profile?.lastName || '',
   phone: profile?.phone || '',
@@ -87,6 +88,7 @@ export const AuthProvider = ({ children }) => {
         username: result.username,
         email: result.email,
         isAdmin: result.is_admin,
+        preferredLanguage: result.preferred_language,
         profile: result.profile,
         createdAt: result.created_at,
         lastLoginAt: new Date().toISOString()
@@ -99,13 +101,13 @@ export const AuthProvider = ({ children }) => {
     return auth;
   }, []);
 
-  const register = useCallback(async ({ username, email, password }) => {
+  const register = useCallback(async ({ username, email, password, preferred_language }) => {
     const response = await fetch(`${API_BASE}/api/auth/register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ username, email, password })
+      body: JSON.stringify({ username, email, password, preferred_language: preferred_language || 'en' })
     });
 
     const result = await response.json();

@@ -3,13 +3,14 @@ import { Navigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   UserCircle2, Mail, CalendarDays, Clock3, MapPin, Phone, FileText,
-  Download, Upload, RotateCcw, Check, AlertTriangle, FileJson, Info, Shield
+  Download, Upload, RotateCcw, Check, AlertTriangle, FileJson, Info, Shield, Globe
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { SEO } from '../components/SEO';
 import { useAuth } from '../hooks/useAuth';
 import { useProgress } from '../hooks/useProgress';
+import { useLanguage, LANGUAGES } from '../hooks/useLanguage';
 import { toast } from 'sonner';
 
 const formatDateTime = (value) => {
@@ -21,6 +22,7 @@ const formatDateTime = (value) => {
 
 export const Account = () => {
   const { user, isAuthenticated, isLoaded: authLoaded, updateProfile } = useAuth();
+  const { language, setLanguage } = useLanguage();
   const { progress, resetProgress, isLoaded: progressLoaded } = useProgress();
   const [activeTab, setActiveTab] = useState('profile');
   const [formData, setFormData] = useState({
@@ -257,6 +259,25 @@ export const Account = () => {
                         />
                       </label>
                     </div>
+
+                    <label className="block text-sm font-medium text-slate-700">
+                      <span className="flex items-center gap-2">
+                        <Globe className="w-4 h-4 text-slate-400" />
+                        Preferred Language
+                      </span>
+                      <select
+                        value={language}
+                        onChange={(e) => setLanguage(e.target.value)}
+                        className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary appearance-none cursor-pointer"
+                      >
+                        {LANGUAGES.map((lang) => (
+                          <option key={lang.code} value={lang.code}>
+                            {lang.flag} {lang.nativeName} ({lang.name})
+                          </option>
+                        ))}
+                      </select>
+                      <p className="mt-1 text-xs text-slate-400">Course content will be displayed in this language when available</p>
+                    </label>
 
                     <label className="block text-sm font-medium text-slate-700">
                       <span className="flex items-center gap-2">

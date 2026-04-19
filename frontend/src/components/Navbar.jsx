@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, BookOpen, Users, User, BarChart3, LogOut, Shield } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { UserMenu } from './UserMenu';
+import { LanguageToggle } from './LanguageToggle';
 
 const baseNavLinks = [
   { path: '/learn', label: 'Learn', icon: BookOpen },
@@ -55,8 +56,9 @@ export const Navbar = () => {
             })}
           </div>
 
-          {/* Auth / User Menu */}
+          {/* Language + Auth / User Menu */}
           <div className="hidden md:flex items-center gap-2">
+            <LanguageToggle />
             {isAuthenticated ? (
               <UserMenu user={user} onLogout={logout} />
             ) : (
@@ -120,6 +122,11 @@ export const Navbar = () => {
                   </Link>
                 );
               })}
+
+              {/* Language toggle (mobile) */}
+              <div className="pt-3 border-t border-slate-100 mt-2 mb-2 px-2">
+                <LanguageToggle />
+              </div>
 
               {/* Account section */}
               <div className="pt-3 border-t border-slate-100 mt-2 space-y-1">

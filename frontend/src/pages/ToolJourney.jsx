@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { BookOpen, FlaskConical, MessageCircle, ArrowLeft } from 'lucide-react';
 import { useProgress } from '../hooks/useProgress';
+import { useLanguage } from '../hooks/useLanguage';
 import { JourneyPlayer } from '../components/JourneyPlayer';
 import { PromptLabPanel } from '../components/PromptLabPanel';
 import { RoleplayChat } from '../components/RoleplayChat';
@@ -25,6 +26,7 @@ export const ToolJourney = () => {
     completeModule,
   } = useProgress();
 
+  const { language } = useLanguage();
   const isAITool = AI_TOOL_IDS.includes(toolId);
   const isEnglish = toolId === 'spoken-english-30day';
 
@@ -46,7 +48,8 @@ export const ToolJourney = () => {
       setError(null);
 
       try {
-        const response = await fetch(`${API_BASE}/api/content/tools/${toolId}`);
+        const langParam = language && language !== 'en' ? `?lang=${language}` : '';
+        const response = await fetch(`${API_BASE}/api/content/tools/${toolId}${langParam}`);
         if (!response.ok) {
           const data = await response.json();
           throw new Error(data.detail || data.message || 'Failed to load tool content.');
@@ -63,7 +66,7 @@ export const ToolJourney = () => {
     if (toolId) {
       fetchTool();
     }
-  }, [toolId]);
+  }, [toolId, language]);
 
   useEffect(() => {
     if (!isLoading && !tool) {
