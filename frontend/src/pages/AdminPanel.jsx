@@ -957,4 +957,35 @@ export const AdminPanel = () => {
         </div>
 
         {/* Tab bar */}
-        <div className="flex gap-1 bg-white rounded-xl border border-slate-200 p-1 mb-6 overflow-x-a
+        <div className="flex gap-1 bg-white rounded-xl border border-slate-200 p-1 mb-6 overflow-x-auto">
+          {TABS.map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all flex-1 justify-center whitespace-nowrap
+                  ${isActive
+                    ? 'bg-primary text-white shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                  }`}
+              >
+                <tab.icon className="w-4 h-4" />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Tab content */}
+        {activeTab === 'users' && <UsersTab token={token} />}
+        {activeTab === 'content' && <ContentTab token={token} />}
+        {activeTab === 'course-creator' && <CourseCreatorTab token={token} />}
+        {activeTab === 'media' && <MediaTab token={token} />}
+        {activeTab === 'stats' && <StatsTab token={token} />}
+      </div>
+    </div>
+  );
+};
+
+export default AdminPanel;
