@@ -1,9 +1,12 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Upload, Sparkles, CheckCircle2, AlertTriangle, RefreshCw,
-  FileText, Play, ChevronDown, ChevronRight, Edit3, Save, X, ArrowRight
+  FileText, Play, ChevronDown, ChevronRight, Edit3, Save, X, ArrowRight,
+  Eye, GraduationCap, Info
 } from 'lucide-react';
+import { JourneyPlayer } from '../../components/JourneyPlayer';
+import { draftToLearnerTool } from './previewAdapter';
 
 // Max lessons generated concurrently to avoid API rate limits
 const LESSON_CONCURRENCY = 4;
@@ -125,6 +128,7 @@ export const CourseCreatorTab = ({ token }) => {
   const [editingLessonId, setEditingLessonId] = useState(null);
   const [editBuffer, setEditBuffer] = useState({});
   const [bulkRunning, setBulkRunning] = useState(false);
+  const [previewMode, setPreviewMode] = useState('creator'); // 'creator' | 'learner'
 
   const toggleModule = (id) =>
     setExpandedModules((s) => {
@@ -394,6 +398,12 @@ export const CourseCreatorTab = ({ token }) => {
   const allGenerated = totalLessons > 0 && generatedLessons === totalLessons;
   const anyGenerating = generatingLessonIds.size > 0;
 
+  // ── Derived: learner preview data (only when draft exists and all lessons generated) ──
+  const learnerData = useMemo(() => {
+    if (!draft || !allGenerated) return null;
+    return draftToLearnerTool(draft);
+  }, [draft, allGenerated]);
+
   // ── Auto-advance to preview once all lessons are generated ──
   useEffect(() => {
     if (allGenerated && !anyGenerating && (step === 'blueprint' || step === 'lessons')) {
@@ -622,14 +632,41 @@ export const CourseCreatorTab = ({ token }) => {
                       </button>
                     )}
                     {allGenerated && (
-                      <button
-                        onClick={handlePublish}
-                        disabled={busy}
-                        className="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-emerald-700 disabled:opacity-50"
-                      >
-                        {busy ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                        Publish Course
-                      </button>
+                      <>
+                        {/* Preview mode toggle */}
+                        <div className="flex items-center bg-slate-100 rounded-lg p-1">
+                          <button
+                            onClick={() => setPreviewMode('creator')}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                              previewMode === 'creator'
+                                ? 'bg-white text-slate-900 shadow-sm'
+                                : 'text-slate-500 hover:text-slate-700'
+                            }`}
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            Creator
+                          </button>
+                          <button
+                            onClick={() => setPreviewMode('learner')}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                              previewMode === 'learner'
+                                ? 'bg-white text-slate-900 shadow-sm'
+                                : 'text-slate-500 hover:text-slate-700'
+                            }`}
+                          >
+                            <GraduationCap className="w-3.5 h-3.5" />
+                            Learner
+                          </button>
+                        </div>
+                        <button
+                          onClick={handlePublish}
+                          disabled={busy}
+                          className="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-emerald-700 disabled:opacity-50"
+                        >
+                          {busy ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                          Publish Course
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>
@@ -653,8 +690,9 @@ export const CourseCreatorTab = ({ token }) => {
                 )}
               </div>
 
-              {/* Modules / lessons tree */}
-              <div className="space-y-2">
+              {/* Modules / lessons tree (Creator view) */}
+              {previewMode === 'creator' && (
+                <div className="space-y-2">
                 {draft.blueprint.modules?.map((module, mIdx) => {
                   const moduleOpen = expandedModules.has(module.id);
                   const moduleLessons = module.lessons || [];
@@ -941,7 +979,35 @@ export const CourseCreatorTab = ({ token }) => {
                     </div>
                   );
                 })}
-              </div>
+                </div>
+              )}
+
+              {/* Learner preview view */}
+              {previewMode === 'learner' && learnerData && (
+                <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                  {/* Preview banner */}
+                  <div className="bg-amber-50 border-b border-amber-200 px-4 py-3 flex items-center gap-3">
+                    <Info className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                    <span className="text-xs text-amber-800 font-medium">
+                      Learner preview — progress and XP are not saved
+                    </span>
+                  </div>
+                  {/* JourneyPlayer */}
+                  <div className="min-h-[600px]">
+                    <JourneyPlayer
+                      tool={learnerData.tool}
+                      modules={learnerData.modules}
+                      isModuleCompleted={learnerData.isModuleCompleted}
+                      isModuleUnlocked={learnerData.isModuleUnlocked}
+                      getModuleProgress={learnerData.getModuleProgress}
+                      completeModule={learnerData.completeModule}
+                      initialModuleId={null}
+                      previewVideoUrl=""
+                      previewMode
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </>
