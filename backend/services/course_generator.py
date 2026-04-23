@@ -33,23 +33,117 @@ MAX_SOURCE_CHARS_FOR_LESSON = 20_000
 # ── Prompt templates ──────────────────────────────────────
 BLUEPRINT_SYSTEM_PROMPT = (
     "You are an expert instructional designer. Given a source document, you "
-    "produce a complete course blueprint in strict JSON format. Ensure logical "
-    "progression from foundational to advanced topics. Never invent facts that "
-    "are not implied by the source material. Output JSON only — no markdown "
-    "fences, no preamble, no commentary."
+    "produce a complete course blueprint. Ensure logical progression from "
+    "foundational to advanced topics. Never invent facts that are not implied "
+    "by the source material. You MUST respond by calling the provided tool."
 )
 
 LESSON_SYSTEM_PROMPT = (
     "You are an expert educator writing a single lesson. Ground every claim in "
     "the provided source material. Produce clear, age-appropriate explanations. "
-    "Output strict JSON only."
+    "You MUST respond by calling the provided tool."
 )
 
 CRITIQUE_SYSTEM_PROMPT = (
     "You are a fact-checking reviewer. You compare generated educational "
     "content against the original source document and flag hallucinations, "
-    "missing key concepts, and factual issues. Output strict JSON only."
+    "missing key concepts, and factual issues. You MUST respond by calling "
+    "the provided tool."
 )
+
+
+# ── JSON schemas for Anthropic tool-use (guarantees valid JSON output) ──
+BLUEPRINT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "course_title": {"type": "string"},
+        "course_description": {"type": "string"},
+        "learning_objectives": {"type": "array", "items": {"type": "string"}},
+        "difficulty": {
+            "type": "string",
+            "enum": ["beginner", "intermediate", "advanced"],
+        },
+        "modules": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "id": {"type": "string"},
+                    "title": {"type": "string"},
+                    "description": {"type": "string"},
+                    "order": {"type": "integer"},
+                    "lessons": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {"type": "string"},
+                                "title": {"type": "string"},
+                                "objectives": {
+                                    "type": "array",
+                                    "items": {"type": "string"},
+                                },
+                                "minutes": {"type": "integer"},
+                                "order": {"type": "integer"},
+                            },
+                            "required": ["id", "title", "objectives", "minutes", "order"],
+                        },
+                    },
+                },
+                "required": ["id", "title", "description", "order", "lessons"],
+            },
+        },
+    },
+    "required": [
+        "course_title", "course_description", "learning_objectives",
+        "difficulty", "modules",
+    ],
+}
+
+LESSON_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "explanation": {"type": "string", "description": "600-1000 word markdown explanation"},
+        "example": {"type": "string", "description": "Concrete 80-200 word example"},
+        "activity": {"type": "string", "description": "Short exercise for the learner"},
+        "key_takeaways": {"type": "array", "items": {"type": "string"}},
+        "quiz": {
+            "type": "object",
+            "properties": {
+                "questions": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "question": {"type": "string"},
+                            "options": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "minItems": 2,
+                                "maxItems": 6,
+                            },
+                            "correct_index": {"type": "integer"},
+                            "explanation": {"type": "string"},
+                        },
+                        "required": ["question", "options", "correct_index", "explanation"],
+                    },
+                },
+            },
+            "required": ["questions"],
+        },
+    },
+    "required": ["explanation", "example", "activity", "key_takeaways", "quiz"],
+}
+
+CRITIQUE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "is_valid": {"type": "boolean"},
+        "issues": {"type": "array", "items": {"type": "string"}},
+        "suggestions": {"type": "array", "items": {"type": "string"}},
+    },
+    "required": ["is_valid", "issues", "suggestions"],
+}
 
 
 def _blueprint_user_prompt(
@@ -70,30 +164,10 @@ def _blueprint_user_prompt(
         f"{title_line}"
         f"{instr_line}"
         "\n"
-        "Return JSON with this exact schema:\n"
-        "{\n"
-        '  "course_title": "string",\n'
-        '  "course_description": "string (2-3 sentences)",\n'
-        '  "learning_objectives": ["string", ...],\n'
-        '  "difficulty": "beginner" | "intermediate" | "advanced",\n'
-        '  "modules": [\n'
-        "    {\n"
-        '      "id": "module-1",\n'
-        '      "title": "string",\n'
-        '      "description": "string",\n'
-        '      "order": 1,\n'
-        '      "lessons": [\n'
-        "        {\n"
-        '          "id": "lesson-1-1",\n'
-        '          "title": "string",\n'
-        '          "objectives": ["string", ...],\n'
-        '          "minutes": 10,\n'
-        '          "order": 1\n'
-        "        }\n"
-        "      ]\n"
-        "    }\n"
-        "  ]\n"
-        "}\n\n"
+        "Design a complete course blueprint grounded in the source material. "
+        "Use module ids like 'module-1', 'module-2' and lesson ids like "
+        "'lesson-1-1', 'lesson-1-2'. Call the save_course_blueprint tool with "
+        "your result.\n\n"
         "Source material:\n"
         "===\n"
         f"{source_text[:MAX_SOURCE_CHARS_FOR_BLUEPRINT]}\n"
@@ -101,31 +175,27 @@ def _blueprint_user_prompt(
     )
 
 
-def _lesson_user_prompt(lesson: dict, tone: str, source_text: str) -> str:
+def _lesson_user_prompt(
+    lesson: dict,
+    tone: str,
+    source_text: str,
+    extra_instructions: Optional[str] = None,
+) -> str:
     objectives = ", ".join(lesson.get("objectives") or [])
+    extra_line = (
+        f"\nAdditional guidance to address on this pass:\n{extra_instructions}\n"
+        if extra_instructions else ""
+    )
     return (
         f"Lesson title: {lesson.get('title', '')}\n"
         f"Learning objectives: {objectives}\n"
         f"Tone: {tone}\n"
-        f"Target length: 600-1000 words of `explanation`.\n\n"
-        "Return JSON with this schema:\n"
-        "{\n"
-        '  "explanation": "markdown string (600-1000 words)",\n'
-        '  "example": "string (concrete example, 80-200 words)",\n'
-        '  "activity": "string (a short exercise for the learner)",\n'
-        '  "key_takeaways": ["string", "string", ...],\n'
-        '  "quiz": {\n'
-        '    "questions": [\n'
-        "      {\n"
-        '        "question": "string",\n'
-        '        "options": ["opt A", "opt B", "opt C", "opt D"],\n'
-        '        "correct_index": 0,\n'
-        '        "explanation": "why this answer is correct"\n'
-        "      }\n"
-        "    ]\n"
-        "  }\n"
-        "}\n\n"
-        "Generate 3-5 quiz questions. Ground everything in the source material below.\n\n"
+        f"{extra_line}"
+        "Target: 600-1000 word explanation (markdown allowed), 80-200 word "
+        "concrete example, a short activity, 3-5 key takeaways, and 3-5 "
+        "multiple-choice quiz questions (4 options each). Ground everything "
+        "in the source material below. Call the save_lesson_content tool "
+        "with your result.\n\n"
         "Source material:\n"
         "===\n"
         f"{source_text[:MAX_SOURCE_CHARS_FOR_LESSON]}\n"
@@ -135,13 +205,10 @@ def _lesson_user_prompt(lesson: dict, tone: str, source_text: str) -> str:
 
 def _critique_user_prompt(generated_content: dict, source_text: str) -> str:
     return (
-        "Compare the generated lesson content against the source material.\n\n"
-        "Return JSON with this schema:\n"
-        "{\n"
-        '  "is_valid": true | false,\n'
-        '  "issues": ["string", ...],\n'
-        '  "suggestions": ["string", ...]\n'
-        "}\n\n"
+        "Compare the generated lesson content against the source material. "
+        "Flag any hallucinations (claims not supported by the source), "
+        "missing key concepts, or factual issues. Call the save_critique "
+        "tool with your findings.\n\n"
         "Generated content:\n"
         f"{json.dumps(generated_content)[:8000]}\n\n"
         "Source material:\n"
@@ -151,34 +218,20 @@ def _critique_user_prompt(generated_content: dict, source_text: str) -> str:
     )
 
 
-# ── JSON extraction helper ────────────────────────────────
-_JSON_BLOCK_RE = re.compile(r"\{[\s\S]*\}")
-
-
-def _extract_json(text: str) -> dict:
-    """Robust JSON parse — strips code fences and extracts the first object."""
-    cleaned = text.strip()
-    if cleaned.startswith("```"):
-        # Remove markdown fences of any language
-        cleaned = re.sub(r"^```[a-zA-Z]*\s*", "", cleaned)
-        cleaned = re.sub(r"\s*```$", "", cleaned)
-
-    try:
-        return json.loads(cleaned)
-    except json.JSONDecodeError:
-        match = _JSON_BLOCK_RE.search(cleaned)
-        if not match:
-            raise
-        return json.loads(match.group(0))
-
-
-# ── Claude call ───────────────────────────────────────────
-async def _call_claude_json(
+# ── Claude tool-use call (guarantees schema-valid JSON) ──
+async def _call_claude_tool(
     system_prompt: str,
     user_prompt: str,
+    tool_name: str,
+    tool_description: str,
+    tool_schema: dict,
     max_tokens: int = 4096,
 ) -> dict:
-    """Call Claude and parse a JSON object from the response."""
+    """Call Claude forcing a tool-use response. Returns the tool's JSON input.
+
+    Using tool-use guarantees the model emits JSON that validates against the
+    supplied schema, eliminating the fragile string-parsing path.
+    """
     if not ANTHROPIC_API_KEY:
         raise RuntimeError(
             "ANTHROPIC_API_KEY is not set — cannot run course generation."
@@ -191,18 +244,29 @@ async def _call_claude_json(
         model=CLAUDE_MODEL,
         system=system_prompt,
         messages=[{"role": "user", "content": user_prompt}],
+        tools=[{
+            "name": tool_name,
+            "description": tool_description,
+            "input_schema": tool_schema,
+        }],
+        tool_choice={"type": "tool", "name": tool_name},
         max_tokens=max_tokens,
     )
     # Some models (e.g. claude-opus-4-7) don't support the temperature parameter
     if "opus-4-7" not in CLAUDE_MODEL:
         kwargs["temperature"] = 0.3
     response = await client.messages.create(**kwargs)
-    text = response.content[0].text
-    try:
-        return _extract_json(text)
-    except Exception as exc:
-        logger.error("Failed to parse Claude JSON response: %s\nRaw: %s", exc, text[:500])
-        raise ValueError(f"AI returned malformed JSON: {exc}")
+
+    for block in response.content:
+        if getattr(block, "type", None) == "tool_use" and block.name == tool_name:
+            return block.input  # already-parsed JSON dict
+
+    logger.error(
+        "Claude did not return a tool_use block. stop_reason=%s content=%r",
+        getattr(response, "stop_reason", None),
+        response.content,
+    )
+    raise ValueError(f"AI did not return structured output for tool '{tool_name}'")
 
 
 # ── Draft persistence ─────────────────────────────────────
@@ -299,6 +363,38 @@ async def update_lesson_in_draft(
     return True
 
 
+async def update_lesson_validation(
+    draft_id: str,
+    module_id: str,
+    lesson_id: str,
+    validation: Optional[dict],
+) -> bool:
+    """Overwrite or clear the validation payload for a single lesson."""
+    now = datetime.now(timezone.utc).isoformat()
+    draft = await get_draft(draft_id)
+    if not draft:
+        return False
+
+    blueprint = draft["blueprint"]
+    updated = False
+    for module in blueprint.get("modules", []):
+        if module.get("id") != module_id:
+            continue
+        for lesson in module.get("lessons", []):
+            if lesson.get("id") == lesson_id:
+                lesson["validation"] = validation
+                updated = True
+
+    if not updated:
+        return False
+
+    await db.course_drafts.update_one(
+        {"id": draft_id},
+        {"$set": {"blueprint": blueprint, "updated_at": now}},
+    )
+    return True
+
+
 # ── Main generation entry points ──────────────────────────
 async def generate_blueprint(
     source_text: str,
@@ -323,8 +419,13 @@ async def generate_blueprint(
         instructions=instructions,
     )
 
-    blueprint = await _call_claude_json(
-        BLUEPRINT_SYSTEM_PROMPT, user_prompt, max_tokens=4096
+    blueprint = await _call_claude_tool(
+        system_prompt=BLUEPRINT_SYSTEM_PROMPT,
+        user_prompt=user_prompt,
+        tool_name="save_course_blueprint",
+        tool_description="Save the full course blueprint with modules and lessons.",
+        tool_schema=BLUEPRINT_SCHEMA,
+        max_tokens=4096,
     )
 
     # Normalise IDs so downstream references are stable
@@ -343,11 +444,17 @@ async def generate_lesson_content(
     lesson: dict,
     source_text: str,
     tone: str,
+    extra_instructions: Optional[str] = None,
 ) -> dict:
     """Generate long-form content + quiz for a single lesson."""
-    user_prompt = _lesson_user_prompt(lesson, tone, source_text)
-    return await _call_claude_json(
-        LESSON_SYSTEM_PROMPT, user_prompt, max_tokens=3000
+    user_prompt = _lesson_user_prompt(lesson, tone, source_text, extra_instructions)
+    return await _call_claude_tool(
+        system_prompt=LESSON_SYSTEM_PROMPT,
+        user_prompt=user_prompt,
+        tool_name="save_lesson_content",
+        tool_description="Save the generated lesson content and quiz.",
+        tool_schema=LESSON_SCHEMA,
+        max_tokens=4096,
     )
 
 
@@ -358,8 +465,13 @@ async def critique_lesson_content(
     """Second-pass critique to detect hallucinations."""
     user_prompt = _critique_user_prompt(generated_content, source_text)
     try:
-        return await _call_claude_json(
-            CRITIQUE_SYSTEM_PROMPT, user_prompt, max_tokens=1024
+        return await _call_claude_tool(
+            system_prompt=CRITIQUE_SYSTEM_PROMPT,
+            user_prompt=user_prompt,
+            tool_name="save_critique",
+            tool_description="Save the fact-check results for the generated lesson.",
+            tool_schema=CRITIQUE_SCHEMA,
+            max_tokens=1024,
         )
     except Exception as exc:
         logger.warning("Critique step failed, defaulting to valid: %s", exc)

@@ -46,10 +46,23 @@ class LessonRequest(BaseModel):
     module_id: str
     lesson_id: str
     run_critique: bool = True
+    extra_instructions: Optional[str] = Field(
+        None,
+        description="Optional extra guidance appended to the lesson prompt (e.g. critique feedback on a regen).",
+    )
 
 
 class BlueprintUpdate(BaseModel):
     blueprint: dict = Field(..., description="Full blueprint JSON to save")
+
+
+class ValidationUpdate(BaseModel):
+    module_id: str
+    lesson_id: str
+    validation: Optional[dict] = Field(
+        None,
+        description="New validation payload, or null to clear.",
+    )
 
 
 # ── 1. Parse uploaded document ────────────────────────────
@@ -137,6 +150,7 @@ async def generate_lesson(draft_id: str, payload: LessonRequest):
             lesson=target_lesson,
             source_text=draft["source_text"],
             tone=draft.get("tone", "professional"),
+            extra_instructions=payload.extra_instructions,
         )
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
@@ -209,6 +223,21 @@ async def update_draft(draft_id: str, payload: BlueprintUpdate):
     if not ok:
         raise HTTPException(status_code=404, detail="Draft not found")
     return {"detail": "Draft updated"}
+
+
+# ── 5b. Update validation on a single lesson ──────────────
+@router.put("/drafts/{draft_id}/validation")
+async def update_lesson_validation(draft_id: str, payload: ValidationUpdate):
+    """Overwrite or clear the validation payload for one lesson (no regen)."""
+    ok = await course_generator.update_lesson_validation(
+        draft_id=draft_id,
+        module_id=payload.module_id,
+        lesson_id=payload.lesson_id,
+        validation=payload.validation,
+    )
+    if not ok:
+        raise HTTPException(status_code=404, detail="Draft or lesson not found")
+    return {"detail": "Validation updated"}
 
 
 # ── 6. Publish draft → real course ────────────────────────
