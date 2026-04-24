@@ -1,6 +1,7 @@
 """Admin routes — user management, content management, media uploads (admin-only)."""
 
 import logging
+import re
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -20,6 +21,11 @@ router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(get_cu
 
 
 # ── Pydantic Models ──────────────────────────────────────
+class CategoryCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+
+
 class ModuleUpdate(BaseModel):
     title: Optional[str] = None
     level: Optional[str] = None
@@ -85,6 +91,45 @@ class AssetAttach(BaseModel):
 
 class TranslateRequest(BaseModel):
     target_language: str = "bn"
+
+
+# ══════════════════════════════════════════════════════════
+# CATEGORIES
+# ══════════════════════════════════════════════════════════
+
+@router.post("/categories")
+async def create_category(payload: CategoryCreate):
+    """Create a new category. Auto-generates id from name via slugify."""
+    # Slugify the name to create an id
+    slug = re.sub(r"[^a-z0-9]+", "-", payload.name.lower()).strip("-")
+    if not slug:
+        raise HTTPException(status_code=400, detail="Invalid category name")
+
+    now = datetime.now(timezone.utc).isoformat()
+
+    category_doc = {
+        "id": slug,
+        "name": payload.name,
+        "description": payload.description or "",
+        "created_at": now,
+        "updated_at": now,
+    }
+
+    # Upsert by id to avoid duplicates
+    result = await db.categories.update_one(
+        {"id": slug},
+        {"$setOnInsert": category_doc},
+        upsert=True,
+    )
+
+    return category_doc
+
+
+@router.get("/categories")
+async def list_categories():
+    """List all categories (admin view)."""
+    categories = await db.categories.find({}, {"_id": 0}).to_list(1000)
+    return categories
 
 
 # ══════════════════════════════════════════════════════════

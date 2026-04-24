@@ -52,7 +52,6 @@ const adminUpload = async (path, token, formData) => {
 
 const StepIndicator = ({ currentStep }) => {
   const steps = [
-    { id: 'upload', label: 'Upload' },
     { id: 'config', label: 'Configure' },
     { id: 'blueprint', label: 'Blueprint' },
     { id: 'lessons', label: 'Generate' },
@@ -103,14 +102,15 @@ const ValidationBadge = ({ validation }) => {
 
 // ── Main component ───────────────────────────────────────
 export const CourseCreatorTab = ({ token }) => {
-  const [step, setStep] = useState('upload');
+  const [step, setStep] = useState('config');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [busy, setBusy] = useState(false);
 
-  // Parsed doc
-  const [file, setFile] = useState(null);
-  const [parsed, setParsed] = useState(null);
+  // Multi-file upload
+  const [files, setFiles] = useState([]);
+  const [parsedFiles, setParsedFiles] = useState([]);
+  const [parsingFiles, setParsingFiles] = useState(new Set());
 
   // Config
   const [tone, setTone] = useState('professional');
@@ -118,6 +118,12 @@ export const CourseCreatorTab = ({ token }) => {
   const [lessonsPerModule, setLessonsPerModule] = useState(3);
   const [courseTitleHint, setCourseTitleHint] = useState('');
   const [instructions, setInstructions] = useState('');
+
+  // Category
+  const [categories, setCategories] = useState([]);
+  const [categoryId, setCategoryId] = useState('');
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [isNewCategory, setIsNewCategory] = useState(false);
 
   // Draft
   const [draft, setDraft] = useState(null);
@@ -146,51 +152,102 @@ export const CourseCreatorTab = ({ token }) => {
   const fileInputRef = useRef(null);
 
   const resetFlow = () => {
-    setStep('upload');
+    setStep('config');
     setError('');
     setSuccess('');
-    setFile(null);
-    setParsed(null);
+    setFiles([]);
+    setParsedFiles([]);
+    setParsingFiles(new Set());
     setDraft(null);
     setCourseTitleHint('');
     setInstructions('');
+    setCategoryId(categories[0]?.id || '');
+    setNewCategoryName('');
+    setIsNewCategory(false);
     setExpandedModules(new Set());
     setExpandedLessons(new Set());
     setGeneratingLessonIds(new Set());
     setProgress({ done: 0, total: 0 });
   };
 
-  // ── Upload & parse ──
-  const handleFileSelect = useCallback(async (selectedFile) => {
-    if (!selectedFile) return;
-    setFile(selectedFile);
-    setBusy(true);
-    setError('');
-    try {
-      const formData = new FormData();
-      formData.append('file', selectedFile);
-      const result = await adminUpload('/admin/course-gen/parse', token, formData);
-      setParsed(result);
-      setStep('config');
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setBusy(false);
+  // ── Multi-file upload & parse ──
+  const handleFilesSelect = useCallback(async (selectedFiles) => {
+    const arr = Array.from(selectedFiles || []);
+    if (!arr.length) return;
+
+    // Add to files list
+    setFiles(prev => [...prev, ...arr]);
+
+    // Parse each file in parallel
+    for (const f of arr) {
+      setParsingFiles(s => new Set(s).add(f.name));
+      setError('');
+      try {
+        const formData = new FormData();
+        formData.append('file', f);
+        const result = await adminUpload('/admin/course-gen/parse', token, formData);
+        setParsedFiles(prev => [...prev, { ...result, filename: f.name }]);
+      } catch (e) {
+        setError(`${f.name}: ${e.message}`);
+      } finally {
+        setParsingFiles(s => { const n = new Set(s); n.delete(f.name); return n; });
+      }
     }
   }, [token]);
 
+  const removeFile = (filename) => {
+    setFiles(prev => prev.filter(f => f.name !== filename));
+    setParsedFiles(prev => prev.filter(p => p.filename !== filename));
+  };
+
   // ── Blueprint ──
   const handleGenerateBlueprint = async () => {
-    if (!parsed) return;
+    if (parsedFiles.length === 0) {
+      setError('Please upload at least one document.');
+      return;
+    }
+
+    // Resolve category (create new if needed)
+    let finalCategoryId = categoryId;
+    if (isNewCategory && newCategoryName.trim()) {
+      try {
+        const created = await adminJson('/admin/categories', token, {
+          method: 'POST',
+          body: JSON.stringify({ name: newCategoryName.trim() }),
+        });
+        finalCategoryId = created.id;
+        setCategoryId(created.id);
+        setCategories(prev => [...prev, created]);
+        setIsNewCategory(false);
+        setNewCategoryName('');
+      } catch (e) {
+        setError(`Failed to create category: ${e.message}`);
+        return;
+      }
+    }
+
+    if (!finalCategoryId && !isNewCategory) {
+      setError('Please select or create a category.');
+      return;
+    }
+
     setBusy(true);
     setError('');
     setStep('blueprint');
+
     try {
+      // Concatenate source text from all parsed files with clear separators
+      const combinedText = parsedFiles
+        .map(p => `=== ${p.filename} ===\n\n${p.raw_text}`)
+        .join('\n\n---\n\n');
+
       const result = await adminJson('/admin/course-gen/blueprint', token, {
         method: 'POST',
         body: JSON.stringify({
-          source_text: parsed.raw_text,
-          filename: file?.name || 'upload',
+          source_text: combinedText,
+          filename: parsedFiles[0]?.filename || 'upload',
+          source_filenames: parsedFiles.map(p => p.filename),
+          category_id: finalCategoryId,
           tone,
           module_count: moduleCount,
           lessons_per_module: lessonsPerModule,
@@ -412,6 +469,20 @@ export const CourseCreatorTab = ({ token }) => {
     }
   }, [allGenerated, anyGenerating, step]);
 
+  // Fix useEffect dependency for categories
+  useEffect(() => {
+    fetch(`${API_BASE}/api/content/categories`)
+      .then(r => r.json())
+      .then(data => {
+        const catArray = Array.isArray(data) ? data : [];
+        setCategories(catArray);
+        if (catArray.length > 0 && !categoryId) {
+          setCategoryId(catArray[0].id);
+        }
+      })
+      .catch(() => setCategories([]));
+  }, []); // Empty deps - only run once on mount
+
   // ── Publish ──
   const handlePublish = async () => {
     if (!draft) return;
@@ -453,61 +524,113 @@ export const CourseCreatorTab = ({ token }) => {
         </div>
       )}
 
-      {/* ── Step 1: Upload ── */}
-      {step === 'upload' && (
-        <div className="bg-white rounded-xl border border-slate-200 p-8">
-          <div className="flex items-center gap-3 mb-4">
+      {/* ── Step 1: Configure (merged upload + config) ── */}
+      {step === 'config' && (
+        <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-5">
+          <div className="flex items-center gap-3 mb-2">
             <Sparkles className="w-5 h-5 text-primary" />
             <h2 className="text-lg font-bold text-slate-900">AI Course Creator</h2>
           </div>
-          <p className="text-sm text-slate-600 mb-4">
-            Upload a PDF, DOCX or text file. Claude will turn it into a full course blueprint
-            with modules, lessons and quizzes. Review and edit before publishing.
+          <p className="text-sm text-slate-600">
+            Upload one or more documents and configure the course structure. Claude will generate a full course blueprint with modules, lessons and quizzes.
           </p>
-          <div
-            onClick={() => !busy && fileInputRef.current?.click()}
-            className={`border-2 border-dashed border-slate-200 rounded-xl p-10 text-center cursor-pointer hover:border-primary/60 hover:bg-slate-50 transition-colors ${busy ? 'opacity-60 pointer-events-none' : ''}`}
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              className="hidden"
-              accept=".pdf,.docx,.txt,.md"
-              onChange={(e) => handleFileSelect(e.target.files?.[0])}
-            />
-            {busy ? (
-              <RefreshCw className="w-8 h-8 text-primary animate-spin mx-auto mb-2" />
+
+          {/* Category Selection */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-700">Category</label>
+            {!isNewCategory ? (
+              <select
+                value={categoryId}
+                onChange={(e) => {
+                  if (e.target.value === '__new__') {
+                    setIsNewCategory(true);
+                  } else {
+                    setCategoryId(e.target.value);
+                  }
+                }}
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/40"
+              >
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+                <option value="__new__">➕ Create new category</option>
+              </select>
             ) : (
-              <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  placeholder="Enter new category name"
+                  className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/40"
+                />
+                <button
+                  onClick={() => {
+                    setIsNewCategory(false);
+                    setNewCategoryName('');
+                  }}
+                  className="px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200"
+                >
+                  Cancel
+                </button>
+              </div>
             )}
-            <p className="text-sm font-medium text-slate-700">
-              {busy ? 'Parsing document…' : 'Drop PDF / DOCX / TXT or click to browse'}
-            </p>
-            <p className="text-xs text-slate-400 mt-1">
-              Claude reads the text and extracts headings automatically.
-            </p>
           </div>
-        </div>
-      )}
 
-      {/* ── Step 2: Configure ── */}
-      {step === 'config' && parsed && (
-        <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-5">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <FileText className="w-4 h-4 text-slate-400" />
-              <span className="font-medium text-slate-700 text-sm">{file?.name}</span>
-              <span className="text-xs text-slate-400">
-                · {parsed.char_count?.toLocaleString()} chars
-                {parsed.page_count ? ` · ${parsed.page_count} pages` : ''}
-              </span>
+          {/* Document Upload */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-700">Source Documents</label>
+            <div
+              onClick={() => !busy && fileInputRef.current?.click()}
+              className={`border-2 border-dashed border-slate-200 rounded-xl p-6 text-center cursor-pointer hover:border-primary/60 hover:bg-slate-50 transition-colors ${busy ? 'opacity-60 pointer-events-none' : ''}`}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                className="hidden"
+                accept=".pdf,.docx,.txt,.md"
+                onChange={(e) => handleFilesSelect(e.target.files)}
+              />
+              <Upload className="w-6 h-6 text-slate-400 mx-auto mb-2" />
+              <p className="text-sm font-medium text-slate-700">
+                Drop PDF / DOCX / TXT files or click to browse
+              </p>
+              <p className="text-xs text-slate-400 mt-1">
+                You can upload multiple documents
+              </p>
             </div>
-            <details className="text-xs text-slate-500 bg-slate-50 rounded-lg p-3 max-h-40 overflow-auto">
-              <summary className="cursor-pointer font-medium">Preview parsed text</summary>
-              <pre className="whitespace-pre-wrap mt-2">{parsed.raw_text?.slice(0, 2000)}…</pre>
-            </details>
+
+            {/* File chips */}
+            {parsedFiles.length > 0 && (
+              <div className="space-y-2">
+                {parsedFiles.map((pf) => (
+                  <div key={pf.filename} className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-slate-400" />
+                      <span className="font-medium text-slate-700">{pf.filename}</span>
+                      <span className="text-xs text-slate-400">
+                        · {pf.char_count?.toLocaleString()} chars
+                        {pf.page_count ? ` · ${pf.page_count} pages` : ''}
+                      </span>
+                    </div>
+                    {parsingFiles.has(pf.filename) ? (
+                      <RefreshCw className="w-4 h-4 text-primary animate-spin" />
+                    ) : (
+                      <button
+                        onClick={() => removeFile(pf.filename)}
+                        className="text-slate-400 hover:text-red-600"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
+          {/* Course Configuration */}
           <div className="grid sm:grid-cols-2 gap-4">
             <label className="block">
               <span className="text-sm font-medium text-slate-700">Tone</span>
@@ -565,16 +688,10 @@ export const CourseCreatorTab = ({ token }) => {
             />
           </label>
 
-          <div className="flex items-center justify-between pt-2">
-            <button
-              onClick={resetFlow}
-              className="text-sm text-slate-500 hover:text-slate-700 px-3 py-2"
-            >
-              ← Re-upload
-            </button>
+          <div className="flex items-center justify-end pt-2">
             <button
               onClick={handleGenerateBlueprint}
-              disabled={busy}
+              disabled={busy || parsedFiles.length === 0}
               className="bg-primary text-white px-5 py-2.5 rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-primary/90 disabled:opacity-50"
             >
               {busy ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}

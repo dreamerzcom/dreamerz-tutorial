@@ -280,6 +280,8 @@ async def create_draft(
     filename: str,
     tone: str,
     blueprint: dict,
+    category_id: str = "ai-learning",
+    source_filenames: list = None,
 ) -> dict:
     now = datetime.now(timezone.utc).isoformat()
     draft_id = await _new_draft_id()
@@ -295,8 +297,10 @@ async def create_draft(
         "id": draft_id,
         "admin_username": admin_username,
         "source_filename": filename,
+        "source_filenames": source_filenames or [],
         "source_text": source_text,
         "tone": tone,
+        "category_id": category_id,
         "blueprint": blueprint,
         "status": "draft",  # draft | publishing | published
         "created_at": now,
@@ -501,7 +505,7 @@ async def publish_draft(draft_id: str, published_by: str) -> dict:
     # ── Course ──────────────────────────────────────────
     course_doc = {
         "id": course_id,
-        "category_id": "ai-learning",
+        "category_id": draft.get("category_id", "ai-learning"),
         "name": blueprint.get("course_title", "AI-generated Course"),
         "locale_names": {},
         "tagline": "",

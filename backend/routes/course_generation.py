@@ -35,6 +35,8 @@ logger = logging.getLogger(__name__)
 class BlueprintRequest(BaseModel):
     source_text: str
     filename: str = "admin-upload.txt"
+    source_filenames: list = []  # Names of all uploaded files
+    category_id: str = "ai-learning"  # Category to assign to the course
     tone: str = "professional"
     module_count: int = 6
     lessons_per_module: int = 3
@@ -122,6 +124,8 @@ async def create_blueprint(
         filename=payload.filename,
         tone=payload.tone,
         blueprint=blueprint,
+        category_id=payload.category_id,
+        source_filenames=payload.source_filenames,
     )
     return draft
 
