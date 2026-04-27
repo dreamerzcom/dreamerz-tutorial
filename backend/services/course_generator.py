@@ -405,6 +405,7 @@ async def generate_blueprint(
     tone: str = "professional",
     module_count: int = DEFAULT_MODULE_COUNT,
     lessons_per_module: int = DEFAULT_LESSONS_PER_MODULE,
+    difficulty: Optional[str] = None,
     course_title_hint: Optional[str] = None,
     instructions: Optional[str] = None,
 ) -> dict:
@@ -431,6 +432,10 @@ async def generate_blueprint(
         tool_schema=BLUEPRINT_SCHEMA,
         max_tokens=4096,
     )
+
+    # Override difficulty if admin specified one
+    if difficulty in {"beginner", "intermediate", "advanced"}:
+        blueprint["difficulty"] = difficulty
 
     # Normalise IDs so downstream references are stable
     for m_idx, module in enumerate(blueprint.get("modules", []), start=1):

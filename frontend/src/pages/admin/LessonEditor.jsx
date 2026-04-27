@@ -52,7 +52,6 @@ export const LessonEditor = ({ lessonId, token, onLessonUpdated, onLessonDeleted
   // Content edit state
   const [contentForm, setContentForm] = useState({
     title: '',
-    level: 'beginner',
     estimated_minutes: 10,
     explanation: '',
     example: '',
@@ -89,7 +88,6 @@ export const LessonEditor = ({ lessonId, token, onLessonUpdated, onLessonDeleted
       const enContent = data.contents?.en || {};
       setContentForm({
         title: data.title || '',
-        level: data.level || 'beginner',
         estimated_minutes: data.estimated_minutes || 10,
         explanation: enContent.explanation || '',
         example: enContent.example || '',
@@ -125,7 +123,6 @@ export const LessonEditor = ({ lessonId, token, onLessonUpdated, onLessonDeleted
         method: 'PUT',
         body: JSON.stringify({
           title: contentForm.title,
-          level: contentForm.level,
           estimated_minutes: contentForm.estimated_minutes,
         }),
       });
@@ -257,7 +254,7 @@ export const LessonEditor = ({ lessonId, token, onLessonUpdated, onLessonDeleted
         <div>
           <h2 className="text-xl font-bold text-slate-900">{lesson.title}</h2>
           <p className="text-xs text-slate-400 mt-1">
-            {lesson.level} · {lesson.estimated_minutes}min · ID: {lessonId}
+            {lesson.estimated_minutes}min · ID: {lessonId}
           </p>
         </div>
         <div>
@@ -319,28 +316,14 @@ export const LessonEditor = ({ lessonId, token, onLessonUpdated, onLessonDeleted
       {/* Content tab */}
       {activeTab === 'content' && (
         <div className="space-y-4">
-          <div className="grid sm:grid-cols-3 gap-3">
-            <label className="block sm:col-span-2">
-              <span className="text-sm font-medium text-slate-700">Title</span>
-              <input
-                value={contentForm.title}
-                onChange={(e) => setContentForm(f => ({ ...f, title: e.target.value }))}
-                className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/40"
-              />
-            </label>
-            <label className="block">
-              <span className="text-sm font-medium text-slate-700">Level</span>
-              <select
-                value={contentForm.level}
-                onChange={(e) => setContentForm(f => ({ ...f, level: e.target.value }))}
-                className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
-              >
-                <option value="beginner">Beginner</option>
-                <option value="intermediate">Intermediate</option>
-                <option value="advanced">Advanced</option>
-              </select>
-            </label>
-          </div>
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">Title</span>
+            <input
+              value={contentForm.title}
+              onChange={(e) => setContentForm(f => ({ ...f, title: e.target.value }))}
+              className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/40"
+            />
+          </label>
 
           <label className="block">
             <span className="text-sm font-medium text-slate-700">Minutes</span>

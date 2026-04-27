@@ -116,6 +116,7 @@ export const CourseCreatorTab = ({ token, onPublishSuccess }) => {
   const [tone, setTone] = useState('professional');
   const [moduleCount, setModuleCount] = useState(6);
   const [lessonsPerModule, setLessonsPerModule] = useState(3);
+  const [difficulty, setDifficulty] = useState('beginner');
   const [courseTitleHint, setCourseTitleHint] = useState('');
   const [instructions, setInstructions] = useState('');
 
@@ -263,6 +264,7 @@ export const CourseCreatorTab = ({ token, onPublishSuccess }) => {
           tone,
           module_count: moduleCount,
           lessons_per_module: lessonsPerModule,
+          difficulty,
           course_title_hint: courseTitleHint || undefined,
           instructions: instructions || undefined,
         }),
@@ -558,56 +560,137 @@ export const CourseCreatorTab = ({ token, onPublishSuccess }) => {
             Upload one or more documents and configure the course structure. Claude will generate a full course blueprint with modules, lessons and quizzes.
           </p>
 
-          {/* Category Selection */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700">Category *</label>
-            {!isNewCategory ? (
-              <select
-                value={categoryId}
+          {/* Course Configuration */}
+          <div className="grid sm:grid-cols-2 gap-4">
+            {/* Row 1: Course Title | Category */}
+            <label className="block">
+              <span className="text-sm font-medium text-slate-700">Course Title *</span>
+              <input
+                required
+                value={courseTitleHint}
                 onChange={(e) => {
-                  setFieldErrors((fe) => ({ ...fe, category: undefined }));
-                  if (e.target.value === '__new__') {
-                    setIsNewCategory(true);
-                  } else {
-                    setCategoryId(e.target.value);
-                  }
+                  setCourseTitleHint(e.target.value);
+                  if (e.target.value.trim()) setFieldErrors((fe) => ({ ...fe, courseTitle: undefined }));
                 }}
-                className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 ${fieldErrors.category ? 'border-red-400 focus:ring-red-300' : 'border-slate-200 focus:ring-primary/40'}`}
-              >
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>{cat.name}</option>
-                ))}
-                <option value="__new__">➕ Create new category</option>
-              </select>
-            ) : (
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={newCategoryName}
+                placeholder="Enter course title"
+                className={`mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 ${fieldErrors.courseTitle ? 'border-red-400 focus:ring-red-300' : 'border-slate-200 focus:ring-primary/40'}`}
+              />
+              {fieldErrors.courseTitle && (
+                <p className="mt-1 text-xs text-red-600">{fieldErrors.courseTitle}</p>
+              )}
+            </label>
+            <div className="block">
+              <span className="text-sm font-medium text-slate-700">Category *</span>
+              {!isNewCategory ? (
+                <select
+                  value={categoryId}
                   onChange={(e) => {
-                    setNewCategoryName(e.target.value);
-                    if (e.target.value.trim()) setFieldErrors((fe) => ({ ...fe, category: undefined }));
+                    setFieldErrors((fe) => ({ ...fe, category: undefined }));
+                    if (e.target.value === '__new__') {
+                      setIsNewCategory(true);
+                    } else {
+                      setCategoryId(e.target.value);
+                    }
                   }}
-                  placeholder="Enter new category name"
-                  className={`flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 ${fieldErrors.category ? 'border-red-400 focus:ring-red-300' : 'border-slate-200 focus:ring-primary/40'}`}
-                />
-                <button
-                  onClick={() => {
-                    setIsNewCategory(false);
-                    setNewCategoryName('');
-                  }}
-                  className="px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200"
+                  className={`mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 ${fieldErrors.category ? 'border-red-400 focus:ring-red-300' : 'border-slate-200 focus:ring-primary/40'}`}
                 >
-                  Cancel
-                </button>
-              </div>
-            )}
-            {fieldErrors.category && (
-              <p className="text-xs text-red-600">{fieldErrors.category}</p>
-            )}
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                  <option value="__new__">➕ Create new category</option>
+                </select>
+              ) : (
+                <div className="mt-1 flex gap-2">
+                  <input
+                    type="text"
+                    value={newCategoryName}
+                    onChange={(e) => {
+                      setNewCategoryName(e.target.value);
+                      if (e.target.value.trim()) setFieldErrors((fe) => ({ ...fe, category: undefined }));
+                    }}
+                    placeholder="Enter new category name"
+                    className={`flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 ${fieldErrors.category ? 'border-red-400 focus:ring-red-300' : 'border-slate-200 focus:ring-primary/40'}`}
+                  />
+                  <button
+                    onClick={() => {
+                      setIsNewCategory(false);
+                      setNewCategoryName('');
+                    }}
+                    className="px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+              {fieldErrors.category && (
+                <p className="mt-1 text-xs text-red-600">{fieldErrors.category}</p>
+              )}
+            </div>
+
+            {/* Row 2: Difficulty Level | Language Tone */}
+            <label className="block">
+              <span className="text-sm font-medium text-slate-700">Difficulty Level</span>
+              <select
+                value={difficulty}
+                onChange={(e) => setDifficulty(e.target.value)}
+                className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/40"
+              >
+                <option value="beginner">Beginner</option>
+                <option value="intermediate">Intermediate</option>
+                <option value="advanced">Advanced</option>
+              </select>
+            </label>
+            <label className="block">
+              <span className="text-sm font-medium text-slate-700">Language Tone</span>
+              <select
+                value={tone}
+                onChange={(e) => setTone(e.target.value)}
+                className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/40"
+              >
+                {TONES.map((t) => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </select>
+            </label>
+
+            {/* Row 3: Course Modules | Lessons per Module */}
+            <label className="block">
+              <span className="text-sm font-medium text-slate-700">Course Modules</span>
+              <input
+                type="number"
+                min={1}
+                max={12}
+                value={moduleCount}
+                onChange={(e) => setModuleCount(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
+              />
+            </label>
+            <label className="block">
+              <span className="text-sm font-medium text-slate-700">Lessons per Module</span>
+              <input
+                type="number"
+                min={1}
+                max={8}
+                value={lessonsPerModule}
+                onChange={(e) => setLessonsPerModule(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
+              />
+            </label>
           </div>
 
-          {/* Document Upload */}
+          {/* Special Instructions */}
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">Special Instructions</span>
+            <textarea
+              value={instructions}
+              onChange={(e) => setInstructions(e.target.value)}
+              rows={3}
+              placeholder="e.g. focus on practical examples, target age 14-18, include Indian context"
+              className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
+            />
+          </label>
+
+          {/* Source Documents */}
           <div className="space-y-2">
             <label className="text-sm font-medium text-slate-700">Source Documents *</label>
             <div
@@ -662,71 +745,6 @@ export const CourseCreatorTab = ({ token, onPublishSuccess }) => {
               <p className="text-xs text-red-600">{fieldErrors.files}</p>
             )}
           </div>
-
-          {/* Course Configuration */}
-          <div className="grid sm:grid-cols-2 gap-4">
-            <label className="block">
-              <span className="text-sm font-medium text-slate-700">Course title *</span>
-              <input
-                required
-                value={courseTitleHint}
-                onChange={(e) => {
-                  setCourseTitleHint(e.target.value);
-                  if (e.target.value.trim()) setFieldErrors((fe) => ({ ...fe, courseTitle: undefined }));
-                }}
-                placeholder="Enter course title"
-                className={`mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 ${fieldErrors.courseTitle ? 'border-red-400 focus:ring-red-300' : 'border-slate-200 focus:ring-primary/40'}`}
-              />
-              {fieldErrors.courseTitle && (
-                <p className="mt-1 text-xs text-red-600">{fieldErrors.courseTitle}</p>
-              )}
-            </label>
-            <label className="block">
-              <span className="text-sm font-medium text-slate-700">Tone</span>
-              <select
-                value={tone}
-                onChange={(e) => setTone(e.target.value)}
-                className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/40"
-              >
-                {TONES.map((t) => (
-                  <option key={t.value} value={t.value}>{t.label}</option>
-                ))}
-              </select>
-            </label>
-            <label className="block">
-              <span className="text-sm font-medium text-slate-700">Modules</span>
-              <input
-                type="number"
-                min={1}
-                max={12}
-                value={moduleCount}
-                onChange={(e) => setModuleCount(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
-              />
-            </label>
-            <label className="block">
-              <span className="text-sm font-medium text-slate-700">Lessons per module</span>
-              <input
-                type="number"
-                min={1}
-                max={8}
-                value={lessonsPerModule}
-                onChange={(e) => setLessonsPerModule(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
-              />
-            </label>
-          </div>
-
-          <label className="block">
-            <span className="text-sm font-medium text-slate-700">Special instructions</span>
-            <textarea
-              value={instructions}
-              onChange={(e) => setInstructions(e.target.value)}
-              rows={3}
-              placeholder="e.g. focus on practical examples, target age 14-18, include Indian context"
-              className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
-            />
-          </label>
 
           <div className="flex items-center justify-end gap-3 pt-2">
             {parsingFiles.size > 0 && (

@@ -40,6 +40,7 @@ class BlueprintRequest(BaseModel):
     tone: str = "professional"
     module_count: int = 6
     lessons_per_module: int = 3
+    difficulty: Optional[str] = None
     course_title_hint: Optional[str] = None
     instructions: Optional[str] = None
 
@@ -107,6 +108,7 @@ async def create_blueprint(
             tone=payload.tone,
             module_count=payload.module_count,
             lessons_per_module=payload.lessons_per_module,
+            difficulty=payload.difficulty,
             course_title_hint=payload.course_title_hint,
             instructions=payload.instructions,
         )
