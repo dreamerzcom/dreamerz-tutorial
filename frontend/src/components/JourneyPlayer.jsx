@@ -529,30 +529,45 @@ export const JourneyPlayer = ({
                     </div>
 
                     {/* Content Section Tabs */}
-                    <div className="border-b border-slate-100">
-                      <div className="flex gap-1 p-2">
-                        {contentSections.map((section) => (
-                          <button
-                            key={section.id}
-                            onClick={() => setContentSection(section.id)}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-sm transition-all ${
-                              contentSection === section.id
-                                ? `bg-${section.color === 'primary' ? 'primary' : section.color + '-500'} text-white shadow-lg`
-                                : 'text-slate-600 hover:bg-slate-100'
-                            }`}
-                            style={contentSection === section.id ? {
-                              backgroundColor: section.color === 'primary' ? '#6366f1' :
-                                section.color === 'amber' ? '#f59e0b' :
-                                section.color === 'violet' ? '#8b5cf6' :
-                                section.color === 'rose' ? '#f43f5e' :
-                                section.color === 'sky' ? '#0ea5e9' : '#10b981'
-                            } : {}}
-                            data-testid={`content-tab-${section.id}`}
-                          >
-                            <section.icon className="w-4 h-4" />
-                            {section.label}
-                          </button>
-                        ))}
+                    <div className="border-b border-slate-100 bg-slate-50/60">
+                      <div className="flex gap-1 p-2 flex-wrap">
+                        {contentSections.map((section) => {
+                          const isActive = contentSection === section.id;
+                          // Soft tinted palette per section — subdued look, not popping.
+                          const palette = {
+                            primary: { bg: '#eef2ff', fg: '#4f46e5', ring: '#c7d2fe' },
+                            amber: { bg: '#fef3c7', fg: '#b45309', ring: '#fcd34d' },
+                            emerald: { bg: '#ecfdf5', fg: '#047857', ring: '#a7f3d0' },
+                            violet: { bg: '#f5f3ff', fg: '#6d28d9', ring: '#ddd6fe' },
+                            rose: { bg: '#fff1f2', fg: '#be123c', ring: '#fecdd3' },
+                            sky: { bg: '#f0f9ff', fg: '#0369a1', ring: '#bae6fd' },
+                          };
+                          const tone = palette[section.color] || palette.primary;
+                          return (
+                            <button
+                              key={section.id}
+                              onClick={() => setContentSection(section.id)}
+                              className={`flex items-center gap-2 px-3.5 py-2 rounded-lg font-medium text-sm transition-all border ${
+                                isActive
+                                  ? 'shadow-sm'
+                                  : 'border-transparent text-slate-600 hover:bg-white hover:text-slate-800'
+                              }`}
+                              style={
+                                isActive
+                                  ? {
+                                      backgroundColor: tone.bg,
+                                      color: tone.fg,
+                                      borderColor: tone.ring,
+                                    }
+                                  : {}
+                              }
+                              data-testid={`content-tab-${section.id}`}
+                            >
+                              <section.icon className="w-4 h-4" />
+                              {section.label}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
 
