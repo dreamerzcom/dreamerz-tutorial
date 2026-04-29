@@ -258,6 +258,11 @@ export const JourneyPlayer = ({
     : (activeModule.quiz?.questions || []);
   const hasQuiz = quizQuestions.length > 0;
   const hasMedia = (activeModule.media_assets || []).length > 0;
+  const quizPassingScore = (() => {
+    const raw = activeModule.quiz?.passing_score;
+    const n = Number(raw);
+    return Number.isFinite(n) && n > 0 && n <= 100 ? Math.round(n) : 70;
+  })();
 
   const contentSections = [
     { id: 'learn', label: 'Learn', icon: BookOpen, color: 'primary' },
@@ -750,7 +755,7 @@ export const JourneyPlayer = ({
                               </div>
                               <div>
                                 <h3 className="font-bold text-slate-900 text-lg">Quiz</h3>
-                                <p className="text-sm text-slate-500">Pass with 70% to unlock the next module</p>
+                                <p className="text-sm text-slate-500">Pass with {quizPassingScore}% to unlock the next module</p>
                               </div>
                             </div>
                             {hasQuiz ? (
@@ -760,6 +765,7 @@ export const JourneyPlayer = ({
                                 onComplete={handleQuizComplete}
                                 previousAttempts={moduleProgress?.attempts || 0}
                                 bestScore={moduleProgress?.quizScore || 0}
+                                passingScore={quizPassingScore}
                               />
                             ) : (
                               <div className="text-center text-slate-500 py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
@@ -867,6 +873,7 @@ export const JourneyPlayer = ({
                         onComplete={handleQuizComplete}
                         previousAttempts={moduleProgress?.attempts || 0}
                         bestScore={moduleProgress?.quizScore || 0}
+                        passingScore={quizPassingScore}
                       />
                     </div>
 

@@ -7,7 +7,7 @@ import {
 import { Button } from './ui/button';
 import confetti from '../utils/confetti';
 
-export const Quiz = ({ questions, onComplete, moduleName, previousAttempts = 0, bestScore = 0 }) => {
+export const Quiz = ({ questions, onComplete, moduleName, previousAttempts = 0, bestScore = 0, passingScore: passingScoreProp }) => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [selectedAnswers, setSelectedAnswers] = useState([]); // for multi-select
@@ -19,7 +19,12 @@ export const Quiz = ({ questions, onComplete, moduleName, previousAttempts = 0, 
   const [answers, setAnswers] = useState([]);
   const [attemptCount, setAttemptCount] = useState(previousAttempts);
 
-  const passingScore = 70; // 70% to pass
+  // Allow the lesson creator to override the pass threshold (1–100). Default 70.
+  const passingScore = (() => {
+    const n = Number(passingScoreProp);
+    if (Number.isFinite(n) && n > 0 && n <= 100) return Math.round(n);
+    return 70;
+  })();
   const passingQuestions = Math.ceil(questions.length * (passingScore / 100));
 
   // Get current question data

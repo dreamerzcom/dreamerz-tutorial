@@ -236,6 +236,29 @@ async def get_published_course(
     ).to_list(500)
     assess_map = {a["lesson_id"]: a for a in assessments}
 
+    # Batch-load media assets attached to any lesson in this course.
+    # Exclude assets uploaded for non-study purposes (e.g. quiz question images),
+    # so the learner-side Study Materials tab only surfaces files the creator
+    # explicitly attached via the lesson's Media tab.
+    media_map: dict[str, list[dict]] = {}
+    if lesson_ids:
+        lesson_id_set = set(lesson_ids)
+        excluded_tags = {"quiz-question"}
+        all_assets = await db.media_assets.find(
+            {
+                "used_in_lessons": {"$in": lesson_ids},
+                "tags": {"$nin": list(excluded_tags)},
+            },
+            {"_id": 0},
+        ).to_list(2000)
+        for asset in all_assets:
+            # Defensive double-check in case the Mongo filter is bypassed
+            if any(t in excluded_tags for t in (asset.get("tags") or [])):
+                continue
+            for lid in asset.get("used_in_lessons", []):
+                if lid in lesson_id_set:
+                    media_map.setdefault(lid, []).append(asset)
+
     # Assemble: convert LMS structure → nested sections→lessons tree for the player
     sections_map = {s["id"]: s for s in sections}
     lessons_by_section = {s["id"]: [] for s in sections}
@@ -263,7 +286,7 @@ async def get_published_course(
                 "activity": lc.get("activity", ""),
             },
             "quiz": quiz if quiz else {},
-            "media_assets": [],
+            "media_assets": media_map.get(lid, []),
         }
 
         if section_id and section_id in lessons_by_section:
