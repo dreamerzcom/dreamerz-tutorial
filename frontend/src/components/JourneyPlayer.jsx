@@ -5,7 +5,7 @@ import {
   BookOpen, Lightbulb, Rocket, Play, Award,
   Clock, Sparkles, ArrowLeft, Home, Volume2,
   Languages, Mic, MessageCircle, Trophy, AlertTriangle, Calendar,
-  FileText, Download, File
+  FileText, Download, File, Paperclip, HelpCircle
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Quiz } from './Quiz';
@@ -19,7 +19,7 @@ import { MarkdownContent } from './MarkdownContent';
 const API_BASE = (process.env.REACT_APP_BACKEND_URL || '').replace(/\/+$/, '');
 
 // ── Inline Media Attachments Component ─────────────────
-const MediaAttachments = ({ assets }) => {
+const MediaAttachments = ({ assets, variant = 'inline' }) => {
   if (!assets || assets.length === 0) return null;
 
   const images = assets.filter((a) => a.type === 'image');
@@ -31,11 +31,13 @@ const MediaAttachments = ({ assets }) => {
   const mediaUrl = (id) => `${API_BASE}/api/content/media/${id}`;
 
   return (
-    <div className="mt-6 pt-6 border-t border-slate-100">
-      <h4 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
-        <FileText className="w-4 h-4 text-slate-500" />
-        Lesson Materials
-      </h4>
+    <div className={variant === 'inline' ? 'mt-6 pt-6 border-t border-slate-100' : ''}>
+      {variant === 'inline' && (
+        <h4 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
+          <FileText className="w-4 h-4 text-slate-500" />
+          Lesson Materials
+        </h4>
+      )}
 
       {/* Inline Images */}
       {images.length > 0 && (
@@ -251,12 +253,20 @@ export const JourneyPlayer = ({
   const moduleDay = activeModule?.day;
   const moduleWeek = activeModule?.week;
 
+  const quizQuestions = Array.isArray(activeModule.quiz)
+    ? activeModule.quiz
+    : (activeModule.quiz?.questions || []);
+  const hasQuiz = quizQuestions.length > 0;
+  const hasMedia = (activeModule.media_assets || []).length > 0;
+
   const contentSections = [
     { id: 'learn', label: 'Learn', icon: BookOpen, color: 'primary' },
     { id: 'example', label: 'Example', icon: Lightbulb, color: 'amber' },
     { id: 'activity', label: 'Try It', icon: Rocket, color: 'emerald' },
     ...(hasVocab ? [{ id: 'vocab', label: 'Vocab', icon: Languages, color: 'violet' }] : []),
-    ...(hasSpeak ? [{ id: 'speak', label: 'Speak', icon: Mic, color: 'rose' }] : [])
+    ...(hasSpeak ? [{ id: 'speak', label: 'Speak', icon: Mic, color: 'rose' }] : []),
+    { id: 'study', label: 'Study Materials', icon: Paperclip, color: 'sky' },
+    { id: 'quiz', label: 'Quiz', icon: HelpCircle, color: 'violet' },
   ];
 
   return (
@@ -472,7 +482,8 @@ export const JourneyPlayer = ({
                               backgroundColor: section.color === 'primary' ? '#6366f1' :
                                 section.color === 'amber' ? '#f59e0b' :
                                 section.color === 'violet' ? '#8b5cf6' :
-                                section.color === 'rose' ? '#f43f5e' : '#10b981'
+                                section.color === 'rose' ? '#f43f5e' :
+                                section.color === 'sky' ? '#0ea5e9' : '#10b981'
                             } : {}}
                             data-testid={`content-tab-${section.id}`}
                           >
@@ -699,10 +710,66 @@ export const JourneyPlayer = ({
                             )}
                           </motion.div>
                         )}
-                      </AnimatePresence>
+                        {contentSection === 'study' && (
+                          <motion.div
+                            key="study"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                          >
+                            <div className="flex items-center gap-3 mb-6">
+                              <div className="w-12 h-12 bg-sky-100 rounded-2xl flex items-center justify-center">
+                                <Paperclip className="w-6 h-6 text-sky-600" />
+                              </div>
+                              <div>
+                                <h3 className="font-bold text-slate-900 text-lg">Study Materials</h3>
+                                <p className="text-sm text-slate-500">Reference docs, slides and images attached to this lesson</p>
+                              </div>
+                            </div>
+                            {hasMedia ? (
+                              <MediaAttachments assets={activeModule.media_assets} variant="standalone" />
+                            ) : (
+                              <div className="text-center text-slate-500 py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                                <Paperclip className="w-8 h-8 mx-auto mb-2 text-slate-400" />
+                                <p className="text-sm font-medium">No study materials attached to this lesson yet.</p>
+                              </div>
+                            )}
+                          </motion.div>
+                        )}
 
-                      {/* Inline Media Attachments */}
-                      <MediaAttachments assets={activeModule.media_assets} />
+                        {contentSection === 'quiz' && (
+                          <motion.div
+                            key="quiz"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                          >
+                            <div className="flex items-center gap-3 mb-6">
+                              <div className="w-12 h-12 bg-violet-100 rounded-2xl flex items-center justify-center">
+                                <HelpCircle className="w-6 h-6 text-violet-600" />
+                              </div>
+                              <div>
+                                <h3 className="font-bold text-slate-900 text-lg">Quiz</h3>
+                                <p className="text-sm text-slate-500">Pass with 70% to unlock the next module</p>
+                              </div>
+                            </div>
+                            {hasQuiz ? (
+                              <Quiz
+                                questions={quizQuestions}
+                                moduleName={activeModule.title}
+                                onComplete={handleQuizComplete}
+                                previousAttempts={moduleProgress?.attempts || 0}
+                                bestScore={moduleProgress?.quizScore || 0}
+                              />
+                            ) : (
+                              <div className="text-center text-slate-500 py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                                <HelpCircle className="w-8 h-8 mx-auto mb-2 text-slate-400" />
+                                <p className="text-sm font-medium">No quiz available for this lesson.</p>
+                              </div>
+                            )}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
 
                     {/* Footer Actions */}
@@ -753,7 +820,10 @@ export const JourneyPlayer = ({
                             </Button>
                           ) : (
                             <Button
-                              onClick={() => setShowQuiz(true)}
+                              onClick={() => {
+                                setContentSection('quiz');
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                              }}
                               className="bg-gradient-to-r from-primary to-violet-600 hover:from-primary/90 hover:to-violet-600/90 text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-primary/30"
                               data-testid="journey-quiz-btn"
                             >
