@@ -105,6 +105,7 @@ const MediaAttachments = ({ assets, variant = 'inline' }) => {
 
 export const JourneyPlayer = ({
   tool,
+  course: courseProp,
   modules,
   isModuleCompleted,
   isModuleUnlocked,
@@ -114,6 +115,25 @@ export const JourneyPlayer = ({
   previewVideoUrl,
   previewMode = false,
 }) => {
+  const course = courseProp || tool;
+
+  // Group lessons by their module (sectionTitle or week)
+  const moduleGroups = useMemo(() => {
+    const groups = [];
+    let currentGroup = null;
+
+    modules.forEach((mod, index) => {
+      const groupKey = mod.sectionTitle || (mod.week ? `Week ${mod.week}` : null);
+
+      if (groupKey && groupKey !== currentGroup?.title) {
+        currentGroup = { title: groupKey, startIndex: index };
+        groups.push(currentGroup);
+      }
+    });
+
+    return groups;
+  }, [modules]);
+
   const [activeModuleIndex, setActiveModuleIndex] = useState(0);
   const [showQuiz, setShowQuiz] = useState(false);
   const [showRoleplay, setShowRoleplay] = useState(false);
@@ -169,7 +189,7 @@ export const JourneyPlayer = ({
   useEffect(() => {
     if (initialModuleId) {
       const index = modules.findIndex(m => m.id === initialModuleId);
-      if (index >= 0 && isModuleUnlocked(tool.id, initialModuleId)) {
+      if (index >= 0 && isModuleUnlocked(course.id, initialModuleId)) {
         setActiveModuleIndex(index);
         return;
       }
@@ -177,30 +197,30 @@ export const JourneyPlayer = ({
     
     // Find first incomplete unlocked module (resume functionality)
     const resumeIndex = modules.findIndex((m, i) => {
-      if (i === 0) return !isModuleCompleted(tool.id, m.id);
+      if (i === 0) return !isModuleCompleted(course.id, m.id);
       const prevModule = modules[i - 1];
-      return isModuleCompleted(tool.id, prevModule.id) && !isModuleCompleted(tool.id, m.id);
+      return isModuleCompleted(course.id, prevModule.id) && !isModuleCompleted(course.id, m.id);
     });
     
     if (resumeIndex >= 0) {
       setActiveModuleIndex(resumeIndex);
     }
-  }, [initialModuleId, modules, tool.id, isModuleCompleted, isModuleUnlocked]);
+  }, [initialModuleId, modules, course.id, isModuleCompleted, isModuleUnlocked]);
 
-  const moduleProgress = getModuleProgress(tool.id, activeModule?.id);
-  const isCurrentModuleCompleted = isModuleCompleted(tool.id, activeModule?.id);
+  const moduleProgress = getModuleProgress(course.id, activeModule?.id);
+  const isCurrentModuleCompleted = isModuleCompleted(course.id, activeModule?.id);
   const completedCount = useMemo(
-    () => modules.filter(m => isModuleCompleted(tool.id, m.id)).length,
-    [modules, tool.id, isModuleCompleted]
+    () => modules.filter(m => isModuleCompleted(course.id, m.id)).length,
+    [modules, course.id, isModuleCompleted]
   );
   const progressPercent = Math.round((completedCount / modules.length) * 100);
 
   // Handle quiz completion
   const handleQuizComplete = useCallback((score, passed, attempts) => {
     if (passed) {
-      completeModule(tool.id, activeModule.id, score);
+      completeModule(course.id, activeModule.id, score);
     }
-  }, [tool.id, activeModule?.id, completeModule]);
+  }, [course.id, activeModule?.id, completeModule]);
 
   // Navigate to next module
   const goToNextModule = useCallback(() => {
@@ -226,12 +246,12 @@ export const JourneyPlayer = ({
   // Select specific module
   const selectModule = useCallback((index) => {
     const module = modules[index];
-    if (isModuleUnlocked(tool.id, module.id)) {
+    if (isModuleUnlocked(course.id, module.id)) {
       setActiveModuleIndex(index);
       setShowQuiz(false);
       setContentSection('learn');
     }
-  }, [modules, tool.id, isModuleUnlocked]);
+  }, [modules, course.id, isModuleUnlocked]);
 
   if (!activeModule) return null;
 
@@ -319,12 +339,12 @@ export const JourneyPlayer = ({
               <div className="flex items-center gap-3">
                 <div 
                   className="w-10 h-10 rounded-xl flex items-center justify-center text-xl"
-                  style={{ backgroundColor: `${tool.color}20` }}
+                  style={{ backgroundColor: `${course.color}20` }}
                 >
-                  {tool.icon}
+                  {course.icon}
                 </div>
                 <div className="hidden sm:block">
-                  <h2 className="font-semibold text-slate-900 text-sm">{tool.name}</h2>
+                  <h2 className="font-semibold text-slate-900 text-sm">{course.name}</h2>
                   <p className="text-xs text-slate-500">{completedCount}/{modules.length} modules</p>
                 </div>
               </div>
@@ -342,7 +362,7 @@ export const JourneyPlayer = ({
             {!previewMode && (
               <div className="flex items-center gap-2 bg-gradient-to-r from-amber-50 to-orange-50 px-4 py-2 rounded-xl border border-amber-200">
                 <Award className="w-4 h-4 text-amber-600" />
-                <span className="font-bold text-amber-700">{tool.xpReward} XP</span>
+                <span className="font-bold text-amber-700">{course.xpReward} XP</span>
               </div>
             )}
           </div>
@@ -367,7 +387,7 @@ export const JourneyPlayer = ({
                     const collapsed = collapsedSections.has(group.title);
                     const total = group.items.length;
                     const doneCount = group.items.filter(({ module }) =>
-                      isModuleCompleted(tool.id, module.id),
+                      isModuleCompleted(course.id, module.id),
                     ).length;
                     const containsActive = group.items.some(({ index }) => index === activeModuleIndex);
 
@@ -397,10 +417,10 @@ export const JourneyPlayer = ({
                         {!collapsed && (
                           <div className={hasMultipleSections ? 'pl-3 ml-2 border-l border-slate-100 mt-1' : ''}>
                             {group.items.map(({ module, index }) => {
-                              const completed = isModuleCompleted(tool.id, module.id);
-                              const unlocked = isModuleUnlocked(tool.id, module.id);
+                              const completed = isModuleCompleted(course.id, module.id);
+                              const unlocked = isModuleUnlocked(course.id, module.id);
                               const isActive = index === activeModuleIndex;
-                              const progress = getModuleProgress(tool.id, module.id);
+                              const progress = getModuleProgress(course.id, module.id);
 
                               return (
                                 <motion.button
@@ -470,7 +490,7 @@ export const JourneyPlayer = ({
             {previewVideoUrl && (
               <CoursePreviewVideo
                 videoUrl={previewVideoUrl}
-                title={`${tool.name} — Course Overview`}
+                title={`${course.name} — Course Overview`}
               />
             )}
 
@@ -959,9 +979,8 @@ export const JourneyPlayer = ({
                           </div>
                           {activeModuleIndex < modules.length - 1 && (
                             <Button
-                              onClick={goToNextModule}
-                              className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                              data-testid="quiz-next-module-btn"
+                              onClick={() => selectModule(activeModuleIndex + 1)}
+                              className="bg-emerald-600 text-white hover:bg-emerald-700"
                             >
                               Continue to Next Module
                               <ChevronRight className="w-4 h-4 ml-1" />
@@ -980,7 +999,7 @@ export const JourneyPlayer = ({
       {/* Roleplay Chat Panel */}
       {showRoleplay && (
         <RoleplayChat
-          toolId={tool.id}
+          toolId={course.id}
           moduleId={activeModule.id}
           moduleName={activeModule.title}
           speakingTask={activeModule.content?.speaking_task || ''}

@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { JourneyPlayer } from '../../components/JourneyPlayer';
 import { draftToLearnerTool } from './previewAdapter';
+import { formatErrorDetail } from '../../lib/utils';
 
 // Max lessons generated concurrently to avoid API rate limits
 const LESSON_CONCURRENCY = 4;
@@ -30,7 +31,7 @@ const adminJson = async (path, token, options = {}) => {
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || `Request failed (${res.status})`);
+    throw new Error(formatErrorDetail(err.detail) || `Request failed (${res.status})`);
   }
   return res.json();
 };
@@ -43,7 +44,7 @@ const adminUpload = async (path, token, formData) => {
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || `Upload failed (${res.status})`);
+    throw new Error(formatErrorDetail(err.detail) || `Upload failed (${res.status})`);
   }
   return res.json();
 };

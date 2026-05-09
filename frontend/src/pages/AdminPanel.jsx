@@ -10,6 +10,7 @@ import {
 import { useAuth } from '../hooks/useAuth';
 import { LANGUAGES } from '../hooks/useLanguage';
 import { ContentManager } from './admin/ContentManager';
+import { formatErrorDetail } from '../lib/utils';
 
 const API_BASE = (process.env.REACT_APP_BACKEND_URL || '').replace(/\/+$/, '');
 
@@ -31,7 +32,7 @@ const adminFetch = async (path, token, options = {}) => {
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || `Request failed (${res.status})`);
+    throw new Error(formatErrorDetail(err.detail) || `Request failed (${res.status})`);
   }
   return res.json();
 };
@@ -44,7 +45,7 @@ const adminUpload = async (path, token, formData) => {
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || `Upload failed (${res.status})`);
+    throw new Error(formatErrorDetail(err.detail) || `Upload failed (${res.status})`);
   }
   return res.json();
 };
