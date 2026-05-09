@@ -30,6 +30,8 @@ services:
         generateValue: true  # Render auto-generates a secure random value
       - key: CORS_ORIGINS
         sync: false  # Set after frontend deploys (e.g. https://dreamerz-frontend.onrender.com)
+      - key: ADMIN_EMAILS
+        sync: false  # Comma-separated emails granted admin access
       - key: PYTHON_VERSION
         value: "3.11.6"
 
