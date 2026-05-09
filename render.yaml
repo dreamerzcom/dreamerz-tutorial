@@ -34,7 +34,8 @@ services:
         value: "3.11.6"
 
   # ── Frontend (React static) ── Free tier ──
-  - type: static
+  - type: web
+    runtime: static
     name: dreamerz-frontend
     region: oregon
     plan: free
