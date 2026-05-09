@@ -97,6 +97,23 @@ export const LearningProgressProvider = ({ children }) => {
     }
   }, [loadCourseEnrollments]);
 
+  // Delete a course enrollment
+  const deleteCourse = useCallback(async (courseId) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await progressService.deleteCourseEnrollment(courseId);
+      setCurrentCourseEnrollment(null);
+      await loadCourseEnrollments();
+    } catch (err) {
+      setError(err.message);
+      console.error('Failed to delete course enrollment:', err);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [loadCourseEnrollments]);
+
   // Start a lesson
   const startLesson = useCallback(async (lessonId, courseId, moduleId) => {
     setIsLoading(true);
@@ -250,6 +267,7 @@ export const LearningProgressProvider = ({ children }) => {
         startCourse,
         updateCourseProgress,
         completeCourse,
+        deleteCourse,
         startLesson,
         loadLessonProgress,
         updateLessonProgress,

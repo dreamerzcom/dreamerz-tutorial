@@ -113,13 +113,14 @@ const CourseCatalogCard = ({ course, index, isEnrolled, isEnrolling, onEnroll })
 
 export const LearnHub = () => {
   const { tools: apiTools, isLoading, error } = useCurriculum();
-  const { courseEnrollments, loadCourseEnrollments, startCourse } = useLearningProgress();
+  const { courseEnrollments, loadCourseEnrollments, startCourse, deleteCourse } = useLearningProgress();
   const {
     progress,
     getToolCompletion,
     getOverallCompletion,
     totalXP,
-    getStreakInfo
+    getStreakInfo,
+    resetProgress
   } = useProgress();
   const [viewMode, setViewMode] = useState('catalog'); // 'catalog' or 'progress'
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -201,6 +202,35 @@ export const LearnHub = () => {
       setEnrollError(err.message || 'Failed to enroll in course');
     } finally {
       setEnrollingCourseId(null);
+    }
+  };
+
+  const handleUnenroll = async (course) => {
+    const courseDbId = getCourseDbId(course);
+    if (!courseDbId) {
+      setEnrollError('Course cannot be unenrolled because its numeric ID is missing.');
+      return;
+    }
+
+    if (!window.confirm(`Are you sure you want to unenroll from "${course.name}"? This will delete all your progress for this course.`)) {
+      return;
+    }
+
+    setEnrollError(null);
+    try {
+      await deleteCourse(courseDbId);
+      // Clear progress for this specific course
+      const courseId = course.id;
+      setProgress(prev => ({
+        ...prev,
+        completedModules: {
+          ...prev.completedModules,
+          [courseId]: {}
+        }
+      }));
+      await loadCourseEnrollments();
+    } catch (err) {
+      setEnrollError(err.message || 'Failed to unenroll from course');
     }
   };
 
@@ -326,10 +356,11 @@ export const LearnHub = () => {
                 progress={progress}
                 getToolCompletion={getToolCompletion}
                 getOverallCompletion={getOverallCompletion}
-                resetProgress={() => {}}
+                resetProgress={resetProgress}
                 totalXP={totalXP}
                 streakInfo={streakInfo}
                 apiTools={enrolledTools}
+                onUnenroll={handleUnenroll}
               />
             </motion.div>
           ) : !selectedCategory ? (

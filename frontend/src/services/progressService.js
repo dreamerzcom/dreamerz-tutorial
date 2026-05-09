@@ -81,6 +81,18 @@ export const completeCourseEnrollment = async (courseId) => {
   return response.json();
 };
 
+export const deleteCourseEnrollment = async (courseId) => {
+  const response = await fetch(`${API_BASE}/api/progress/courses/${courseId}/enrollment`, {
+    method: 'DELETE',
+    headers: getAuthHeaders()
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Failed to delete course enrollment');
+  }
+  return response.json();
+};
+
 // ---------------------------------------------------------------------------
 // Lesson Progress
 // ---------------------------------------------------------------------------

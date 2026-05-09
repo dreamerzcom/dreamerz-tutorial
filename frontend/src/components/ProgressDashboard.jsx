@@ -15,7 +15,8 @@ export const ProgressDashboard = ({
   resetProgress,
   totalXP,
   streakInfo,
-  apiTools = []
+  apiTools = [],
+  onUnenroll = null
 }) => {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
@@ -136,65 +137,83 @@ export const ProgressDashboard = ({
                 transition={{ delay: index * 0.05 }}
                 className="p-4 hover:bg-slate-50 transition-colors"
               >
-                <Link to={`/learn/${tool.id}`} className="block" data-testid={`progress-tool-${tool.id}`}>
-                  <div className="flex items-center gap-4">
-                    {/* Tool Icon */}
-                    <div
-                      className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
-                      style={{ backgroundColor: `${tool.color}15` }}
-                    >
-                      {tool.icon}
-                    </div>
-
-                    {/* Tool Info */}
-                    <div className="flex-grow min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h4 className="font-semibold text-slate-900">{tool.name}</h4>
-                        {tool._source === 'api' && (
-                          <span className="bg-rose-100 text-rose-600 text-xs font-semibold px-2 py-0.5 rounded-full flex items-center gap-1">
-                            <Mic className="w-3 h-3" /> English
-                          </span>
-                        )}
-                        {completion === 100 && (
-                          <span className="bg-emerald-100 text-emerald-700 text-xs font-semibold px-2 py-0.5 rounded-full">
-                            Complete!
-                          </span>
-                        )}
+                <div className="flex items-center gap-4">
+                  <Link to={`/learn/${tool.id}`} className="block flex-grow" data-testid={`progress-tool-${tool.id}`}>
+                    <div className="flex items-center gap-4">
+                      {/* Tool Icon */}
+                      <div
+                        className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
+                        style={{ backgroundColor: `${tool.color}15` }}
+                      >
+                        {tool.icon}
                       </div>
 
-                      <div className="flex items-center gap-4 text-xs text-slate-500">
-                        <span>{completedCount}/{moduleCount} modules</span>
-                        {completedCount > 0 && (
-                          <>
-                            <span>•</span>
-                            <span>Avg: {avgScore}%</span>
-                            <span>•</span>
-                            <span>{totalAttempts} attempts</span>
-                          </>
-                        )}
-                      </div>
-
-                      {/* Progress Bar */}
-                      <div className="mt-2 flex items-center gap-3">
-                        <div className="flex-grow">
-                          <Progress
-                            value={completion}
-                            className="h-2"
-                            style={{
-                              '--progress-background': tool.color
-                            }}
-                          />
+                      {/* Tool Info */}
+                      <div className="flex-grow min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className="font-semibold text-slate-900">{tool.name}</h4>
+                          {tool._source === 'api' && (
+                            <span className="bg-rose-100 text-rose-600 text-xs font-semibold px-2 py-0.5 rounded-full flex items-center gap-1">
+                              <Mic className="w-3 h-3" /> English
+                            </span>
+                          )}
+                          {completion === 100 && (
+                            <span className="bg-emerald-100 text-emerald-700 text-xs font-semibold px-2 py-0.5 rounded-full">
+                              Complete!
+                            </span>
+                          )}
                         </div>
-                        <span className="text-sm font-bold text-slate-700 w-12 text-right">
-                          {completion}%
-                        </span>
-                      </div>
-                    </div>
 
-                    {/* Arrow */}
-                    <ChevronRight className="w-5 h-5 text-slate-300 flex-shrink-0" />
-                  </div>
-                </Link>
+                        <div className="flex items-center gap-4 text-xs text-slate-500">
+                          <span>{completedCount}/{moduleCount} modules</span>
+                          {completedCount > 0 && (
+                            <>
+                              <span>•</span>
+                              <span>Avg: {avgScore}%</span>
+                              <span>•</span>
+                              <span>{totalAttempts} attempts</span>
+                            </>
+                          )}
+                        </div>
+
+                        {/* Progress Bar */}
+                        <div className="mt-2 flex items-center gap-3">
+                          <div className="flex-grow">
+                            <Progress
+                              value={completion}
+                              className="h-2"
+                              style={{
+                                '--progress-background': tool.color
+                              }}
+                            />
+                          </div>
+                          <span className="text-sm font-bold text-slate-700 w-12 text-right">
+                            {completion}%
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Arrow */}
+                      <ChevronRight className="w-5 h-5 text-slate-300 flex-shrink-0" />
+                    </div>
+                  </Link>
+
+                  {/* Unenroll Button */}
+                  {onUnenroll && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onUnenroll(tool);
+                      }}
+                      className="flex-shrink-0 px-3 py-2 rounded-lg bg-rose-100 text-rose-700 hover:bg-rose-200 hover:text-rose-800 transition-colors text-sm font-semibold"
+                      title="Unenroll from course"
+                    >
+                      Unenroll
+                    </button>
+                  )}
+                </div>
               </motion.div>
             );
           })}

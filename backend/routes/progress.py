@@ -17,6 +17,7 @@ from services.progress_service import (
     update_course_enrollment,
     get_student_course_enrollments,
     complete_course_enrollment,
+    delete_course_enrollment,
     start_lesson_progress,
     update_lesson_progress,
     complete_lesson_progress,
@@ -167,6 +168,32 @@ async def complete_course(
         return enrollment
     except HTTPException:
         raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/courses/{course_id}/enrollment")
+async def delete_enrollment(
+    course_id: int,
+    current_user: dict = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+):
+    """Delete a course enrollment and all associated progress."""
+    try:
+        from sqlalchemy import select
+        from models.sql_models import User
+
+        result = await session.execute(
+            select(User.id).where(User.username == current_user["username"])
+        )
+        user_id = result.scalar()
+        if not user_id:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        result = await delete_course_enrollment(user_id, course_id, session)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

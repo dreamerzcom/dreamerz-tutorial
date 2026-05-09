@@ -207,7 +207,7 @@ async def complete_course_enrollment(
     student_user_id: int,
     course_id: int,
     session: AsyncSession = None,
-) -> Optional[dict]:
+) -> dict:
     """Mark a course enrollment as completed."""
     return await update_course_enrollment(
         student_user_id,
@@ -215,6 +215,55 @@ async def complete_course_enrollment(
         StudentCourseEnrollmentUpdate(status="completed"),
         session,
     )
+
+
+async def delete_course_enrollment(
+    student_user_id: int,
+    course_id: int,
+    session: AsyncSession = None,
+) -> dict:
+    """Delete a course enrollment and associated lesson progress."""
+    sess, close = await _get_session_if_needed(session)
+
+    try:
+        # Find the enrollment
+        result = await sess.execute(
+            select(StudentCourseEnrollment).where(
+                and_(
+                    StudentCourseEnrollment.student_user_id == student_user_id,
+                    StudentCourseEnrollment.course_id == course_id,
+                )
+            )
+        )
+        enrollment = result.scalars().first()
+
+        if not enrollment:
+            raise ValueError("Enrollment not found")
+
+        # Delete associated lesson progress by matching on student_user_id and course_id
+        from sqlalchemy import delete
+        await sess.execute(
+            delete(StudentLessonProgress).where(
+                and_(
+                    StudentLessonProgress.student_user_id == student_user_id,
+                    StudentLessonProgress.course_id == course_id,
+                )
+            )
+        )
+
+        # Delete the enrollment
+        await sess.delete(enrollment)
+        await sess.commit()
+
+        return {"message": "Enrollment deleted successfully"}
+
+    except Exception as e:
+        await sess.rollback()
+        logger.error("Error deleting course enrollment: %s", e, exc_info=True)
+        raise
+    finally:
+        if close:
+            await sess.close()
 
 
 # ---------------------------------------------------------------------------
