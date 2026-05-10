@@ -6,7 +6,7 @@ from collections import defaultdict
 from copy import deepcopy
 
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 from config import DATABASE_URL, CURRICULUM_JSON_PATH, SITE_CONFIG_JSON_PATH
 from models.sql_models import (
@@ -72,12 +72,26 @@ async def init_db(drop_first: bool = False):
     Args:
         drop_first: If True, drops all existing tables before creating.
                     Useful for local dev when the schema changes.
-                    The seed_local.py script sets this to True automatically
-                    for SQLite databases.
+                    On Postgres, runs `DROP SCHEMA public CASCADE` so FK
+                    constraints don't block the drop (Base.metadata.drop_all
+                    breaks when tables outside the metadata or new tables
+                    leave the dependency graph un-resolvable). On SQLite,
+                    falls back to metadata.drop_all which is safe.
     """
+    is_postgres = DATABASE_URL.startswith("postgresql")
+
     async with engine.begin() as conn:
         if drop_first:
-            await conn.run_sync(Base.metadata.drop_all)
+            if is_postgres:
+                # Nuke and recreate the schema. Cleaner than drop_all when
+                # FK direction makes ordered drops impossible, and also
+                # removes any orphan tables that drifted away from the model.
+                await conn.execute(text("DROP SCHEMA IF EXISTS public CASCADE"))
+                await conn.execute(text("CREATE SCHEMA public"))
+                # Restore default search path / privileges that DROP cleared.
+                await conn.execute(text("GRANT ALL ON SCHEMA public TO public"))
+            else:
+                await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
 
 
