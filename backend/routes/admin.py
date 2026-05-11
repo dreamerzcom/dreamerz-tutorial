@@ -441,6 +441,85 @@ async def get_supervisor_learners(
     return out
 
 
+class SupervisorSelfLinkPayload(BaseModel):
+    """Body for POST /supervisor/me/learners — the supervisor identifies the
+    learner they want to track by username OR email."""
+    learner_identifier: str
+
+
+@supervisor_router.post("/supervisor/me/learners")
+async def supervisor_self_link_learner(
+    body: SupervisorSelfLinkPayload,
+    current_user: dict = Depends(get_current_supervisor),
+    session: AsyncSession = Depends(get_db),
+):
+    """Let a supervisor link a learner to themselves by username or email.
+
+    Mirrors the existing admin-only POST .../supervisor/<user>/learners/<user>
+    but is callable by the supervisor for their own assignments. Admins can
+    still call this — they're effectively a super-supervisor.
+    """
+    identifier = (body.learner_identifier or "").strip().lower()
+    if not identifier:
+        raise HTTPException(status_code=400, detail="Learner username or email is required.")
+
+    # Resolve current user (the supervisor making the request)
+    sup_result = await session.execute(
+        select(User).where(User.username == current_user["username"].lower())
+    )
+    supervisor = sup_result.scalars().first()
+    if not supervisor:
+        raise HTTPException(status_code=404, detail="Supervisor user not found.")
+
+    # Find learner by username or email
+    learner_result = await session.execute(
+        select(User).where(or_(User.username == identifier, User.email == identifier))
+    )
+    learner = learner_result.scalars().first()
+    if not learner:
+        raise HTTPException(status_code=404, detail="Learner account not found.")
+
+    if learner.id == supervisor.id:
+        raise HTTPException(status_code=400, detail="You cannot link your own account as a learner.")
+
+    # Idempotent: if assignment already exists, just return it
+    existing_result = await session.execute(
+        select(SupervisorAssignment).where(
+            SupervisorAssignment.supervisor_user_id == supervisor.id,
+            SupervisorAssignment.learner_user_id == learner.id,
+        )
+    )
+    existing = existing_result.scalars().first()
+    if existing:
+        return {
+            "assignment_id": existing.id,
+            "learner_id": learner.id,
+            "learner_username": learner.username,
+            "learner_email": learner.email,
+            "learner_role": learner.role,
+            "created_at": existing.created_at.isoformat() if existing.created_at else None,
+            "already_linked": True,
+        }
+
+    assignment = SupervisorAssignment(
+        supervisor_user_id=supervisor.id,
+        learner_user_id=learner.id,
+    )
+    session.add(assignment)
+    await session.commit()
+    await session.refresh(assignment)
+
+    return {
+        "assignment_id": assignment.id,
+        "learner_id": learner.id,
+        "learner_username": learner.username,
+        "learner_email": learner.email,
+        "learner_role": learner.role,
+        "created_at": assignment.created_at.isoformat() if assignment.created_at else None,
+        "already_linked": False,
+    }
+
+
 @admin_router.post("/supervisor/{supervisor_username}/learners/{learner_username}")
 async def assign_learner_to_supervisor(
     supervisor_username: str,

@@ -46,10 +46,19 @@ export const ParentDashboard = () => {
 
   const handleAddStudent = async (e) => {
     e.preventDefault();
-    if (!studentUsername.trim()) return;
+    const identifier = studentUsername.trim();
+    if (!identifier) return;
 
     try {
-      await parentService.createParentStudentLinkByIdentifier(studentUsername.trim(), 'guardian');
+      if (isSupervisor()) {
+        // Supervisors create SupervisorAssignment rows; the parent endpoint
+        // would write to a different table the supervisor dashboard never
+        // reads, which is why the prior version of this form silently
+        // appeared to do nothing.
+        await parentService.linkSupervisorLearnerByIdentifier(identifier);
+      } else {
+        await parentService.createParentStudentLinkByIdentifier(identifier, 'guardian');
+      }
       setStudentUsername('');
       setShowAddStudent(false);
       loadStudents();

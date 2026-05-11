@@ -170,6 +170,23 @@ export const getSupervisorLearners = async () => {
   return response.json();
 };
 
+// Supervisor self-link: identifies the current user via the auth token and
+// creates a SupervisorAssignment to the learner with the given username/email.
+// Idempotent — the backend returns the existing assignment if one is already
+// in place (with `already_linked: true`).
+export const linkSupervisorLearnerByIdentifier = async (learnerIdentifier) => {
+  const response = await fetch(`${API_BASE}/api/admin/supervisor/me/learners`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ learner_identifier: learnerIdentifier })
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Failed to link learner');
+  }
+  return response.json();
+};
+
 export const getLearnerProgress = async (learnerId) => {
   const response = await fetch(`${API_BASE}/api/admin/supervisor/learners/${learnerId}/progress`, {
     method: 'GET',
