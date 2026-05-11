@@ -123,13 +123,19 @@ export const AuthProvider = ({ children }) => {
     return auth;
   }, []);
 
-  const register = useCallback(async ({ username, email, password, preferred_language }) => {
+  const register = useCallback(async ({ username, email, password, preferred_language, role }) => {
     const response = await fetch(`${API_BASE}/api/auth/register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ username, email, password, preferred_language: preferred_language || 'en' })
+      body: JSON.stringify({
+        username,
+        email,
+        password,
+        preferred_language: preferred_language || 'en',
+        role: role || 'learner',
+      })
     });
 
     const result = await response.json();

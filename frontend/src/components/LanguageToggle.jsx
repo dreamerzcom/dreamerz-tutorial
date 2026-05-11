@@ -17,8 +17,9 @@ export const LanguageToggle = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleSelect = (code) => {
-    setLanguage(code);
+  const handleSelect = (lang) => {
+    if (lang.disabled) return;
+    setLanguage(lang.code);
     setOpen(false);
   };
 
@@ -39,14 +40,19 @@ export const LanguageToggle = () => {
         <div className="absolute right-0 mt-1 w-44 bg-white rounded-xl shadow-lg shadow-black/10 border border-slate-200 py-1 z-50 overflow-hidden">
           {languages.map((lang) => {
             const isActive = language === lang.code;
+            const isDisabled = !!lang.disabled;
             return (
               <button
                 key={lang.code}
-                onClick={() => handleSelect(lang.code)}
+                onClick={() => handleSelect(lang)}
+                disabled={isDisabled}
+                title={isDisabled ? 'Coming soon' : undefined}
                 className={`flex items-center gap-3 w-full px-4 py-2.5 text-sm transition-colors
-                  ${isActive
-                    ? 'bg-primary/10 text-primary font-semibold'
-                    : 'text-slate-700 hover:bg-slate-50'
+                  ${isDisabled
+                    ? 'text-slate-400 cursor-not-allowed opacity-60'
+                    : isActive
+                      ? 'bg-primary/10 text-primary font-semibold'
+                      : 'text-slate-700 hover:bg-slate-50'
                   }`}
               >
                 <span className="text-base">{lang.flag}</span>
@@ -56,8 +62,11 @@ export const LanguageToggle = () => {
                     <span className="text-[10px] text-slate-400">{lang.name}</span>
                   )}
                 </div>
-                {isActive && (
+                {isActive && !isDisabled && (
                   <span className="ml-auto text-primary text-xs font-bold">&#10003;</span>
+                )}
+                {isDisabled && (
+                  <span className="ml-auto text-[10px] text-slate-400 italic">soon</span>
                 )}
               </button>
             );

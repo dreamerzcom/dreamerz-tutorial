@@ -4,7 +4,25 @@ import { Button } from '../components/ui/button';
 import { SEO } from '../components/SEO';
 import { useAuth } from '../hooks/useAuth';
 import { LANGUAGES } from '../hooks/useLanguage';
-import { Lock, Mail, User, Globe, Eye, EyeOff } from 'lucide-react';
+import { Lock, Mail, User, Briefcase, Globe, Eye, EyeOff } from 'lucide-react';
+
+const ROLE_OPTIONS = [
+  {
+    value: 'learner',
+    label: 'Learner / Student',
+    description: 'I want to learn from courses.',
+  },
+  {
+    value: 'supervisor',
+    label: 'Parent / Supervisor',
+    description: 'I want to monitor a learner\u2019s progress.',
+  },
+  {
+    value: 'creator',
+    label: 'Course Creator',
+    description: 'I want to build and publish courses.',
+  },
+];
 
 export const Register = () => {
   const { register } = useAuth();
@@ -13,6 +31,7 @@ export const Register = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [role, setRole] = useState('learner');
   const [preferredLanguage, setPreferredLanguage] = useState('en');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -41,7 +60,7 @@ export const Register = () => {
 
     setLoading(true);
     try {
-      await register({ username: name, email, password, preferred_language: preferredLanguage });
+      await register({ username: name, email, password, role, preferred_language: preferredLanguage });
       navigate('/learn');
     } catch (err) {
       setError(err.message || 'Unable to create account.');
@@ -132,21 +151,49 @@ export const Register = () => {
             </label>
 
             <label className="block text-sm font-medium text-slate-700">
+              I am a…
+              <div className="mt-2 relative rounded-xl border border-slate-200 bg-slate-50 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary">
+                <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                <select
+                  value={role}
+                  onChange={(e) => setRole(e.target.value)}
+                  className="w-full rounded-xl border-0 bg-transparent py-3 pl-12 pr-4 text-slate-900 outline-none appearance-none cursor-pointer"
+                >
+                  {ROLE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <p className="mt-1.5 text-xs text-slate-500">
+                {ROLE_OPTIONS.find((o) => o.value === role)?.description}
+              </p>
+            </label>
+
+            <label className="block text-sm font-medium text-slate-700">
               Preferred language
               <div className="mt-2 relative rounded-xl border border-slate-200 bg-slate-50 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary">
                 <Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                 <select
                   value={preferredLanguage}
-                  onChange={(e) => setPreferredLanguage(e.target.value)}
+                  onChange={(e) => {
+                    const target = LANGUAGES.find((l) => l.code === e.target.value);
+                    if (!target || target.disabled) return;
+                    setPreferredLanguage(e.target.value);
+                  }}
                   className="w-full rounded-xl border-0 bg-transparent py-3 pl-12 pr-4 text-slate-900 outline-none appearance-none cursor-pointer"
                 >
                   {LANGUAGES.map((lang) => (
-                    <option key={lang.code} value={lang.code}>
-                      {lang.flag} {lang.nativeName} ({lang.name})
+                    <option key={lang.code} value={lang.code} disabled={lang.disabled}>
+                      {lang.flag} {lang.nativeName} ({lang.name}){lang.disabled ? ' — coming soon' : ''}
                     </option>
                   ))}
                 </select>
               </div>
+              <p className="mt-1.5 text-xs text-slate-500">
+                Only English is available right now. More languages coming soon.
+              </p>
             </label>
 
             {error && <div className="text-sm text-rose-600">{error}</div>}

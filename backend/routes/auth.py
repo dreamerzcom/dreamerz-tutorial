@@ -64,14 +64,27 @@ async def register_user(user: UserCreate, session: AsyncSession = Depends(get_db
     if lang not in _VALID_LANG_CODES:
         lang = DEFAULT_LANGUAGE
 
+    # Restrict self-assignable roles at signup. Admin role is granted only
+    # via ADMIN_EMAILS env var (super-admins) or by an existing admin
+    # promoting a user, never via the public registration endpoint.
+    SELF_ASSIGNABLE_ROLES = {"learner", "supervisor", "creator"}
+    requested_role = (user.role or "learner").strip().lower()
+    if requested_role not in SELF_ASSIGNABLE_ROLES:
+        requested_role = "learner"
+
     hashed_password = get_password_hash(password)
     now = datetime.now(timezone.utc)
+
+    is_admin_email = email in ADMIN_EMAILS
+    final_role = "admin" if is_admin_email else requested_role
 
     new_user = User(
         username=username,
         email=email,
         hashed_password=hashed_password,
         preferred_language=lang,
+        role=final_role,
+        is_admin=is_admin_email,
         created_at=now,
         updated_at=now,
         last_login=None,

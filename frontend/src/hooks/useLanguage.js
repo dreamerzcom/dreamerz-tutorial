@@ -4,10 +4,12 @@ import { useAuth } from './useAuth';
 const LANG_STORAGE_KEY = 'dreamerz_language';
 const API_BASE = (process.env.REACT_APP_BACKEND_URL || '').replace(/\/+$/, '');
 
-// Supported languages — mirrors backend config.SUPPORTED_LANGUAGES
+// Supported languages — mirrors backend config.SUPPORTED_LANGUAGES.
+// `disabled: true` keeps a language visible in the UI but prevents selection
+// (used while translations are still in progress).
 export const LANGUAGES = [
   { code: 'en', name: 'English', nativeName: 'English', flag: '🇬🇧' },
-  { code: 'bn', name: 'Bengali', nativeName: 'বাংলা', flag: '🇮🇳' },
+  { code: 'bn', name: 'Bengali', nativeName: 'বাংলা', flag: '🇮🇳', disabled: true },
 ];
 
 const LanguageContext = createContext(null);
@@ -34,6 +36,9 @@ export const LanguageProvider = ({ children }) => {
   }, [user?.preferredLanguage]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const setLanguage = useCallback(async (langCode) => {
+    // Refuse to switch to a language that's marked disabled
+    const target = LANGUAGES.find((l) => l.code === langCode);
+    if (!target || target.disabled) return;
     setLanguageState(langCode);
     try { localStorage.setItem(LANG_STORAGE_KEY, langCode); } catch {}
 
