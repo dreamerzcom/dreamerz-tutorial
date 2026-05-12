@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 
 from database import async_session
-from models.sql_models import ParentStudentLink, User
+from models.sql_models import ParentStudentLink, SupervisorAssignment, User
 from models.progress import ParentStudentLinkCreate, ParentStudentLinkUpdate
 
 logger = logging.getLogger(__name__)
@@ -173,11 +173,24 @@ async def check_parent_access(
     student_user_id: int,
     session: AsyncSession = None,
 ) -> bool:
-    """Check if a parent has access to a student's data."""
+    """Check if the calling user has access to a student's data.
+
+    Returns True if either:
+      - The user is a parent linked to the student via ParentStudentLink
+        (with is_active=True), OR
+      - The user is a supervisor assigned to the student via
+        SupervisorAssignment.
+
+    Despite the name `check_parent_access`, this function also covers the
+    supervisor relationship now — the parent and supervisor routes share
+    the same access predicate so the /api/parent/* endpoints work for
+    both roles without duplicating every handler.
+    """
     sess, close = await _get_session_if_needed(session)
 
     try:
-        result = await sess.execute(
+        # Parent-student link path
+        parent_result = await sess.execute(
             select(ParentStudentLink).where(
                 and_(
                     ParentStudentLink.parent_user_id == parent_user_id,
@@ -186,7 +199,19 @@ async def check_parent_access(
                 )
             )
         )
-        return result.scalars().first() is not None
+        if parent_result.scalars().first() is not None:
+            return True
+
+        # Supervisor-learner assignment path
+        supervisor_result = await sess.execute(
+            select(SupervisorAssignment).where(
+                and_(
+                    SupervisorAssignment.supervisor_user_id == parent_user_id,
+                    SupervisorAssignment.learner_user_id == student_user_id,
+                )
+            )
+        )
+        return supervisor_result.scalars().first() is not None
 
     finally:
         if close:
