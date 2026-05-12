@@ -1,12 +1,14 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { 
-  Shield, Heart, Brain, Eye, MessageCircle, 
+import {
+  Shield, Heart, Brain, Eye, MessageCircle,
   Clock, Users, BookOpen, AlertCircle, Check,
   ArrowRight, Lock, UserX, Phone, HelpCircle,
   FileWarning, CheckCircle2, XCircle, Sparkles
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
+import { useAuth } from '../hooks/useAuth';
+import { ParentDashboard } from './ParentDashboard';
 
 // What DreamerZ teaches
 const whatWeTeach = [
@@ -123,6 +125,15 @@ const helplines = [
 ];
 
 export const Parents = () => {
+  const { isAuthenticated, isSupervisor } = useAuth();
+
+  // Logged-in supervisors and admins land on the live dashboard rather than
+  // the marketing copy — same component the /parent route uses, so 'Add
+  // Learner', linked-learner cards, and progress drill-downs all work here.
+  if (isAuthenticated && isSupervisor && isSupervisor()) {
+    return <ParentDashboard />;
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-slate-50 pt-24 pb-16">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
