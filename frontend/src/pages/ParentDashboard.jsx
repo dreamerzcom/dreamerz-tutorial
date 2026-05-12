@@ -101,18 +101,19 @@ export const ParentDashboard = () => {
           </p>
         </div>
 
-        {/* Add Student Button - only for parents, supervisors get assigned by admin */}
-        {!isSupervisor() && (
-          <div className="mb-6">
-            <button
-              onClick={() => setShowAddStudent(!showAddStudent)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
-            >
-              <Plus className="w-5 h-5" />
-              Add Student
-            </button>
-          </div>
-        )}
+        {/* Add Student Button — visible for both parents and supervisors.
+            Supervisors call /api/admin/supervisor/me/learners; parents call
+            /api/parent/links/by-identifier — the routing happens inside
+            handleAddStudent based on the user's role. */}
+        <div className="mb-6">
+          <button
+            onClick={() => setShowAddStudent(!showAddStudent)}
+            className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="w-5 h-5" />
+            {isSupervisor() ? 'Add Learner' : 'Add Student'}
+          </button>
+        </div>
 
         {/* Add Student Form */}
         {showAddStudent && (
