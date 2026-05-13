@@ -62,35 +62,35 @@ const CourseCatalogCard = ({ course, index, isEnrolled, isEnrolling, onEnroll })
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.04 }}
-      className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all flex flex-col min-h-[280px]"
+      className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all flex flex-col min-h-[260px] sm:min-h-[280px]"
     >
-      <div className="flex items-start justify-between gap-3 mb-4">
-        <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl" style={{ backgroundColor: `${course.color || '#10A37F'}18` }}>
+      <div className="flex items-start justify-between gap-2 sm:gap-3 mb-3 sm:mb-4">
+        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center text-xl sm:text-2xl flex-shrink-0" style={{ backgroundColor: `${course.color || '#10A37F'}18` }}>
           {course.icon || '📘'}
         </div>
-        <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-semibold">
+        <span className="px-2 sm:px-3 py-0.5 sm:py-1 rounded-full bg-slate-100 text-slate-600 text-[10px] sm:text-xs font-semibold flex-shrink-0">
           {stats.difficulty}
         </span>
       </div>
 
-      <h3 className="text-lg font-bold text-slate-900 mb-2 line-clamp-2">{course.name}</h3>
-      <p className="text-sm text-slate-500 line-clamp-2 mb-5 flex-grow">{course.tagline || course.description || 'A guided learning course with lessons and quizzes.'}</p>
+      <h3 className="text-base sm:text-lg font-bold text-slate-900 mb-1.5 sm:mb-2 line-clamp-2">{course.name}</h3>
+      <p className="text-xs sm:text-sm text-slate-500 line-clamp-2 mb-3 sm:mb-5 flex-grow">{course.tagline || course.description || 'A guided learning course with lessons and quizzes.'}</p>
 
-      <div className="grid grid-cols-3 gap-2 mb-5">
-        <div className="rounded-xl bg-slate-50 p-3 text-center">
-          <Layers className="w-4 h-4 mx-auto text-primary mb-1" />
-          <div className="text-sm font-bold text-slate-900">{stats.totalModules}</div>
-          <div className="text-[11px] text-slate-500">Modules</div>
+      <div className="grid grid-cols-3 gap-1.5 sm:gap-2 mb-3 sm:mb-5">
+        <div className="rounded-xl bg-slate-50 p-2 sm:p-3 text-center min-w-[70px] sm:min-w-[80px]">
+          <Layers className="w-3.5 h-3.5 sm:w-4 sm:h-4 mx-auto text-primary mb-0.5 sm:mb-1" />
+          <div className="text-xs sm:text-sm font-bold text-slate-900">{stats.totalModules}</div>
+          <div className="text-[10px] sm:text-[11px] text-slate-500">Modules</div>
         </div>
-        <div className="rounded-xl bg-slate-50 p-3 text-center">
-          <HelpCircle className="w-4 h-4 mx-auto text-violet-600 mb-1" />
-          <div className="text-sm font-bold text-slate-900">{stats.totalQuizzes}</div>
-          <div className="text-[11px] text-slate-500">Quizzes</div>
+        <div className="rounded-xl bg-slate-50 p-2 sm:p-3 text-center min-w-[70px] sm:min-w-[80px]">
+          <HelpCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 mx-auto text-violet-600 mb-0.5 sm:mb-1" />
+          <div className="text-xs sm:text-sm font-bold text-slate-900">{stats.totalQuizzes}</div>
+          <div className="text-[10px] sm:text-[11px] text-slate-500">Quizzes</div>
         </div>
-        <div className="rounded-xl bg-slate-50 p-3 text-center">
-          <Signal className="w-4 h-4 mx-auto text-emerald-600 mb-1" />
-          <div className="text-sm font-bold text-slate-900 truncate">{stats.difficulty}</div>
-          <div className="text-[11px] text-slate-500">Level</div>
+        <div className="rounded-xl bg-slate-50 p-2 sm:p-3 text-center min-w-[70px] sm:min-w-[80px]">
+          <Signal className="w-3.5 h-3.5 sm:w-4 sm:h-4 mx-auto text-emerald-600 mb-0.5 sm:mb-1" />
+          <div className="text-xs sm:text-sm font-bold text-slate-900 truncate">{stats.difficulty}</div>
+          <div className="text-[10px] sm:text-[11px] text-slate-500">Level</div>
         </div>
       </div>
 
@@ -98,13 +98,13 @@ const CourseCatalogCard = ({ course, index, isEnrolled, isEnrolling, onEnroll })
         type="button"
         onClick={handlePrimaryAction}
         disabled={isEnrolling}
-        className={`w-full rounded-xl px-4 py-3 font-semibold transition-colors flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed ${
+        className={`w-full rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 font-semibold text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed ${
           isEnrolled
             ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
             : 'bg-primary text-white hover:bg-primary/90'
         }`}
       >
-        {isEnrolled ? <CheckCircle2 className="w-4 h-4" /> : <BookOpen className="w-4 h-4" />}
+        {isEnrolled ? <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
         {isEnrolling ? 'Enrolling...' : isEnrolled ? 'Open Course' : 'Enroll'}
       </button>
     </motion.div>
@@ -112,6 +112,7 @@ const CourseCatalogCard = ({ course, index, isEnrolled, isEnrolling, onEnroll })
 };
 
 export const LearnHub = ({ viewMode: initialViewMode = 'catalog' }) => {
+  const navigate = useNavigate();
   const { tools: apiTools, isLoading, error } = useCurriculum();
   const { courseEnrollments, loadCourseEnrollments, startCourse, deleteCourse } = useLearningProgress();
   const {
@@ -127,6 +128,7 @@ export const LearnHub = ({ viewMode: initialViewMode = 'catalog' }) => {
   const [viewMode, setViewMode] = useState(location.pathname === '/myprogress' ? 'progress' : initialViewMode); // 'catalog' or 'progress'
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [globalSearchQuery, setGlobalSearchQuery] = useState('');
   const [enrollingCourseId, setEnrollingCourseId] = useState(null);
   const [enrollError, setEnrollError] = useState(null);
   const streakInfo = getStreakInfo();
@@ -186,6 +188,26 @@ export const LearnHub = ({ viewMode: initialViewMode = 'catalog' }) => {
 
   const selectedCategoryData = categories.find(category => category.id === selectedCategory);
   const query = searchQuery.trim().toLowerCase();
+  const globalQuery = globalSearchQuery.trim().toLowerCase();
+
+  // Filter categories based on global search
+  const filteredCategories = useMemo(() => {
+    if (!globalQuery) return categories;
+    return categories.filter(category =>
+      category.title.toLowerCase().includes(globalQuery) ||
+      category.description.toLowerCase().includes(globalQuery)
+    );
+  }, [categories, globalQuery]);
+
+  // Filter all courses based on global search
+  const filteredCourses = useMemo(() => {
+    if (!globalQuery) return [];
+    return apiTools.filter(course =>
+      course.name.toLowerCase().includes(globalQuery) ||
+      (course.tagline || '').toLowerCase().includes(globalQuery) ||
+      (course.description || '').toLowerCase().includes(globalQuery)
+    );
+  }, [apiTools, globalQuery]);
 
   const visibleCourses = useMemo(() => {
     const courses = selectedCategoryData?.courses || [];
@@ -278,16 +300,16 @@ export const LearnHub = ({ viewMode: initialViewMode = 'catalog' }) => {
                 }}
                 className="px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-primary hover:border-primary/30 transition-colors"
               >
-                Back to Categories
+                Back to Learning Home
               </button>
             )}
             {viewMode === 'progress' && (
               <button
                 type="button"
-                onClick={() => setViewMode('catalog')}
+                onClick={() => navigate('/learn')}
                 className="px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-primary hover:border-primary/30 transition-colors"
               >
-                Back to Catalog
+                Back to Learning Home
               </button>
             )}
           </div>
@@ -326,27 +348,48 @@ export const LearnHub = ({ viewMode: initialViewMode = 'catalog' }) => {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 flex-shrink-0">
-                  <div className="bg-white/15 backdrop-blur rounded-2xl px-4 py-3 text-center min-w-[80px]">
-                    <div className="text-2xl font-bold text-white">{overallCompletion}%</div>
-                    <div className="text-xs text-white/80">Complete</div>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-shrink-0">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-white/15 backdrop-blur rounded-2xl px-3 sm:px-4 py-2 sm:py-3 text-center min-w-[70px] sm:min-w-[80px]">
+                      <div className="text-xl sm:text-2xl font-bold text-white">{overallCompletion}%</div>
+                      <div className="text-[10px] sm:text-xs text-white/80">Complete</div>
+                    </div>
+                    <div className="bg-white/15 backdrop-blur rounded-2xl px-3 sm:px-4 py-2 sm:py-3 text-center min-w-[70px] sm:min-w-[80px]">
+                      <div className="text-xl sm:text-2xl font-bold text-white">{totalXP}</div>
+                      <div className="text-[10px] sm:text-xs text-white/80">XP</div>
+                    </div>
+                    <div className="bg-white/15 backdrop-blur rounded-2xl px-3 sm:px-4 py-2 sm:py-3 text-center min-w-[70px] sm:min-w-[80px]">
+                      <div className="text-xl sm:text-2xl font-bold text-white">{streakInfo.currentStreak}</div>
+                      <div className="text-[10px] sm:text-xs text-white/80">Day Streak</div>
+                    </div>
                   </div>
-                  <div className="bg-white/15 backdrop-blur rounded-2xl px-4 py-3 text-center min-w-[80px]">
-                    <div className="text-2xl font-bold text-white">{totalXP}</div>
-                    <div className="text-xs text-white/80">XP</div>
-                  </div>
-                  <div className="bg-white/15 backdrop-blur rounded-2xl px-4 py-3 text-center min-w-[80px]">
-                    <div className="text-2xl font-bold text-white">{streakInfo.currentStreak}</div>
-                    <div className="text-xs text-white/80">Day Streak</div>
-                  </div>
-                  <div className="bg-white text-emerald-600 rounded-xl px-5 py-3 font-semibold group-hover:bg-emerald-50 transition-colors flex items-center gap-2">
-                    <BarChart3 className="w-4 h-4" />
-                    View Details
-                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  <div className="bg-white text-emerald-600 rounded-xl px-3 sm:px-4 py-2 sm:py-3 font-semibold group-hover:bg-emerald-50 transition-colors flex items-center justify-center gap-2 sm:flex-grow-0">
+                    <span className="text-sm sm:text-base">View Details</span>
+                    <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform" />
                   </div>
                 </div>
               </div>
             </Link>
+          </motion.div>
+        )}
+
+        {/* Global Search Box */}
+        {viewMode === 'catalog' && !selectedCategory && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="mb-8"
+          >
+            <div className="relative w-full max-w-2xl mx-auto">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+              <input
+                value={globalSearchQuery}
+                onChange={(event) => setGlobalSearchQuery(event.target.value)}
+                placeholder="Search courses or categories..."
+                className="w-full pl-12 pr-4 py-4 rounded-2xl border border-slate-200 bg-white shadow-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-base"
+              />
+            </div>
           </motion.div>
         )}
 
@@ -369,6 +412,91 @@ export const LearnHub = ({ viewMode: initialViewMode = 'catalog' }) => {
                 onUnenroll={handleUnenroll}
               />
             </motion.div>
+          ) : globalQuery ? (
+            <motion.div
+              key="search"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              {/* Show matching categories */}
+              {filteredCategories.length > 0 && (
+                <div className="mb-8">
+                  <h2 className="text-xl font-bold text-slate-900 mb-4">Matching Categories</h2>
+                  <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                    {filteredCategories.map((category, index) => (
+                      <motion.button
+                        key={category.id}
+                        type="button"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        onClick={() => {
+                          setSelectedCategory(category.id);
+                          setGlobalSearchQuery('');
+                        }}
+                        className={`text-left rounded-3xl p-6 bg-gradient-to-br ${category.gradient} text-white shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all overflow-hidden relative`}
+                      >
+                        <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full bg-white/10" />
+                        <div className="relative z-10">
+                          <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center text-3xl mb-6">
+                            {category.icon}
+                          </div>
+                          <h2 className="text-2xl font-bold mb-2">{category.title}</h2>
+                          <p className="text-white/85 text-sm leading-relaxed mb-6 min-h-[44px]">{category.description}</p>
+                          <div className="flex items-center gap-3 mb-6">
+                            <div className="bg-white/20 rounded-2xl px-3 sm:px-4 py-2 sm:py-3 backdrop-blur text-center min-w-[70px] sm:min-w-[80px]">
+                              <div className="text-xl sm:text-2xl font-bold">{category.totalCourses}</div>
+                              <div className="text-[10px] sm:text-xs text-white/80">Courses</div>
+                            </div>
+                            <div className="bg-white/20 rounded-2xl px-3 sm:px-4 py-2 sm:py-3 backdrop-blur text-center min-w-[70px] sm:min-w-[80px]">
+                              <div className="text-xl sm:text-2xl font-bold">{category.totalModules}</div>
+                              <div className="text-[10px] sm:text-xs text-white/80">Modules</div>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between font-semibold">
+                            <span>View Courses</span>
+                            <ArrowRight className="w-5 h-5" />
+                          </div>
+                        </div>
+                      </motion.button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Show matching courses */}
+              {filteredCourses.length > 0 && (
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900 mb-4">Matching Courses</h2>
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                    {filteredCourses.map((course, index) => {
+                      const courseDbId = getCourseDbId(course);
+                      const isEnrolled = courseDbId ? enrolledCourseIds.has(courseDbId) : false;
+                      return (
+                        <CourseCatalogCard
+                          key={course.id}
+                          course={course}
+                          index={index}
+                          isEnrolled={isEnrolled}
+                          isEnrolling={courseDbId === enrollingCourseId}
+                          onEnroll={handleEnroll}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* No results */}
+              {filteredCategories.length === 0 && filteredCourses.length === 0 && (
+                <div className="text-center py-20 bg-white border border-slate-200 rounded-3xl">
+                  <Search className="w-12 h-12 mx-auto text-slate-300 mb-4" />
+                  <h3 className="text-xl font-semibold text-slate-900 mb-2">No results found</h3>
+                  <p className="text-slate-500">Try a different search term.</p>
+                </div>
+              )}
+            </motion.div>
           ) : !selectedCategory ? (
             <motion.div
               key="categories"
@@ -384,7 +512,10 @@ export const LearnHub = ({ viewMode: initialViewMode = 'catalog' }) => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
-                  onClick={() => setSelectedCategory(category.id)}
+                  onClick={() => {
+                    setSelectedCategory(category.id);
+                    setGlobalSearchQuery('');
+                  }}
                   className={`text-left rounded-3xl p-6 bg-gradient-to-br ${category.gradient} text-white shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all overflow-hidden relative`}
                 >
                   <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full bg-white/10" />
@@ -395,13 +526,13 @@ export const LearnHub = ({ viewMode: initialViewMode = 'catalog' }) => {
                     <h2 className="text-2xl font-bold mb-2">{category.title}</h2>
                     <p className="text-white/85 text-sm leading-relaxed mb-6 min-h-[44px]">{category.description}</p>
                     <div className="flex items-center gap-3 mb-6">
-                      <div className="bg-white/20 rounded-2xl px-4 py-3 backdrop-blur">
-                        <div className="text-2xl font-bold">{category.totalCourses}</div>
-                        <div className="text-xs text-white/80">Courses</div>
+                      <div className="bg-white/20 rounded-2xl px-3 sm:px-4 py-2 sm:py-3 backdrop-blur text-center min-w-[70px] sm:min-w-[80px]">
+                        <div className="text-xl sm:text-2xl font-bold">{category.totalCourses}</div>
+                        <div className="text-[10px] sm:text-xs text-white/80">Courses</div>
                       </div>
-                      <div className="bg-white/20 rounded-2xl px-4 py-3 backdrop-blur">
-                        <div className="text-2xl font-bold">{category.totalModules}</div>
-                        <div className="text-xs text-white/80">Modules</div>
+                      <div className="bg-white/20 rounded-2xl px-3 sm:px-4 py-2 sm:py-3 backdrop-blur text-center min-w-[70px] sm:min-w-[80px]">
+                        <div className="text-xl sm:text-2xl font-bold">{category.totalModules}</div>
+                        <div className="text-[10px] sm:text-xs text-white/80">Modules</div>
                       </div>
                     </div>
                     <div className="flex items-center justify-between font-semibold">

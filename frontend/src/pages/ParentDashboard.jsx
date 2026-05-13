@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Users, BookOpen, Clock, Award, AlertTriangle, Plus, ArrowRight, ChevronDown, ChevronUp, X, Trash2, MoreVertical } from 'lucide-react';
+import { Users, BookOpen, Clock, Award, AlertTriangle, Plus, ArrowRight, ChevronDown, ChevronUp, X, Unlink, MoreVertical } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import * as parentService from '../services/parentService';
 
@@ -365,75 +365,67 @@ const StudentCard = ({ student, onUnlink }) => {
   return (
     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md">
       {/* Card Header */}
-      <div 
-        className="p-6 border-b border-slate-100 cursor-pointer hover:bg-slate-50 transition-colors"
-        onClick={() => setIsExpanded(!isExpanded)}
-      >
-        <div className="flex items-start justify-between">
+      <div className="p-6 border-b border-slate-100">
+        <div className="flex items-start justify-between mb-4">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-3 mb-2">
-              <h3 className="text-lg font-semibold text-slate-900 truncate">{student.username}</h3>
-              {student.relationship_type && (
-                <span className="flex-shrink-0 px-2 py-1 text-xs font-medium bg-slate-100 text-slate-600 rounded-full">
-                  {student.relationship_type}
-                </span>
-              )}
-            </div>
+            <h3 className="text-lg font-semibold text-slate-900 truncate">{student.username}</h3>
             <p className="text-sm text-slate-500 truncate">{student.email}</p>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0 ml-4">
-            {isSupervisor() && (
-              showConfirm ? (
-                <>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleUnlink();
-                    }}
-                    disabled={isUnlinking}
-                    className="text-xs bg-red-500 text-white px-3 py-1.5 rounded-lg hover:bg-red-600 transition-colors"
-                  >
-                    {isUnlinking ? 'Unlinking...' : 'Confirm'}
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowConfirm(false);
-                    }}
-                    className="text-xs bg-slate-100 text-slate-600 px-2 py-1.5 rounded-lg hover:bg-slate-200 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                </>
-              ) : (
+          {isSupervisor() && (
+            showConfirm ? (
+              <div className="flex items-center gap-2 flex-shrink-0 ml-4">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    setShowConfirm(true);
+                    handleUnlink();
                   }}
-                  className="p-2 hover:bg-rose-50 rounded-lg transition-colors text-rose-500 hover:text-rose-700"
-                  title="Unlink learner"
+                  disabled={isUnlinking}
+                  className="text-xs bg-red-500 text-white px-3 py-1.5 rounded-lg hover:bg-red-600 transition-colors"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  {isUnlinking ? 'Unlinking...' : 'Confirm'}
                 </button>
-              )
-            )}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsExpanded(!isExpanded);
-              }}
-              className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-400 hover:text-slate-600"
-              title={isExpanded ? 'Collapse details' : 'View details'}
-            >
-              {isExpanded ? (
-                <ChevronUp className="w-5 h-5" />
-              ) : (
-                <ChevronDown className="w-5 h-5" />
-              )}
-            </button>
-          </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowConfirm(false);
+                  }}
+                  className="text-xs bg-slate-100 text-slate-600 px-2 py-1.5 rounded-lg hover:bg-slate-200 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowConfirm(true);
+                }}
+                className="flex-shrink-0 ml-4 p-1.5 hover:bg-rose-50 rounded-lg transition-colors text-rose-500 hover:text-rose-700"
+                title="Unlink learner"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )
+          )}
         </div>
+        
+        {/* View Details Button */}
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-700 hover:text-slate-900 rounded-lg transition-all duration-200 font-medium text-sm border border-slate-200 hover:border-slate-300"
+        >
+          {isExpanded ? (
+            <>
+              <ChevronUp className="w-4 h-4" />
+              Hide Details
+            </>
+          ) : (
+            <>
+              <ChevronDown className="w-4 h-4" />
+              View Progress Details
+            </>
+          )}
+        </button>
       </div>
 
       {/* Expanded Content */}
