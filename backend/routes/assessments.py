@@ -2,7 +2,7 @@
 
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
@@ -150,6 +150,36 @@ async def grade_assessment(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/attempts/count")
+async def get_attempts_count(
+    assessment_type: str,
+    assessment_id: int,
+    current_user: dict = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+):
+    """Get the number of attempts made for an assessment."""
+    try:
+        from sqlalchemy import select
+        from models.sql_models import User
+
+        result = await session.execute(
+            select(User.id).where(User.username == current_user["username"])
+        )
+        user_id = result.scalar()
+        if not user_id:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        count = await get_attempt_count(
+            student_user_id=user_id,
+            assessment_type=assessment_type,
+            assessment_id=assessment_id,
+            session=session,
+        )
+        return {"count": count}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/attempts/{attempt_id}")
 async def get_attempt(
     attempt_id: int,
@@ -243,36 +273,6 @@ async def get_best_attempt(
         if not attempt:
             return None
         return attempt
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.get("/attempts/count")
-async def get_attempts_count(
-    assessment_type: str,
-    assessment_id: int,
-    current_user: dict = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db),
-):
-    """Get the number of attempts made for an assessment."""
-    try:
-        from sqlalchemy import select
-        from models.sql_models import User
-
-        result = await session.execute(
-            select(User.id).where(User.username == current_user["username"])
-        )
-        user_id = result.scalar()
-        if not user_id:
-            raise HTTPException(status_code=404, detail="User not found")
-
-        count = await get_attempt_count(
-            student_user_id=user_id,
-            assessment_type=assessment_type,
-            assessment_id=assessment_id,
-            session=session,
-        )
-        return {"count": count}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

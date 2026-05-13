@@ -48,6 +48,22 @@ async def start_assessment_attempt(
     sess, close = await _get_session_if_needed(session)
 
     try:
+        # Calculate the next attempt number from existing attempts
+        # This ensures we don't have UNIQUE constraint violations
+        result = await sess.execute(
+            select(func.count())
+            .select_from(AssessmentAttempt)
+            .where(
+                and_(
+                    AssessmentAttempt.student_user_id == student_user_id,
+                    AssessmentAttempt.assessment_type == assessment_type,
+                    AssessmentAttempt.assessment_id == assessment_id,
+                )
+            )
+        )
+        existing_count = result.scalar()
+        next_attempt_number = (existing_count or 0) + 1
+
         now = datetime.now(timezone.utc)
         new_attempt = AssessmentAttempt(
             student_user_id=student_user_id,
@@ -56,7 +72,7 @@ async def start_assessment_attempt(
             lesson_id=lesson_id,
             assessment_type=assessment_type,
             assessment_id=assessment_id,
-            attempt_number=attempt_number,
+            attempt_number=next_attempt_number,
             status="started",
             started_at=now,
             time_spent_seconds=0,

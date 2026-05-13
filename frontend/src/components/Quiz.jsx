@@ -7,7 +7,7 @@ import {
 import { Button } from './ui/button';
 import confetti from '../utils/confetti';
 
-export const Quiz = ({ questions, onComplete, moduleName, previousAttempts = 0, bestScore = 0, passingScore: passingScoreProp }) => {
+export const Quiz = ({ questions, onComplete, onBackToContent, onContinueToNext, moduleName, previousAttempts = 0, bestScore = 0, passingScore: passingScoreProp }) => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [selectedAnswers, setSelectedAnswers] = useState([]); // for multi-select
@@ -17,11 +17,6 @@ export const Quiz = ({ questions, onComplete, moduleName, previousAttempts = 0, 
   const [score, setScore] = useState(0);
   const [quizComplete, setQuizComplete] = useState(false);
   const [answers, setAnswers] = useState([]);
-  const [attemptCount, setAttemptCount] = useState(previousAttempts);
-
-  useEffect(() => {
-    setAttemptCount(previousAttempts);
-  }, [previousAttempts]);
 
   // Allow the lesson creator to override the pass threshold (1–100). Default 70.
   const passingScore = (() => {
@@ -177,15 +172,16 @@ export const Quiz = ({ questions, onComplete, moduleName, previousAttempts = 0, 
       const finalScore = Math.round((score / questions.length) * 100);
       const passed = score >= passingQuestions;
       setQuizComplete(true);
-      setAttemptCount(prev => prev + 1);
+      // Don't increment attempt count here - backend handles it
+      // The attempt count displayed will be previousAttempts + 1 (the current attempt)
       
       if (passed) {
         confetti();
       }
       
-      onComplete(finalScore, passed, attemptCount + 1);
+      // Don't call onComplete automatically - wait for user to click a button
     }
-  }, [currentQuestion, questions.length, score, passingQuestions, onComplete, attemptCount]);
+  }, [currentQuestion, questions.length, score, passingQuestions]);
 
   // Retry the quiz
   const handleRetry = () => {
@@ -198,6 +194,7 @@ export const Quiz = ({ questions, onComplete, moduleName, previousAttempts = 0, 
     setScore(0);
     setQuizComplete(false);
     setAnswers([]);
+    // Don't reset attemptCount - it should come from parent
   };
 
   // Render options for MCQ
@@ -464,6 +461,7 @@ export const Quiz = ({ questions, onComplete, moduleName, previousAttempts = 0, 
     const finalScore = Math.round((score / questions.length) * 100);
     const passed = score >= passingQuestions;
     const isNewBest = finalScore > bestScore;
+    const currentAttemptNumber = previousAttempts + 1; // This is the attempt they just completed
     
     return (
       <motion.div
@@ -517,7 +515,7 @@ export const Quiz = ({ questions, onComplete, moduleName, previousAttempts = 0, 
         >
           <div className="text-center">
             <div className="text-sm text-slate-500">Attempts</div>
-            <div className="text-xl font-bold text-slate-700">{attemptCount}</div>
+            <div className="text-xl font-bold text-slate-700">{currentAttemptNumber}</div>
           </div>
           <div className="w-px bg-slate-200" />
           <div className="text-center">
@@ -541,17 +539,18 @@ export const Quiz = ({ questions, onComplete, moduleName, previousAttempts = 0, 
           transition={{ delay: 0.5 }}
         >
           {passed 
-            ? `Great job completing "${moduleName}"! You've unlocked the next module.`
+            ? `Great job completing "${moduleName}"! You've unlocked the next lesson.`
             : `You need ${passingScore}% to pass. Review the content and try again - you've got this!`
           }
         </motion.p>
         
-        {!passed && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
-          >
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+          className="flex flex-col sm:flex-row gap-3 justify-center"
+        >
+          {!passed ? (
             <Button
               onClick={handleRetry}
               className="bg-gradient-to-r from-primary to-violet-600 hover:from-primary/90 hover:to-violet-600/90 text-white px-8 py-4 rounded-2xl font-semibold text-lg shadow-lg shadow-primary/30 transition-all"
@@ -560,8 +559,30 @@ export const Quiz = ({ questions, onComplete, moduleName, previousAttempts = 0, 
               <RotateCcw className="w-5 h-5 mr-2" />
               Try Again
             </Button>
-          </motion.div>
-        )}
+          ) : (
+            <Button
+              onClick={() => {
+                onComplete(finalScore, passed, currentAttemptNumber);
+                if (onContinueToNext) {
+                  onContinueToNext();
+                }
+              }}
+              className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white px-8 py-4 rounded-2xl font-semibold text-lg shadow-lg shadow-emerald-200 transition-all"
+              data-testid="quiz-continue-btn"
+            >
+              Continue
+              <ArrowRight className="w-5 h-5 ml-2" />
+            </Button>
+          )}
+          <Button
+            onClick={() => onBackToContent ? onBackToContent() : onComplete(finalScore, passed, currentAttemptNumber)}
+            variant="outline"
+            className="border-slate-200 text-slate-700 hover:bg-slate-50 px-8 py-4 rounded-2xl font-semibold text-lg transition-all"
+            data-testid="quiz-back-btn"
+          >
+            Back to Content
+          </Button>
+        </motion.div>
       </motion.div>
     );
   }
