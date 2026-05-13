@@ -262,7 +262,7 @@ export const LearnHub = ({ viewMode: initialViewMode = 'catalog' }) => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 pt-24 pb-16 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 pt-16 sm:pt-20 pb-12 sm:pb-16 flex items-center justify-center">
         <div className="bg-white border border-slate-200 rounded-2xl p-8 text-slate-600 shadow-sm">Loading learning catalog...</div>
       </div>
     );
@@ -270,16 +270,16 @@ export const LearnHub = ({ viewMode: initialViewMode = 'catalog' }) => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-slate-50 pt-24 pb-16 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 pt-16 sm:pt-20 pb-12 sm:pb-16 flex items-center justify-center">
         <div className="bg-rose-50 border border-rose-200 rounded-2xl p-8 text-rose-700 shadow-sm">{error}</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 pt-24 pb-16">
+    <div className="min-h-screen bg-slate-50 pt-16 sm:pt-20 pb-12 sm:pb-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6 sm:mb-8">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-semibold mb-4">
             <GraduationCap className="w-4 h-4" />
             Learn Home
