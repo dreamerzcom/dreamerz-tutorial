@@ -26,10 +26,29 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 target_metadata = Base.metadata
 
-# other values from the config, defined by the needs of env.py,
-# can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
-# ... etc.
+
+def _alembic_db_url() -> str:
+    """Resolve the database URL for migrations.
+
+    Prefers the DATABASE_URL environment variable (set by Render in
+    production) and normalises it to a *synchronous* psycopg2 driver —
+    Alembic's engine_from_config / offline runner are synchronous, so an
+    `asyncpg` URL would blow up. Render injects DATABASE_URL as either
+    `postgres://` or `postgresql://`; both are rewritten here.
+
+    Falls back to alembic.ini's `sqlalchemy.url` (the local SQLite path)
+    when DATABASE_URL is unset, so local dev keeps working unchanged.
+    """
+    env_url = os.environ.get("DATABASE_URL", "").strip()
+    if not env_url:
+        return config.get_main_option("sqlalchemy.url")
+
+    for prefix in ("postgresql+asyncpg://", "postgresql://", "postgres://"):
+        if env_url.startswith(prefix):
+            return "postgresql+psycopg2://" + env_url[len(prefix):]
+
+    # sqlite:// or any already-explicit driver — use as given.
+    return env_url
 
 
 def run_migrations_offline() -> None:
@@ -44,7 +63,7 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = config.get_main_option("sqlalchemy.url")
+    url = _alembic_db_url()
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -63,8 +82,13 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
+    # Override whatever alembic.ini hardcodes (sqlite://) with the resolved
+    # URL so production migrations actually hit the Postgres database.
+    configuration = config.get_section(config.config_ini_section, {})
+    configuration["sqlalchemy.url"] = _alembic_db_url()
+
     connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
+        configuration,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )

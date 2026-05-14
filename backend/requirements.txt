@@ -8,7 +8,8 @@ python-multipart==0.0.9
 # ── Database ─────────────────────────────────────────
 sqlalchemy[asyncio]>=2.0
 aiosqlite>=0.19
-asyncpg>=0.29
+asyncpg>=0.29              # async driver — used by the app at runtime
+psycopg2-binary>=2.9       # sync driver — used by Alembic migrations only
 alembic>=1.13
 
 # ── Auth ─────────────────────────────────────────────
