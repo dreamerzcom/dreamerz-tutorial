@@ -255,7 +255,14 @@ async def get_student_course_enrollments(
     student_user_id: int,
     session: AsyncSession = None,
 ) -> List[dict]:
-    """Get all course enrollments for a student."""
+    """Get all course enrollments for a student.
+
+    Also self-heals each enrollment's lesson counters from the underlying
+    lesson-progress rows, so enrollments created before write-path syncing
+    existed still report the right completion %. The recalc is best-effort:
+    if it fails, the (un-healed) enrollment data is still returned rather
+    than failing the whole dashboard.
+    """
     sess, close = await _get_session_if_needed(session)
 
     try:
@@ -266,16 +273,39 @@ async def get_student_course_enrollments(
         )
         enrollments = result.scalars().all()
 
-        # Self-heal: recompute counters from the lesson-progress rows so the
-        # dashboard reflects completions even for enrollments that were
-        # created before write-path syncing existed. Dicts are built before
-        # the commit while the ORM objects are still live.
-        for enrollment in enrollments:
-            await _sync_enrollment_counters(sess, student_user_id, enrollment.course_id)
-        payload = [e.to_dict() for e in enrollments]
         if enrollments:
-            await sess.commit()
-        return payload
+            try:
+                for enrollment in enrollments:
+                    await _sync_enrollment_counters(
+                        sess, student_user_id, enrollment.course_id
+                    )
+                await sess.commit()
+            except Exception as sync_err:
+                logger.error(
+                    "Enrollment self-heal failed for student %s: %s",
+                    student_user_id, sync_err, exc_info=True,
+                )
+                await sess.rollback()
+
+            # Re-fetch so every attribute is fully loaded before the
+            # synchronous to_dict() below. The UPDATE expires the
+            # server-side `updated_at`; accessing an expired attribute in a
+            # plain list comprehension would trigger a lazy load outside the
+            # async greenlet and raise MissingGreenlet.
+            result = await sess.execute(
+                select(StudentCourseEnrollment).where(
+                    StudentCourseEnrollment.student_user_id == student_user_id
+                )
+            )
+            enrollments = result.scalars().all()
+
+        return [e.to_dict() for e in enrollments]
+    except Exception as e:
+        logger.error(
+            "Error listing course enrollments for student %s: %s",
+            student_user_id, e, exc_info=True,
+        )
+        raise
     finally:
         if close:
             await sess.close()
