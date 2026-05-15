@@ -102,7 +102,7 @@ function App() {
                       <ToolJourney />
                     </RequireAuth>
                   } />
-                  <Route path="/myprogress" element={
+                  <Route path="/learn/myprogress" element={
                     <RequireAuth>
                       <LearnHub viewMode="progress" />
                     </RequireAuth>
@@ -136,7 +136,7 @@ function App() {
 
                   {/* Parent dashboard routes */}
                   <Route
-                    path="/parentdashboard"
+                    path="/parents/dashboard"
                     element={
                       <RequireRole roles={["supervisor", "admin", "creator"]}>
                         <ParentDashboard />
@@ -144,7 +144,7 @@ function App() {
                     }
                   />
                   <Route
-                    path="/parentdashboard/students/:studentUserId"
+                    path="/parents/dashboard/students/:studentUserId"
                     element={
                       <RequireRole roles={["supervisor", "admin"]}>
                         <ParentStudentDetail />
@@ -158,11 +158,13 @@ function App() {
                   <Route path="/learn/:toolId" element={<CourseRedirect />} />
                   <Route path="/learn/category/:categoryName" element={<CategoryRedirect />} />
                   <Route path="/learn/course/:toolId" element={<CoursePathRedirect />} />
+                  <Route path="/myprogress" element={<Navigate to="/learn/myprogress" replace />} />
                   <Route path="/curriculum" element={<Navigate to="/learn" replace />} />
                   <Route path="/prompt-lab" element={<Navigate to="/learn" replace />} />
                   <Route path="/profile" element={<Navigate to="/account" replace />} />
                   <Route path="/settings" element={<Navigate to="/account" replace />} />
-                  <Route path="/parent" element={<Navigate to="/parentdashboard" replace />} />
+                  <Route path="/parent" element={<Navigate to="/parents/dashboard" replace />} />
+                  <Route path="/parentdashboard" element={<Navigate to="/parents/dashboard" replace />} />
 
                   <Route path="*" element={<NotFound />} />
                 </Routes>

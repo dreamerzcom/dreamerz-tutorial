@@ -153,7 +153,7 @@ export const Parents = () => {
 
           {canAccessDashboard && (
             <div className="mt-6">
-              <Link to="/parentdashboard">
+              <Link to="/parents/dashboard">
                 <Button className="bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-primary/30">
                   <Shield className="w-4 h-4 mr-2" />
                   Go to Parent Dashboard

@@ -145,7 +145,7 @@ export const LearnHub = ({ viewMode: initialViewMode = 'catalog' }) => {
   } = useProgress();
   const { isAuthenticated } = useAuth();
   const location = useLocation();
-  const [viewMode, setViewMode] = useState(location.pathname === '/myprogress' ? 'progress' : initialViewMode); // 'catalog' or 'progress'
+  const [viewMode, setViewMode] = useState(location.pathname === '/learn/myprogress' ? 'progress' : initialViewMode); // 'catalog' or 'progress'
   const [selectedCategory, setSelectedCategory] = useState(categoryName || null);
   const [searchQuery, setSearchQuery] = useState('');
   const [globalSearchQuery, setGlobalSearchQuery] = useState('');
@@ -155,7 +155,7 @@ export const LearnHub = ({ viewMode: initialViewMode = 'catalog' }) => {
 
   // Sync viewMode with URL
   useEffect(() => {
-    if (location.pathname === '/myprogress') {
+    if (location.pathname === '/learn/myprogress') {
       setViewMode('progress');
     } else if (location.pathname === '/learn' || location.pathname.startsWith('/learn/')) {
       setViewMode('catalog');
@@ -379,7 +379,7 @@ export const LearnHub = ({ viewMode: initialViewMode = 'catalog' }) => {
             transition={{ delay: 0.1 }}
           >
             <Link
-              to="/myprogress"
+              to="/learn/myprogress"
               className="w-full bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 rounded-3xl p-6 lg:p-8 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all text-left relative overflow-hidden group mb-8 block"
             >
               <div className="absolute -right-16 -top-16 w-48 h-48 rounded-full bg-white/10 group-hover:bg-white/15 transition-colors" />

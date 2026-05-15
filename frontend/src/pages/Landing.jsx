@@ -135,7 +135,7 @@ export const Landing = () => {
                 <Link to={isAuthenticated ? '/learn' : '/register'}>
                   <Button className="bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900 font-bold px-8 py-3.5 rounded-full shadow-lg shadow-amber-500/25 hover:shadow-xl hover:shadow-amber-500/30 transition-all w-full sm:w-auto">
                     <Play className="w-4 h-4 mr-2" />
-                    {isAuthenticated ? 'Continue learning' : 'Start free'}
+                    {isAuthenticated ? 'Go to Learning' : 'Start free'}
                   </Button>
                 </Link>
                 <Link to="/parents">
@@ -198,43 +198,6 @@ export const Landing = () => {
                 {stats.as_of && (
                   <span className="text-slate-400">· updated {fmtRelativeTime(stats.as_of)}</span>
                 )}
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* ━━━ COURSE CATALOG ━━━ */}
-        <section className="py-16 lg:py-20 bg-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
-              <div>
-                <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">Free courses, real depth</h2>
-                <p className="text-slate-600 mt-2">
-                  {apiTools.length > 0
-                    ? `${apiTools.length} courses across AI, English, code, and more — every lesson with a quiz.`
-                    : 'Loading courses…'}
-                </p>
-              </div>
-              <Link to="/learn" className="text-primary font-semibold hover:text-primary/80 inline-flex items-center gap-1 text-sm">
-                See all courses <ArrowRight className="w-4 h-4" />
-              </Link>
-            </div>
-
-            {topCourses.length > 0 ? (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                {topCourses.map((course, i) => (
-                  <CourseCard
-                    key={course.id}
-                    course={course}
-                    index={i}
-                    completion={0}
-                    linkPrefix="/learn"
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="rounded-2xl border border-dashed border-slate-200 p-12 text-center text-slate-400 text-sm">
-                Courses will appear here as they're added.
               </div>
             )}
           </div>
@@ -365,7 +328,7 @@ export const Landing = () => {
               </p>
               <Link to={isAuthenticated ? '/learn' : '/register'}>
                 <Button className="bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900 font-bold px-8 py-3.5 rounded-full shadow-lg hover:shadow-xl transition-all">
-                  {isAuthenticated ? 'Continue learning' : 'Start free →'}
+                  {isAuthenticated ? 'Go to Learning' : 'Start free →'}
                 </Button>
               </Link>
 
