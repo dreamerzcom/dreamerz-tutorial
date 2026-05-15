@@ -116,7 +116,7 @@ export const Landing = () => {
             >
               <div className="inline-flex items-center gap-2 bg-emerald-500/15 text-emerald-300 px-3 py-1 rounded-full mb-6 text-xs font-semibold border border-emerald-500/20">
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                100% free · no payments ever
+                Structured High-quality Curated Courses
               </div>
 
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white leading-[1.05] mb-5 max-w-3xl mx-auto">
@@ -156,7 +156,7 @@ export const Landing = () => {
                   <strong className="text-white">{fmtCount(stats.lessons_completed)}</strong> lessons completed
                 </span>
                 <span className="text-white/20">·</span>
-                <span className="text-emerald-300">100% free</span>
+                <span className="text-emerald-300">100% Quality</span>
               </div>
             </motion.div>
           </div>
@@ -324,7 +324,7 @@ export const Landing = () => {
                 Create your free account
               </h2>
               <p className="text-slate-400 mb-7 max-w-md mx-auto">
-                No credit card. No payments ever. You can delete your data anytime.
+               Start your learning Journey Today. You can delete your data anytime.
               </p>
               <Link to={isAuthenticated ? '/learn' : '/register'}>
                 <Button className="bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900 font-bold px-8 py-3.5 rounded-full shadow-lg hover:shadow-xl transition-all">
