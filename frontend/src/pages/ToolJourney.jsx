@@ -19,7 +19,7 @@ const numericId = (value) => {
 const AI_TOOL_IDS = ['chatgpt', 'claude', 'gemini', 'canva', 'syllaby'];
 
 export const ToolJourney = () => {
-  const { toolId } = useParams();
+  const { toolId, categoryName } = useParams();
   const navigate = useNavigate();
   const [tool, setTool] = useState(null);
   const [isLoading, setIsLoading] = useState(true);

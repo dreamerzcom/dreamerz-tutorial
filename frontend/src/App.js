@@ -1,5 +1,5 @@
 import "@/App.css";
-import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { Toaster } from "./components/ui/sonner";
 import { Navbar } from "./components/Navbar";
@@ -24,10 +24,37 @@ import { LearningProgressProvider } from "./hooks/useLearningProgress";
 import { ProgressProvider } from "./hooks/useProgress";
 import { useEffect } from "react";
 
-/** Redirect /tools/:toolId → /learn/:toolId preserving the param */
+/** Scroll to top on route change */
+const ScrollToTop = () => {
+  const location = useLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
+  return null;
+};
+
+/** Redirect /tools/:toolId → /learn/ai-learning/:toolId preserving the param (default category) */
 const ToolRedirect = () => {
   const { toolId } = useParams();
-  return <Navigate to={`/learn/${toolId}`} replace />;
+  return <Navigate to={`/learn/ai-learning/${toolId}`} replace />;
+};
+
+/** Redirect /learn/:toolId → /learn/ai-learning/:toolId for backward compatibility (default category) */
+const CourseRedirect = () => {
+  const { toolId } = useParams();
+  return <Navigate to={`/learn/ai-learning/${toolId}`} replace />;
+};
+
+/** Redirect /learn/category/:categoryName → /learn/:categoryName for backward compatibility */
+const CategoryRedirect = () => {
+  const { categoryName } = useParams();
+  return <Navigate to={`/learn/${categoryName}`} replace />;
+};
+
+/** Redirect /learn/course/:toolId → /learn/ai-learning/:toolId for backward compatibility (default category) */
+const CoursePathRedirect = () => {
+  const { toolId } = useParams();
+  return <Navigate to={`/learn/ai-learning/${toolId}`} replace />;
 };
 
 function App() {
@@ -56,6 +83,7 @@ function App() {
     <HelmetProvider>
       <div className="App flex flex-col min-h-screen">
         <BrowserRouter>
+          <ScrollToTop />
           <AuthProvider>
           <LanguageProvider>
           <LearningProgressProvider>
@@ -68,7 +96,8 @@ function App() {
                   <Route path="/home" element={<Landing />} />
                   <Route path="/" element={<Navigate to="/home" replace />} />
                   <Route path="/learn" element={<LearnHub />} />
-                  <Route path="/learn/:toolId" element={
+                  <Route path="/learn/:categoryName" element={<LearnHub />} />
+                  <Route path="/learn/:categoryName/:toolId" element={
                     <RequireAuth>
                       <ToolJourney />
                     </RequireAuth>
@@ -126,6 +155,9 @@ function App() {
                   {/* Backward-compatible redirects */}
                   <Route path="/tools" element={<Navigate to="/learn" replace />} />
                   <Route path="/tools/:toolId" element={<ToolRedirect />} />
+                  <Route path="/learn/:toolId" element={<CourseRedirect />} />
+                  <Route path="/learn/category/:categoryName" element={<CategoryRedirect />} />
+                  <Route path="/learn/course/:toolId" element={<CoursePathRedirect />} />
                   <Route path="/curriculum" element={<Navigate to="/learn" replace />} />
                   <Route path="/prompt-lab" element={<Navigate to="/learn" replace />} />
                   <Route path="/profile" element={<Navigate to="/account" replace />} />

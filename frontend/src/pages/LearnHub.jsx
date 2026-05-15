@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate, useLocation, useParams } from 'react-router-dom';
 import { useCurriculum } from '../hooks/useCurriculum';
 import { useLearningProgress } from '../hooks/useLearningProgress';
 import { useProgress } from '../hooks/useProgress';
@@ -54,7 +54,8 @@ const CourseCatalogCard = ({ course, index, isEnrolled, isEnrolling, onEnroll })
 
   const handlePrimaryAction = async () => {
     if (isEnrolled) {
-      navigate(`/learn/${course.id}`);
+      const categoryId = course.category_id || 'uncategorized';
+      navigate(`/learn/${categoryId}/${course.id}`);
       return;
     }
     if (!isAuthenticated) {
@@ -133,6 +134,7 @@ const CourseCatalogCard = ({ course, index, isEnrolled, isEnrolling, onEnroll })
 
 export const LearnHub = ({ viewMode: initialViewMode = 'catalog' }) => {
   const navigate = useNavigate();
+  const { categoryName } = useParams();
   const { tools: apiTools, isLoading, error } = useCurriculum();
   const { courseEnrollments, loadCourseEnrollments, startCourse, deleteCourse } = useLearningProgress();
   const {
@@ -144,7 +146,7 @@ export const LearnHub = ({ viewMode: initialViewMode = 'catalog' }) => {
   const { isAuthenticated } = useAuth();
   const location = useLocation();
   const [viewMode, setViewMode] = useState(location.pathname === '/myprogress' ? 'progress' : initialViewMode); // 'catalog' or 'progress'
-  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState(categoryName || null);
   const [searchQuery, setSearchQuery] = useState('');
   const [globalSearchQuery, setGlobalSearchQuery] = useState('');
   const [enrollingCourseId, setEnrollingCourseId] = useState(null);
@@ -155,10 +157,19 @@ export const LearnHub = ({ viewMode: initialViewMode = 'catalog' }) => {
   useEffect(() => {
     if (location.pathname === '/myprogress') {
       setViewMode('progress');
-    } else if (location.pathname === '/learn') {
+    } else if (location.pathname === '/learn' || location.pathname.startsWith('/learn/')) {
       setViewMode('catalog');
     }
   }, [location.pathname]);
+
+  // Sync selectedCategory with URL params
+  useEffect(() => {
+    if (categoryName) {
+      setSelectedCategory(categoryName);
+    } else {
+      setSelectedCategory(null);
+    }
+  }, [categoryName]);
 
   useEffect(() => {
     loadCourseEnrollments();
@@ -340,7 +351,7 @@ export const LearnHub = ({ viewMode: initialViewMode = 'catalog' }) => {
               <button
                 type="button"
                 onClick={() => {
-                  setSelectedCategory(null);
+                  navigate('/learn');
                   setSearchQuery('');
                 }}
                 className="px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-primary hover:border-primary/30 transition-colors"
@@ -476,7 +487,7 @@ export const LearnHub = ({ viewMode: initialViewMode = 'catalog' }) => {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.05 }}
                         onClick={() => {
-                          setSelectedCategory(category.id);
+                          navigate(`/learn/${category.id}`);
                           setGlobalSearchQuery('');
                         }}
                         className={`text-left rounded-3xl p-6 bg-gradient-to-br ${category.gradient} text-white shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all overflow-hidden relative`}
@@ -557,7 +568,7 @@ export const LearnHub = ({ viewMode: initialViewMode = 'catalog' }) => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
                   onClick={() => {
-                    setSelectedCategory(category.id);
+                    navigate(`/learn/${category.id}`);
                     setGlobalSearchQuery('');
                   }}
                   className={`text-left rounded-3xl p-6 bg-gradient-to-br ${category.gradient} text-white shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all overflow-hidden relative`}

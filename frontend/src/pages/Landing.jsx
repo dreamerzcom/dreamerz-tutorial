@@ -272,7 +272,7 @@ export const Landing = () => {
                     </li>
                   ))}
                 </ul>
-                <Link to="/learn/chatgpt" className="inline-flex items-center gap-1 text-primary font-semibold text-sm hover:text-primary/80">
+                <Link to="/learn/ai-learning/chatgpt" className="inline-flex items-center gap-1 text-primary font-semibold text-sm hover:text-primary/80">
                   See a sample lesson <ChevronRight className="w-4 h-4" />
                 </Link>
               </motion.div>
