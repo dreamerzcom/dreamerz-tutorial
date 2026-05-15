@@ -276,17 +276,28 @@ export const JourneyPlayer = ({
     }
   }, [course.id, courseDbId, activeModule, activeQuizDbId, activeLessonDbId, activeModuleDbId, previewMode, completeModule, getAttemptsCount, startAssessment, submitAssessment, completeLesson]);
 
+  const scrollToLessonTitle = useCallback(() => {
+    setTimeout(() => {
+      const courseContent = document.getElementById('course-content');
+      if (courseContent) {
+        const headerOffset = 120; // Account for website header and lesson header banner
+        const elementPosition = courseContent.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: 'smooth'
+        });
+      }
+    }, 100);
+  }, []);
+
   // Handle back to content from quiz results
   const handleBackToContent = useCallback(() => {
     setShowQuiz(false);
     setContentSection('learn');
-    setTimeout(() => {
-      const courseContent = document.getElementById('course-content');
-      if (courseContent) {
-        courseContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }, 100);
-  }, []);
+    scrollToLessonTitle();
+  }, [scrollToLessonTitle]);
 
   // Handle continue to next lesson after quiz completion
   const handleContinueToNext = useCallback(() => {
@@ -297,14 +308,9 @@ export const JourneyPlayer = ({
       setShowQuiz(false);
       setContentSection('learn');
       setQuizAttempts(0);
-      setTimeout(() => {
-        const courseContent = document.getElementById('course-content');
-        if (courseContent) {
-          courseContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      }, 100);
+      scrollToLessonTitle();
     }
-  }, [activeModuleIndex, allLessons.length, stopSpeech]);
+  }, [activeModuleIndex, allLessons.length, stopSpeech, scrollToLessonTitle]);
 
   // Navigate to next module
   const goToNextModule = useCallback(() => {
@@ -314,9 +320,9 @@ export const JourneyPlayer = ({
       setActiveModuleIndex(nextIndex);
       setShowQuiz(false);
       setContentSection('learn');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      scrollToLessonTitle();
     }
-  }, [activeModuleIndex, allLessons.length, stopSpeech]);
+  }, [activeModuleIndex, allLessons.length, stopSpeech, scrollToLessonTitle]);
 
   // Navigate to previous module
   const goToPrevModule = useCallback(() => {
@@ -325,9 +331,9 @@ export const JourneyPlayer = ({
       setActiveModuleIndex(prev => prev - 1);
       setShowQuiz(false);
       setContentSection('learn');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      scrollToLessonTitle();
     }
-  }, [activeModuleIndex, stopSpeech]);
+  }, [activeModuleIndex, stopSpeech, scrollToLessonTitle]);
 
   // Select specific module
   const selectModule = useCallback((index) => {
@@ -338,8 +344,9 @@ export const JourneyPlayer = ({
       setShowQuiz(false);
       setContentSection('learn');
       setQuizAttempts(0);
+      scrollToLessonTitle();
     }
-  }, [allLessons, course.id, isModuleUnlocked, stopSpeech]);
+  }, [allLessons, course.id, isModuleUnlocked, stopSpeech, scrollToLessonTitle]);
 
   if (!activeModule) return null;
 
@@ -974,6 +981,7 @@ export const JourneyPlayer = ({
                           <Button
                             onClick={() => {
                               setContentSection('quiz');
+                              scrollToLessonTitle();
                             }}
                             className="flex-1 sm:flex-none bg-gradient-to-r from-violet-600 to-violet-500 hover:from-violet-700 hover:to-violet-600 text-white px-4 sm:px-6 text-sm sm:text-base font-semibold shadow-lg shadow-violet-500/30"
                           >
