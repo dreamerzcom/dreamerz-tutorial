@@ -142,13 +142,11 @@ export const Landing = () => {
                 <h3 className="text-2xl font-bold text-slate-900 mb-3">You stay in control</h3>
                 <p className="text-slate-600 mb-5">
                   Track every quiz score. See exactly which lessons your child has finished.
-                  No social features, no random chat — just safe, structured learning.
                 </p>
                 <ul className="space-y-2.5 mb-6">
                   {[
                     'Per-learner progress dashboard with lesson-level detail',
                     'AI conversations stay on-topic and age-appropriate',
-                    'Transparent pricing — no surprise charges',
                     'Delete your child\'s data any time, no questions asked',
                   ].map((line) => (
                     <li key={line} className="flex items-start gap-2 text-sm text-slate-700">
