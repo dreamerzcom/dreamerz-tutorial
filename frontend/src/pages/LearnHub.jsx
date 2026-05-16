@@ -363,7 +363,7 @@ export const LearnHub = ({ viewMode: initialViewMode = 'catalog' }) => {
                   <p className="text-slate-600 max-w-6xl text-lg">
                     {viewMode === 'progress'
                       ? 'Monitor your courses, celebrate milestones, and visualize your journey toward mastering new skills in real time.'
-                      : 'Choose a learning category first. Then enroll in a course to unlock the full course player and begin progress tracking.'}
+                      : 'Explore learning categories, choose a course to enroll and unlock the full course player and begin progress tracking.'}
                   </p>
                 </div>
               </div>
