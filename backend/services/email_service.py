@@ -270,7 +270,7 @@ def build_welcome_email(username: str) -> str:
                 <a href="https://dreamerz-frontend.onrender.com/account" style="color:#818cf8; text-decoration:none; font-weight:600;">My Account</a>
               </p>
               <p style="color:#64748b; font-size:12px; margin:0;">
-                &copy; 2026 DreamerZ. Made with ❤️ for teen learners in India.
+                &copy; 2026 DreamerZ. Made with ❤️ for AI & Conversational-English learners.
               </p>
             </td>
           </tr>
