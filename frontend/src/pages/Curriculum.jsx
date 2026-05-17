@@ -67,7 +67,7 @@ export const Curriculum = () => {
     },
     {
       id: 'spoken-writing-english',
-      name: 'Spoken and Writing English',
+      name: 'Conversational English',
       description: 'West Bengal-focused spoken and written English practice for teens, with stories, read-aloud practice, and quizzes.'
     }
   ];

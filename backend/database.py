@@ -51,10 +51,10 @@ except FileNotFoundError:
 CATEGORIES_DATA = [
     {
         "id": "spoken-writing-english",
-        "name": "Spoken and Writing English",
+        "name": "Conversational English",
         "description": (
-            "Spoken and Writing English for West Bengal teens with "
-            "story-based lessons, voice read-aloud practice, and quizzes."
+            "Conversational English with story-based lessons, "
+            "voice read-aloud practice, and quizzes."
         ),
     },
     {

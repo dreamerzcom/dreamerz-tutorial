@@ -18,8 +18,8 @@ const CATEGORY_META = {
     ring: 'ring-indigo-100'
   },
   'spoken-writing-english': {
-    title: 'Spoken & Writing English',
-    description: 'Build confidence with English speaking, writing, vocabulary, and roleplay practice.',
+    title: 'Conversational English',
+    description: 'Build confidence in everyday English conversations with vocabulary, dialogues, and roleplay practice.',
     icon: '🗣️',
     gradient: 'from-rose-500 to-pink-500',
     ring: 'ring-rose-100'
