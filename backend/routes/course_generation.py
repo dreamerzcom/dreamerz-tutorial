@@ -83,7 +83,11 @@ async def parse_upload(
     """Upload a PDF/DOCX/TXT file and return the parsed plain text."""
     data = await file.read()
     try:
-        parsed = await course_generator.parse_document(data, file.filename)
+        parsed = document_parser.parse_document(
+            data=data,
+            filename=file.filename,
+            content_type=file.content_type,
+        )
         return {
             "filename": file.filename,
             "content_type": file.content_type,
@@ -124,7 +128,7 @@ async def create_blueprint(
 
     try:
         draft = await course_generator.create_draft(
-            admin_username=current_admin.get("username", "admin"),
+            admin_username=current_user.get("username", "admin"),
             source_text=payload.source_text,
             filename=payload.filename,
             tone=payload.tone,
