@@ -144,7 +144,7 @@ export const Parents = () => {
           </div>
 
           <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">
-            Safe AI Learning for Your Teen
+            Safe AI Learning for Your Child
           </h1>
           <p className="text-lg text-slate-600 max-w-2xl mx-auto">
             DreamerZ_Lite helps learners 11 years and above learn about AI responsibly.
