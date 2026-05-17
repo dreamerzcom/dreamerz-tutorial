@@ -1,7 +1,7 @@
 """Authentication routes — register, login, profile, change password."""
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
@@ -13,12 +13,46 @@ from database import get_db
 from models.sql_models import User
 from models.user import UserCreate, UserLogin, TokenResponse, UserInfoResponse, LanguageUpdate
 from services.auth_service import (
+    TRIAL_DURATION_DAYS,
+    TRIAL_EXEMPT_ROLES,
     authenticate_user,
     create_access_token,
     get_current_user,
     get_password_hash,
     has_role,
+    trial_days_remaining,
 )
+
+
+def _trial_payload(user_like) -> dict:
+    """Extract (trial_expires_at_iso, trial_days_remaining) for response bodies.
+
+    Accepts either a User ORM row or the dict shape `authenticate_user`
+    returns. Hides the column for exempt roles by returning None on both
+    fields — the frontend reads None as "no trial, never expires".
+    """
+    if isinstance(user_like, dict):
+        role = user_like.get("role")
+        email = user_like.get("email", "")
+        raw_expiry = user_like.get("trial_expires_at")
+        if isinstance(raw_expiry, datetime):
+            expiry_iso = raw_expiry.isoformat()
+        else:
+            expiry_iso = raw_expiry  # already a string or None
+        user_dict = user_like
+    else:
+        role = user_like.role
+        email = user_like.email or ""
+        expiry_iso = user_like.trial_expires_at.isoformat() if user_like.trial_expires_at else None
+        user_dict = {"role": role, "email": email, "trial_expires_at": expiry_iso}
+
+    role_lc = (role or "learner").lower()
+    if role_lc in TRIAL_EXEMPT_ROLES or email.lower() in ADMIN_EMAILS:
+        return {"trial_expires_at": None, "trial_days_remaining": None}
+    return {
+        "trial_expires_at": expiry_iso,
+        "trial_days_remaining": trial_days_remaining(user_dict),
+    }
 from services.email_service import send_welcome_email
 from middleware.rate_limit import check_auth_rate_limit
 
@@ -77,6 +111,13 @@ async def register_user(user: UserCreate, session: AsyncSession = Depends(get_db
     is_admin_email = email in ADMIN_EMAILS
     final_role = "admin" if is_admin_email else requested_role
 
+    # Exempt roles never have an expiry; learners get the standard window.
+    trial_expires = (
+        None
+        if final_role in TRIAL_EXEMPT_ROLES or is_admin_email
+        else now + timedelta(days=TRIAL_DURATION_DAYS)
+    )
+
     new_user = User(
         username=username,
         email=email,
@@ -86,6 +127,7 @@ async def register_user(user: UserCreate, session: AsyncSession = Depends(get_db
         created_at=now,
         updated_at=now,
         last_login=None,
+        trial_expires_at=trial_expires,
     )
     session.add(new_user)
     await session.commit()
@@ -106,6 +148,7 @@ async def register_user(user: UserCreate, session: AsyncSession = Depends(get_db
         "role": final_role,
         "ai_generation_enabled": False,
         "preferred_language": lang,
+        **_trial_payload(new_user),
     }
 
 
@@ -151,6 +194,7 @@ async def login_user(credentials: UserLogin, request: Request, session: AsyncSes
         "role": user.get("role", "learner"),
         "ai_generation_enabled": user.get("ai_generation_enabled", False),
         "preferred_language": user_lang,
+        **_trial_payload(user),
     }
 
 
@@ -163,6 +207,7 @@ async def get_profile(current_user: dict = Depends(get_current_user)):
         "role": current_user.get("role", "learner"),
         "ai_generation_enabled": current_user.get("ai_generation_enabled", False),
         "preferred_language": current_user.get("preferred_language", DEFAULT_LANGUAGE),
+        **_trial_payload(current_user),
     }
 
 
@@ -250,6 +295,7 @@ async def change_password(
         "created_at": user.created_at.isoformat() if user.created_at else None,
         "role": user.role,
         "preferred_language": user_lang,
+        **_trial_payload(user),
     }
 
 
@@ -331,4 +377,5 @@ async def forgot_password(
         "created_at": user.created_at.isoformat() if user.created_at else None,
         "role": user.role,
         "preferred_language": user_lang,
+        **_trial_payload(user),
     }

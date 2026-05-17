@@ -6,6 +6,19 @@ import {
 
 const API_BASE = (process.env.REACT_APP_BACKEND_URL || '').replace(/\/+$/, '');
 
+// Same key the rest of the app uses for the auth blob (see useAuth.js).
+const AUTH_STORAGE_KEY = 'dreamerz_beta_auth_v1';
+
+const getAuthToken = () => {
+  try {
+    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw)?.token || null;
+  } catch {
+    return null;
+  }
+};
+
 // Per-tool theming + external links. `chat: false` tools (Canva, Syllaby)
 // aren't conversational, so we show a link-out + copy-prompt panel instead
 // of a chat window.
@@ -120,9 +133,12 @@ const ChatPanel = ({ cfg, suggestion }) => {
     setLoading(true);
 
     try {
+      const token = getAuthToken();
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers.Authorization = `Bearer ${token}`;
       const res = await fetch(`${API_BASE}/api/ai`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           prompt: text,
           mode: 'tryit',
@@ -132,6 +148,12 @@ const ChatPanel = ({ cfg, suggestion }) => {
 
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
+        if (res.status === 401) {
+          throw new Error('Please sign in to use the Try-It chat.');
+        }
+        if (res.status === 403 && body.detail === 'trial_expired') {
+          throw new Error('Your free trial has ended — the chat is no longer available.');
+        }
         if (res.status === 429) {
           throw new Error('You are sending messages too fast. Please wait a moment.');
         }

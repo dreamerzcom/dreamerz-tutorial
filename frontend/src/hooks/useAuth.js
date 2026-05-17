@@ -38,7 +38,18 @@ const storePasswordCredential = async ({ username, email, password }) => {
   }
 };
 
-const buildUserProfile = ({ username, email, profile, lastLoginAt, createdAt, preferredLanguage, role, aiGenerationEnabled }) => ({
+const buildUserProfile = ({
+  username,
+  email,
+  profile,
+  lastLoginAt,
+  createdAt,
+  preferredLanguage,
+  role,
+  aiGenerationEnabled,
+  trialExpiresAt,
+  trialDaysRemaining,
+}) => ({
   username,
   email,
   role: role || 'learner',
@@ -50,8 +61,36 @@ const buildUserProfile = ({ username, email, profile, lastLoginAt, createdAt, pr
   bio: profile?.bio || '',
   location: profile?.location || '',
   lastLoginAt: lastLoginAt || new Date().toISOString(),
-  createdAt: createdAt || new Date().toISOString()
+  createdAt: createdAt || new Date().toISOString(),
+  // Free-trial bookkeeping. `trialExpiresAt` is an ISO string for learners
+  // and null for exempt roles (admin/creator/supervisor — never gated).
+  trialExpiresAt: trialExpiresAt || null,
+  // We cache the server-computed number too, but `useAuth` recomputes from
+  // `trialExpiresAt` on every render so the Navbar countdown stays current.
+  trialDaysRemaining: typeof trialDaysRemaining === 'number' ? trialDaysRemaining : null,
 });
+
+// Recompute days remaining locally so the Navbar badge updates as time
+// passes without needing a server round-trip. Returns:
+//   null  → exempt user (no trial)
+//   0     → expired
+//   N>0   → whole days left
+const computeTrialDaysRemaining = (user) => {
+  if (!user) return null;
+  if (!user.trialExpiresAt) {
+    // Exempt accounts (admins etc.) intentionally have a null expiry.
+    // Learners with a null expiry mean a backfill miss → treat as expired.
+    const role = (user.role || 'learner').toLowerCase();
+    if (role === 'admin' || role === 'creator' || role === 'supervisor') {
+      return null;
+    }
+    return 0;
+  }
+  const expiry = new Date(user.trialExpiresAt).getTime();
+  if (Number.isNaN(expiry)) return 0;
+  const ms = expiry - Date.now();
+  return Math.max(0, Math.ceil(ms / (24 * 60 * 60 * 1000)));
+};
 
 const isTokenExpired = (token) => {
   try {
@@ -111,6 +150,8 @@ export const AuthProvider = ({ children }) => {
         lastLoginAt: new Date().toISOString(),
         role: result.role,
         aiGenerationEnabled: result.ai_generation_enabled,
+        trialExpiresAt: result.trial_expires_at,
+        trialDaysRemaining: result.trial_days_remaining,
       })
     };
 
@@ -160,6 +201,8 @@ export const AuthProvider = ({ children }) => {
         lastLoginAt: new Date().toISOString(),
         role: response.role,
         aiGenerationEnabled: response.ai_generation_enabled,
+        trialExpiresAt: response.trial_expires_at,
+        trialDaysRemaining: response.trial_days_remaining,
       })
     };
     saveAuth(auth);
@@ -209,6 +252,8 @@ export const AuthProvider = ({ children }) => {
           lastLoginAt: new Date().toISOString(),
           role: result.role,
           aiGenerationEnabled: result.ai_generation_enabled,
+          trialExpiresAt: result.trial_expires_at,
+          trialDaysRemaining: result.trial_days_remaining,
         });
         const stored = getStoredAuth();
         if (stored?.token) {
@@ -228,6 +273,13 @@ export const AuthProvider = ({ children }) => {
     navigate('/');
   }, [navigate]);
 
+  // Recomputed every render so the badge keeps ticking down without a
+  // refresh. null → exempt (no trial); 0 → expired; N>0 → days left.
+  const trialDaysRemaining = computeTrialDaysRemaining(user);
+  const isTrialActive = trialDaysRemaining === null || trialDaysRemaining > 0;
+  const isTrialExpired =
+    Boolean(token) && trialDaysRemaining !== null && trialDaysRemaining <= 0;
+
   return (
     <AuthContext.Provider
       value={{
@@ -235,6 +287,9 @@ export const AuthProvider = ({ children }) => {
         token,
         isLoaded,
         isAuthenticated: Boolean(token),
+        trialDaysRemaining,
+        isTrialActive,
+        isTrialExpired,
         login,
         register,
         applyAuthResponse,

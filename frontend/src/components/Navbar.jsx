@@ -1,10 +1,43 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, BookOpen, Users, User, BarChart3, LogOut, Shield } from 'lucide-react';
+import { Menu, X, BookOpen, Users, User, BarChart3, LogOut, Shield, Clock } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { UserMenu } from './UserMenu';
 import { LanguageToggle } from './LanguageToggle';
+
+// Free-trial countdown chip. Hidden for exempt accounts (admin/creator/
+// supervisor get `trialDaysRemaining === null`) and for logged-out users.
+// Turns rose-red at ≤3 days, amber at ≤7, slate otherwise; once expired
+// it links to /trial-expired so the user can see what to do next.
+const TrialBadge = ({ trialDaysRemaining, className = '' }) => {
+  if (trialDaysRemaining === null || trialDaysRemaining === undefined) return null;
+
+  const expired = trialDaysRemaining <= 0;
+  const tone = expired
+    ? 'bg-rose-50 text-rose-700 border-rose-200'
+    : trialDaysRemaining <= 3
+      ? 'bg-rose-50 text-rose-700 border-rose-200'
+      : trialDaysRemaining <= 7
+        ? 'bg-amber-50 text-amber-700 border-amber-200'
+        : 'bg-slate-100 text-slate-600 border-slate-200';
+
+  const label = expired
+    ? 'Trial ended'
+    : `${trialDaysRemaining} day${trialDaysRemaining === 1 ? '' : 's'} left in trial`;
+
+  return (
+    <Link
+      to={expired ? '/trial-expired' : '/learn'}
+      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-semibold ${tone} ${className}`}
+      title={expired ? 'Free trial ended — tap for details' : '45-day free trial'}
+      data-testid="nav-trial-badge"
+    >
+      <Clock className="w-3 h-3" />
+      {label}
+    </Link>
+  );
+};
 
 const baseNavLinks = [
   { path: '/learn', label: 'Learn', icon: BookOpen },
@@ -14,7 +47,7 @@ const baseNavLinks = [
 export const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
-  const { user, isAuthenticated, logout, isCreator, isSupervisor, isAdmin } = useAuth();
+  const { user, isAuthenticated, logout, isCreator, isSupervisor, isAdmin, trialDaysRemaining } = useAuth();
 
   const navLinks = [
     { path: '/learn', label: 'Learn', icon: BookOpen },
@@ -64,6 +97,9 @@ export const Navbar = () => {
 
           {/* Language + Auth / User Menu */}
           <div className="hidden md:flex items-center gap-2">
+            {isAuthenticated && (
+              <TrialBadge trialDaysRemaining={trialDaysRemaining} />
+            )}
             <LanguageToggle />
             {isAuthenticated ? (
               <UserMenu user={user} onLogout={logout} />
@@ -133,6 +169,13 @@ export const Navbar = () => {
               <div className="pt-3 border-t border-slate-100 mt-2 mb-2 px-2">
                 <LanguageToggle />
               </div>
+
+              {/* Trial badge (mobile) */}
+              {isAuthenticated && trialDaysRemaining !== null && trialDaysRemaining !== undefined && (
+                <div className="px-2 pt-3 border-t border-slate-100 mt-2">
+                  <TrialBadge trialDaysRemaining={trialDaysRemaining} className="w-full justify-center" />
+                </div>
+              )}
 
               {/* Account section */}
               <div className="pt-3 border-t border-slate-100 mt-2 space-y-1">

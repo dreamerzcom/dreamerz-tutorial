@@ -1,6 +1,7 @@
 """Authentication service — password hashing, JWT tokens, user lookup."""
 
 import logging
+import math
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -17,6 +18,13 @@ from models.sql_models import User
 from utils.sanitizers import sanitize_str
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# ── Free trial ────────────────────────────────────────────
+# Learner accounts get a 45-day window from registration. Once it lapses
+# they are routed to the trial-expired page and blocked from progress /
+# AI endpoints. Roles in TRIAL_EXEMPT_ROLES are never gated.
+TRIAL_DURATION_DAYS = 45
+TRIAL_EXEMPT_ROLES = {"admin", "creator", "supervisor"}
 
 # Dummy hash for constant-time comparison when user is not found
 _DUMMY_HASH = pwd_context.hash("dummy-password-for-timing-safety")
@@ -63,7 +71,78 @@ def _user_to_dict(user: User) -> dict:
         "created_at": user.created_at.isoformat() if user.created_at else None,
         "updated_at": user.updated_at.isoformat() if user.updated_at else None,
         "last_login": user.last_login.isoformat() if user.last_login else None,
+        "trial_expires_at": user.trial_expires_at.isoformat() if user.trial_expires_at else None,
     }
+
+
+def _coerce_expiry(value) -> Optional[datetime]:
+    """Normalise a trial_expires_at value into a timezone-aware datetime.
+
+    Accepts ISO strings (the shape we serialise into dicts), naive datetimes
+    (treated as UTC), and aware datetimes (used as-is). Returns None for
+    falsy / unparseable input — the caller decides what that means.
+    """
+    if not value:
+        return None
+    if isinstance(value, datetime):
+        dt = value
+    else:
+        try:
+            dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        except (TypeError, ValueError):
+            return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
+def is_trial_active(user: dict) -> bool:
+    """True if the user can still access gated features.
+
+    Exempt roles (admin / creator / supervisor) always pass. Learners pass
+    while now < trial_expires_at. A NULL expiry is treated as expired for
+    learner-role accounts so we don't accidentally grant unlimited access
+    if backfill ever missed a row.
+    """
+    role = (user.get("role") or "learner").lower()
+    if role in TRIAL_EXEMPT_ROLES:
+        return True
+    if user.get("email", "").lower() in ADMIN_EMAILS:
+        return True
+    expiry = _coerce_expiry(user.get("trial_expires_at"))
+    if not expiry:
+        return False
+    return datetime.now(timezone.utc) < expiry
+
+
+def trial_days_remaining(user: dict) -> Optional[int]:
+    """Whole days left in the trial, or None for exempt accounts.
+
+    A non-exempt user with no expiry returns 0 (expired). Already-expired
+    users return 0, not a negative number — the frontend uses 0 as the
+    "expired" marker.
+    """
+    role = (user.get("role") or "learner").lower()
+    if role in TRIAL_EXEMPT_ROLES or user.get("email", "").lower() in ADMIN_EMAILS:
+        return None
+    expiry = _coerce_expiry(user.get("trial_expires_at"))
+    if not expiry:
+        return 0
+    delta = expiry - datetime.now(timezone.utc)
+    return max(0, math.ceil(delta.total_seconds() / 86400))
+
+
+async def require_trial_active(authorization: Optional[str] = Header(None)):
+    """FastAPI dependency — block gated endpoints once the trial lapses.
+
+    Returns 403 with a stable `detail='trial_expired'` so the frontend can
+    detect and route to the trial-expired page. Wraps `get_current_user`
+    so callers still get the user dict.
+    """
+    user = await get_current_user(authorization)
+    if not is_trial_active(user):
+        raise HTTPException(status_code=403, detail="trial_expired")
+    return user
 
 
 async def get_user_by_login_identifier(

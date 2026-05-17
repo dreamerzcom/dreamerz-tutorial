@@ -5,7 +5,7 @@ import { Toaster } from "./components/ui/sonner";
 import { Navbar } from "./components/Navbar";
 import { Footer } from "./components/Footer";
 import { ErrorBoundary, NotFound } from "./components/ErrorStates";
-import { RequireAuth, RequireRole } from "./components/RequireRole";
+import { RequireAuth, RequireRole, RequireTrialActive } from "./components/RequireRole";
 import { Landing } from "./pages/Landing";
 import { LearnHub } from "./pages/LearnHub";
 import { ToolJourney } from "./pages/ToolJourney";
@@ -15,6 +15,7 @@ import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
 import { ChangePassword } from "./pages/ChangePassword";
 import { ForgotPassword } from "./pages/ForgotPassword";
+import { TrialExpired } from "./pages/TrialExpired";
 import { AdminPanel } from "./pages/AdminPanel";
 import { ParentDashboard } from "./pages/ParentDashboard";
 import { ParentStudentDetail } from "./pages/ParentStudentDetail";
@@ -98,15 +99,16 @@ function App() {
                   <Route path="/learn" element={<LearnHub />} />
                   <Route path="/learn/:categoryName" element={<LearnHub />} />
                   <Route path="/learn/:categoryName/:toolId" element={
-                    <RequireAuth>
+                    <RequireTrialActive>
                       <ToolJourney />
-                    </RequireAuth>
+                    </RequireTrialActive>
                   } />
                   <Route path="/learn/myprogress" element={
-                    <RequireAuth>
+                    <RequireTrialActive>
                       <LearnHub viewMode="progress" />
-                    </RequireAuth>
+                    </RequireTrialActive>
                   } />
+                  <Route path="/trial-expired" element={<TrialExpired />} />
                   <Route path="/parents" element={<Parents />} />
                   <Route path="/account" element={
                     <RequireAuth>

@@ -25,7 +25,7 @@ from services.progress_service import (
     get_course_lesson_progress,
     update_lesson_time_spent,
 )
-from services.auth_service import get_current_user
+from services.auth_service import get_current_user, require_trial_active
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/progress", tags=["progress"])
@@ -38,7 +38,7 @@ router = APIRouter(prefix="/progress", tags=["progress"])
 @router.post("/courses/{course_id}/start")
 async def start_course(
     course_id: int,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_trial_active),
     session: AsyncSession = Depends(get_db),
 ):
     """Start or resume a course enrollment."""
@@ -67,7 +67,7 @@ async def start_course(
 @router.get("/courses/{course_id}")
 async def get_enrollment(
     course_id: int,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_trial_active),
     session: AsyncSession = Depends(get_db),
 ):
     """Get enrollment status for a specific course."""
@@ -96,7 +96,7 @@ async def get_enrollment(
 async def update_enrollment(
     course_id: int,
     updates: StudentCourseEnrollmentUpdate,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_trial_active),
     session: AsyncSession = Depends(get_db),
 ):
     """Update course enrollment progress."""
@@ -123,7 +123,7 @@ async def update_enrollment(
 
 @router.get("/courses")
 async def list_enrollments(
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_trial_active),
     session: AsyncSession = Depends(get_db),
 ):
     """Get all course enrollments for the current user."""
@@ -147,7 +147,7 @@ async def list_enrollments(
 @router.post("/courses/{course_id}/complete")
 async def complete_course(
     course_id: int,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_trial_active),
     session: AsyncSession = Depends(get_db),
 ):
     """Mark a course as completed."""
@@ -175,7 +175,7 @@ async def complete_course(
 @router.delete("/courses/{course_id}/enrollment")
 async def delete_enrollment(
     course_id: int,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_trial_active),
     session: AsyncSession = Depends(get_db),
 ):
     """Delete a course enrollment and all associated progress."""
@@ -207,7 +207,7 @@ async def start_lesson(
     lesson_id: int,
     course_id: int,
     module_id: int,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_trial_active),
     session: AsyncSession = Depends(get_db),
 ):
     """Start or resume a lesson. User must be enrolled in the course."""
@@ -240,7 +240,7 @@ async def start_lesson(
 @router.get("/lessons/{lesson_id}")
 async def get_lesson_progress_endpoint(
     lesson_id: int,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_trial_active),
     session: AsyncSession = Depends(get_db),
 ):
     """Get progress for a specific lesson."""
@@ -269,7 +269,7 @@ async def get_lesson_progress_endpoint(
 async def update_lesson_progress_endpoint(
     lesson_id: int,
     updates: StudentLessonProgressUpdate,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_trial_active),
     session: AsyncSession = Depends(get_db),
 ):
     """Update lesson progress. User must be enrolled in the course."""
@@ -305,7 +305,7 @@ async def update_lesson_progress_endpoint(
 @router.post("/lessons/{lesson_id}/complete")
 async def complete_lesson_endpoint(
     lesson_id: int,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_trial_active),
     session: AsyncSession = Depends(get_db),
 ):
     """Mark a lesson as completed. User must be enrolled in the course."""
@@ -341,7 +341,7 @@ async def complete_lesson_endpoint(
 @router.get("/courses/{course_id}/lessons")
 async def list_course_lesson_progress(
     course_id: int,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_trial_active),
     session: AsyncSession = Depends(get_db),
 ):
     """Get all lesson progress for a course. User must be enrolled in the course."""
@@ -373,7 +373,7 @@ async def list_course_lesson_progress(
 async def lesson_heartbeat(
     lesson_id: int,
     additional_seconds: int,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_trial_active),
     session: AsyncSession = Depends(get_db),
 ):
     """Update time spent on a lesson (heartbeat for tracking engagement). User must be enrolled in the course."""

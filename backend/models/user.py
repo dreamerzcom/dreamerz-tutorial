@@ -45,6 +45,11 @@ class TokenResponse(BaseModel):
     role: str = "learner"
     ai_generation_enabled: bool = False
     preferred_language: str = "en"
+    # Free-trial bookkeeping. `trial_expires_at` is ISO-8601 (or null for
+    # exempt roles); `trial_days_remaining` is null for exempt roles and a
+    # non-negative int for learners (0 = already expired).
+    trial_expires_at: Optional[str] = None
+    trial_days_remaining: Optional[int] = None
 
 
 class UserInfoResponse(BaseModel):
@@ -54,6 +59,8 @@ class UserInfoResponse(BaseModel):
     role: str = "learner"
     ai_generation_enabled: bool = False
     preferred_language: str = "en"
+    trial_expires_at: Optional[str] = None
+    trial_days_remaining: Optional[int] = None
 
 
 class AdminUserResponse(BaseModel):

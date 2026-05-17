@@ -30,6 +30,39 @@ export const RequireAuth = ({ children }) => {
   return children;
 };
 
+// Gate routes that consume the trial: course player, my-progress dashboard,
+// anything else where lessons get done. Exempt roles always pass; expired
+// learners are bounced to /trial-expired.
+export const RequireTrialActive = ({ children }) => {
+  const { isLoaded, isAuthenticated, isTrialExpired } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    if (!isAuthenticated) {
+      navigate('/login', { replace: true });
+      return;
+    }
+    if (isTrialExpired) {
+      navigate('/trial-expired', { replace: true });
+    }
+  }, [isLoaded, isAuthenticated, isTrialExpired, navigate]);
+
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated || isTrialExpired) {
+    return null;
+  }
+
+  return children;
+};
+
 export const RequireRole = ({ roles = [], children }) => {
   const { user, isLoaded, hasRole, isAuthenticated, isAdmin } = useAuth();
   const navigate = useNavigate();
