@@ -961,6 +961,39 @@ async def get_course(
     return d
 
 
+@content_router.get("/courses/{course_id}/learner-preview")
+async def get_course_learner_preview(
+    course_id: str,
+    lang: str = "en",
+    session: AsyncSession = Depends(get_db),
+):
+    """Admin/creator-only learner-view payload for a course in any state
+    (including drafts). Mirrors the public `/api/content/courses/{slug}`
+    response shape so the admin Learner-Preview toggle can reuse the
+    same JourneyPlayer rendering pipeline.
+    """
+    # Imported lazily to keep admin.py free of a hard dep on content.py at module load
+    from routes.content import (
+        _eager_load_course_with_content,
+        serialize_full_course,
+    )
+
+    course_id = (course_id or "").strip()
+    lang = (lang or "en").strip().lower()
+
+    stmt = (
+        select(Course)
+        .options(*_eager_load_course_with_content())
+        .where(Course.slug == course_id)
+    )
+    result = await session.execute(stmt)
+    course = result.scalars().unique().first()
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+
+    return serialize_full_course(course, course_id, lang)
+
+
 @content_router.put("/courses/{course_id}")
 async def update_course(
     course_id: str,

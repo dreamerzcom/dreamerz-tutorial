@@ -399,26 +399,11 @@ async def get_published_courses(session: AsyncSession = Depends(get_db)):
 # 4. GET /content/courses/{course_id} — single course with full content
 # ---------------------------------------------------------------------------
 
-@router.get("/courses/{course_id}")
-async def get_published_course(
-    course_id: str,
-    lang: str = Query(default="en", max_length=5),
-    session: AsyncSession = Depends(get_db),
-):
-    """Get a single published course with full content for the JourneyPlayer."""
-    course_id = sanitize_id(course_id, "course_id")
-    lang = lang.strip().lower()
-
-    stmt = (
-        select(Course)
-        .options(*_eager_load_course_with_content())
-        .where(Course.slug == course_id, Course.status == "published")
-    )
-    result = await session.execute(stmt)
-    course = result.scalars().unique().first()
-    if not course:
-        raise HTTPException(status_code=404, detail="Course not found")
-
+def serialize_full_course(course: Course, course_id: str, lang: str) -> dict:
+    """Serialize a course (modules → lessons → content/quiz/media) for the
+    JourneyPlayer. Shared between the public published endpoint and the
+    admin learner-preview endpoint so both views stay in sync.
+    """
     course_dict = _serialize_tool(course)
 
     sections_with_lessons = []
@@ -475,6 +460,29 @@ async def get_published_course(
     course_dict["id"] = course_id
     course_dict["sections"] = sections_with_lessons
     return course_dict
+
+
+@router.get("/courses/{course_id}")
+async def get_published_course(
+    course_id: str,
+    lang: str = Query(default="en", max_length=5),
+    session: AsyncSession = Depends(get_db),
+):
+    """Get a single published course with full content for the JourneyPlayer."""
+    course_id = sanitize_id(course_id, "course_id")
+    lang = lang.strip().lower()
+
+    stmt = (
+        select(Course)
+        .options(*_eager_load_course_with_content())
+        .where(Course.slug == course_id, Course.status == "published")
+    )
+    result = await session.execute(stmt)
+    course = result.scalars().unique().first()
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+
+    return serialize_full_course(course, course_id, lang)
 
 
 # ---------------------------------------------------------------------------

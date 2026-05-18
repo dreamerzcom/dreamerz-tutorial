@@ -312,17 +312,22 @@ export const CourseDetail = ({ courseId, token, onBack, onCourseDeleted, onNavig
     }
   };
 
-  // ── Learner preview data (fetch the public course API with nested sections) ──
+  // ── Learner preview data ──
+  // Drafts are not surfaced by the public `/api/content/courses/{slug}`
+  // endpoint (it filters to status=published). For the admin in-editor
+  // preview we therefore hit the auth-gated admin variant which returns
+  // the same payload shape regardless of course status.
   const [learnerCourse, setLearnerCourse] = useState(null);
   const loadLearnerPreview = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/content/courses/${courseId}`);
-      if (res.ok) {
-        const data = await res.json();
-        setLearnerCourse(data);
-      }
-    } catch {/* ignore */}
-  }, [courseId]);
+      const data = await adminFetch(`/courses/${courseId}/learner-preview`, token);
+      setLearnerCourse(data);
+    } catch (e) {
+      // Surface so the user knows the preview couldn't load (e.g. course not
+      // found, network error). Don't replace previously-loaded data.
+      setError(e.message || 'Could not load learner preview');
+    }
+  }, [courseId, token]);
 
   useEffect(() => {
     if (previewMode === 'learner') {
