@@ -384,7 +384,7 @@ export const JourneyPlayer = ({
     { id: 'quiz', label: 'Quiz', icon: HelpCircle, color: 'violet' },
     ...(hasVocab ? [{ id: 'vocab', label: 'Vocab', icon: Languages, color: 'violet' }] : []),
     ...(hasSpeak ? [{ id: 'speak', label: 'Speak', icon: Mic, color: 'rose' }] : []),
-    { id: 'study', label: 'Study Materials', icon: Paperclip, color: 'sky' },
+    { id: 'study', label: 'Media', icon: Paperclip, color: 'sky' },
   ];
 
   return (
@@ -468,9 +468,11 @@ export const JourneyPlayer = ({
       </div>
 
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-8 overflow-x-hidden">
-        <div className="grid lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-8">
-          {/* Module Sidebar */}
-          <div className="hidden lg:block lg:col-span-3 order-2 lg:order-1">
+        <div className="grid lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-8 lg:items-start">
+          {/* Module Sidebar — always top-aligned with the content column so
+              the learning path doesn't centre-align when the main panel is
+              taller than the sidebar. */}
+          <div className="hidden lg:block lg:col-span-3 order-2 lg:order-1 self-start">
             <div className="lg:sticky lg:top-36">
               <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                 <div className="p-4 border-b border-slate-100 bg-slate-50">
@@ -930,7 +932,7 @@ export const JourneyPlayer = ({
                                 <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-sky-600" />
                               </div>
                               <div className="min-w-0 flex-1">
-                                <h3 className="font-bold text-slate-900 text-base sm:text-lg break-words">Study Materials</h3>
+                                <h3 className="font-bold text-slate-900 text-base sm:text-lg break-words">Media</h3>
                                 <p className="text-sm text-slate-500 truncate">Additional resources</p>
                               </div>
                             </div>

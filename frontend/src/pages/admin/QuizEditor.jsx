@@ -205,9 +205,16 @@ export const QuizEditor = ({
       if (lessonId) formData.append('lesson_id', lessonId);
       formData.append('tags', 'quiz-question');
       const asset = await adminUpload('/media/upload', token, formData);
+      // Prefer the direct cloud URL (Cloudinary `secure_url`) so the learner
+      // view can fetch the image straight from the CDN without a backend hop.
+      // Fall back to the backend proxy when the file is stored locally
+      // (i.e. CLOUDINARY_URL not set in the backend).
+      const directUrl = typeof asset.cloudinary_url === 'string' && asset.cloudinary_url.startsWith('http')
+        ? asset.cloudinary_url
+        : `${API_BASE}/api/content/media/${asset.id}`;
       updateDraft({
         image_asset_id: asset.id,
-        image_url: `${API_BASE}/api/content/media/${asset.id}`,
+        image_url: directUrl,
       });
     } catch (e) {
       onError?.(e.message || 'Image upload failed');

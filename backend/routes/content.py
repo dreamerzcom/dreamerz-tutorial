@@ -60,6 +60,25 @@ def _serialize_media_asset(asset: MediaAsset) -> dict:
 
 def _serialize_quiz(quiz: Quiz) -> dict:
     """Convert a Quiz ORM object (with eager-loaded questions) to dict."""
+    def _q(q: QuizQuestion) -> dict:
+        # Image references are stashed inside the JSON `feedback` blob by the
+        # admin quiz editor (see routes/admin.update_lesson_quiz). Surface them
+        # at the top level so the learner UI can render them directly.
+        fb = q.feedback or {}
+        out = {
+            "question": q.question_text,
+            "type": q.question_type,
+            "options": q.options,
+            "correctAnswer": q.correct_answer,
+            "explanation": q.hint,
+        }
+        if isinstance(fb, dict):
+            if fb.get("image_url"):
+                out["image_url"] = fb["image_url"]
+            if fb.get("image_asset_id") is not None:
+                out["image_asset_id"] = fb["image_asset_id"]
+        return out
+
     return {
         "id": str(quiz.id),
         "title": quiz.title,
@@ -67,16 +86,7 @@ def _serialize_quiz(quiz: Quiz) -> dict:
         "max_attempts": quiz.max_attempts,
         "shuffle_questions": quiz.shuffle_questions,
         "shuffle_options": quiz.shuffle_options,
-        "questions": [
-            {
-                "question": q.question_text,
-                "type": q.question_type,
-                "options": q.options,
-                "correctAnswer": q.correct_answer,
-                "explanation": q.hint,
-            }
-            for q in sorted(quiz.questions, key=lambda q: q.sort_order)
-        ],
+        "questions": [_q(q) for q in sorted(quiz.questions, key=lambda q: q.sort_order)],
     }
 
 

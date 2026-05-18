@@ -274,6 +274,28 @@ export const CourseDetail = ({ courseId, token, onBack, onCourseDeleted, onNavig
     }
   };
 
+  // ── Delete the draft version of a published course (when viewed from
+  // the published parent). Removes the draft course row entirely; the
+  // published course stays untouched. After deletion we refresh the
+  // current course so the "Create Draft" banner reappears.
+  const [deletingDraft, setDeletingDraft] = useState(false);
+  const deleteDraftVersion = async () => {
+    if (!course?.draft_slug) return;
+    setDeletingDraft(true);
+    setError('');
+    try {
+      await adminFetch(`/courses/${course.draft_slug}`, token, { method: 'DELETE' });
+      // Re-fetch the published course so draft_version_id / draft_slug clear.
+      await loadCourseData();
+      setConfirmDelete(null);
+      showSuccess('Draft deleted');
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setDeletingDraft(false);
+    }
+  };
+
   // ── Create draft version of published course ──
   const createDraftVersion = async () => {
     setCreatingDraft(true);
@@ -402,13 +424,50 @@ export const CourseDetail = ({ courseId, token, onBack, onCourseDeleted, onNavig
               <span className="text-xs text-emerald-700 block mt-0.5">Edit the <span className="text-emerald-600 font-semibold">draft version</span> to make changes.</span>
             </div>
           </div>
-          <button
-            onClick={() => onNavigateToDraft && onNavigateToDraft(course.draft_slug)}
-            className="text-sm bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 flex items-center gap-1.5 font-medium"
-          >
-            <Edit3 className="w-4 h-4" />
-            Go to Draft
-          </button>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button
+              onClick={() => onNavigateToDraft && onNavigateToDraft(course.draft_slug)}
+              className="text-sm bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 flex items-center gap-1.5 font-medium"
+            >
+              <Edit3 className="w-4 h-4" />
+              Go to Draft
+            </button>
+            {confirmDelete?.type === 'draft' ? (
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={deleteDraftVersion}
+                  disabled={deletingDraft}
+                  className="text-sm bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center gap-1.5 font-medium"
+                >
+                  {deletingDraft ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    'Confirm'
+                  )}
+                </button>
+                <button
+                  onClick={() => setConfirmDelete(null)}
+                  disabled={deletingDraft}
+                  className="text-sm bg-slate-100 text-slate-600 px-2 py-2 rounded-lg hover:bg-slate-200"
+                  title="Cancel"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmDelete({ type: 'draft', id: course.draft_slug })}
+                className="text-sm bg-white border border-red-300 text-red-600 px-4 py-2 rounded-lg hover:bg-red-50 flex items-center gap-1.5 font-medium"
+                title="Discard the draft version (published course is untouched)"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete Draft
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -494,10 +553,11 @@ export const CourseDetail = ({ courseId, token, onBack, onCourseDeleted, onNavig
               ) : (
                 <button
                   onClick={() => setConfirmDelete({ type: 'course', id: courseId })}
-                  className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium bg-white border border-red-300 text-red-600 hover:bg-red-50"
                   title={course?.status === 'draft' ? 'Delete draft' : 'Delete course'}
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="w-3.5 h-3.5" />
+                  {course?.status === 'draft' ? 'Delete Draft' : 'Delete Course'}
                 </button>
               )}
             </>
