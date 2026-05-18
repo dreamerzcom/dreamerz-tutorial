@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  Search, Plus, BookOpen, RefreshCw, Sparkles, AlertTriangle, X,
+  Search, BookOpen, RefreshCw, Sparkles, AlertTriangle, X,
   Folder, Trash2, FilePlus,
 } from 'lucide-react';
 import { formatErrorDetail } from '../../lib/utils';

@@ -5,6 +5,13 @@ import { Toaster } from "./components/ui/sonner";
 import { Navbar } from "./components/Navbar";
 import { Footer } from "./components/Footer";
 import { ErrorBoundary, NotFound } from "./components/ErrorStates";
+
+/** ErrorBoundary that auto-resets when the route changes — so "Go Home"
+ *  on the error page actually drops you back into a working app. */
+const RouteAwareErrorBoundary = ({ children }) => {
+  const location = useLocation();
+  return <ErrorBoundary resetKey={location.pathname}>{children}</ErrorBoundary>;
+};
 import { RequireAuth, RequireRole, RequireTrialActive } from "./components/RequireRole";
 import { Landing } from "./pages/Landing";
 import { LearnHub } from "./pages/LearnHub";
@@ -89,7 +96,7 @@ function App() {
           <LanguageProvider>
           <LearningProgressProvider>
           <ProgressProvider>
-            <ErrorBoundary>
+            <RouteAwareErrorBoundary>
               <Navbar />
               <main className="flex-grow pt-16">
                 <Routes>
@@ -172,7 +179,7 @@ function App() {
                 </Routes>
               </main>
               <Footer />
-            </ErrorBoundary>
+            </RouteAwareErrorBoundary>
             <Toaster position="bottom-right" />
           </ProgressProvider>
           </LearningProgressProvider>

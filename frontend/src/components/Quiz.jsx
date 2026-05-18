@@ -26,8 +26,13 @@ export const Quiz = ({ questions, onComplete, onBackToContent, onContinueToNext,
   })();
   const passingQuestions = Math.ceil(questions.length * (passingScore / 100));
 
-  // Get current question data
+  // Get current question data. Guarded — `questions` can legitimately be
+  // empty (lesson without a quiz yet) or `currentQuestion` can transiently
+  // be out of bounds, and the downstream JSX freely reads `question.X`.
+  // Falling back to an empty object would mask the empty-state UI; instead
+  // we short-circuit below.
   const question = questions[currentQuestion];
+  const hasQuestions = Array.isArray(questions) && questions.length > 0;
 
   // Normalise the type field — admin/legacy data may use different names
   const normaliseType = (rawType, q) => {
@@ -586,6 +591,24 @@ export const Quiz = ({ questions, onComplete, onBackToContent, onContinueToNext,
           )}
         </motion.div>
       </motion.div>
+    );
+  }
+
+  // Short-circuit when there's nothing to render. Without this, the JSX
+  // below dereferences `question.X` and crashes the whole admin tree with
+  // "Cannot read properties of undefined (reading 'explanation')" — which
+  // then gets caught by the top-level ErrorBoundary and shows the global
+  // "Oops!" page until you reload. Better to render a clean empty state.
+  if (!hasQuestions || !question) {
+    return (
+      <div className="text-center text-slate-500 py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+        <HelpCircle className="w-8 h-8 mx-auto mb-2 text-slate-400" />
+        <p className="text-sm font-medium">
+          {hasQuestions
+            ? 'Quiz finished — switch back to the lesson to continue.'
+            : 'No quiz questions for this lesson yet.'}
+        </p>
+      </div>
     );
   }
 

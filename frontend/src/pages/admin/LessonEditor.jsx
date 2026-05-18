@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   FileText, HelpCircle, Sparkles, Paperclip, Save, RefreshCw,
-  Upload, X, Plus, Trash2, AlertTriangle, CheckCircle2, Wand2,
+  Upload, X, Trash2, AlertTriangle, CheckCircle2, Wand2,
 } from 'lucide-react';
 import { QuizEditor } from './QuizEditor';
 import { formatErrorDetail } from '../../lib/utils';
@@ -81,10 +81,9 @@ export const LessonEditor = ({ lessonId, token, onLessonUpdated, onLessonDeleted
   const [regenerating, setRegenerating] = useState(false);
   const aiFileInputRef = useRef(null);
 
-  // Media state
+  // Media state — uploads now go through <MediaUploader>, which manages
+  // its own uploading/progress state. We only keep the rendered list here.
   const [mediaAssets, setMediaAssets] = useState([]);
-  const [mediaUploading, setMediaUploading] = useState(false);
-  const mediaFileInputRef = useRef(null);
 
   // Delete confirmation
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -203,31 +202,7 @@ export const LessonEditor = ({ lessonId, token, onLessonUpdated, onLessonDeleted
     }
   };
 
-  // ── Media ──
-  const handleMediaUpload = async (files) => {
-    if (!files || files.length === 0) return;
-    setMediaUploading(true);
-    setError('');
-    for (const file of files) {
-      try {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('lesson_id', lessonId);
-        formData.append('course_id', lesson.course_id);
-        const asset = await adminUpload('/media/upload', token, formData);
-        await adminFetch(`/media/${asset.id}/attach`, token, {
-          method: 'POST',
-          body: JSON.stringify({ lesson_id: lessonId }),
-        });
-        setMediaAssets(prev => [...prev, asset]);
-      } catch (e) {
-        setError(e.message);
-      }
-    }
-    setMediaUploading(false);
-    showSuccess('Files uploaded');
-  };
-
+  // ── Media —— upload is owned by <MediaUploader>; we only handle removal. ──
   const removeMedia = async (assetId) => {
     try {
       await adminFetch(`/media/${assetId}`, token, { method: 'DELETE' });
@@ -513,16 +488,28 @@ export const LessonEditor = ({ lessonId, token, onLessonUpdated, onLessonDeleted
             </div>
           ) : (
             <div className="space-y-2">
-              {mediaAssets.map(asset => (
+              {mediaAssets.map(asset => {
+                // Backend uses `asset_type` (the model + serialisers all emit
+                // it); the old `asset.type` we used to read here is always
+                // undefined, which is why thumbnails never rendered. Same for
+                // `file_extension` — there's no such column; we derive the
+                // extension from the original filename instead.
+                const kind = asset.asset_type || asset.type;
+                const ext = (asset.original_filename || '').split('.').pop() || '';
+                const isImage = kind === 'image';
+                // Prefer the direct Cloudinary URL if the asset has one
+                // (newer rows do); fall back to the backend proxy.
+                const imgSrc = asset.cloudinary_url || `${API_BASE}/api/content/media/${asset.id}`;
+                return (
                 <div key={asset.id} className="flex items-center gap-3 bg-white border border-slate-200 rounded-lg px-3 py-2">
-                  {asset.type === 'image' ? (
-                    <img src={`${API_BASE}/api/content/media/${asset.id}`} alt="" className="w-10 h-10 rounded object-cover" />
+                  {isImage ? (
+                    <img src={imgSrc} alt={asset.alt_text || asset.original_filename || ''} className="w-10 h-10 rounded object-cover" />
                   ) : (
                     <FileText className="w-5 h-5 text-slate-400" />
                   )}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-slate-700 truncate">{asset.original_filename}</p>
-                    <p className="text-xs text-slate-400">{asset.file_extension?.toUpperCase()}</p>
+                    <p className="text-xs text-slate-400">{ext.toUpperCase()}</p>
                   </div>
                   {!readOnly && (
                     <button onClick={() => removeMedia(asset.id)} className="p-1 text-slate-400 hover:text-red-500 rounded">
@@ -530,7 +517,8 @@ export const LessonEditor = ({ lessonId, token, onLessonUpdated, onLessonDeleted
                     </button>
                   )}
                 </div>
-              ))}
+              );
+              })}
             </div>
           )}
         </div>

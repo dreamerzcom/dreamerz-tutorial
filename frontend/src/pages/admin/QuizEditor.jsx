@@ -117,7 +117,6 @@ export const QuizEditor = ({
   const imageFileInputRef = useRef(null);
   const [dirty, setDirty] = useState(false);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
-  const questionListRef = useRef(null);
 
   // Sync if parent reloads a different lesson / fresh data
   useEffect(() => {
@@ -300,7 +299,13 @@ export const QuizEditor = ({
 
   const saveAll = async () => {
     if (editingIdx !== null) {
-      onError?.('Finish editing the current question before saving.');
+      // Common reason saves silently appear to do nothing: the user
+      // clicked Save while still editing a question. Surface the cause
+      // to both UI banner AND console so it's not invisible.
+      const msg = 'Finish editing the current question before saving.';
+      // eslint-disable-next-line no-console
+      console.warn('[QuizEditor] saveAll() bailed:', msg);
+      onError?.(msg);
       return;
     }
     setSaving(true);
@@ -320,13 +325,19 @@ export const QuizEditor = ({
         })),
         passing_score: pass,
       };
+      // eslint-disable-next-line no-console
+      console.log('[QuizEditor] PUT /admin/lessons/' + lessonId + '/quiz payload:', payload);
       const saved = await adminFetch(`/lessons/${lessonId}/quiz`, token, {
         method: 'PUT',
         body: JSON.stringify(payload),
       });
+      // eslint-disable-next-line no-console
+      console.log('[QuizEditor] save OK — response:', saved);
       setDirty(false);
       onSaved?.(saved);
     } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error('[QuizEditor] save FAILED for lesson', lessonId, e);
       onError?.(e.message || 'Failed to save quiz');
     } finally {
       setSaving(false);

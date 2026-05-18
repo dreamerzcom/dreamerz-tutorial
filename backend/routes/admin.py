@@ -1185,6 +1185,38 @@ async def create_draft_version(
                     )
                     session.add(draft_question)
 
+            # Copy media assets — the draft references the SAME Cloudinary
+            # files as the published lesson (no re-upload). Without this,
+            # creating a draft of a lesson with images/videos shows an empty
+            # Attached Files list and editors have to re-upload everything.
+            # When the draft is published the old MediaAsset rows are
+            # replaced wholesale; the underlying Cloudinary objects stay
+            # because the new rows reference them. Orphans (assets removed
+            # in the draft) are cleaned up by scripts/cleanup_orphan_media.py.
+            media_result = await session.execute(
+                select(MediaAsset).where(MediaAsset.lesson_id == lesson.id)
+            )
+            for asset in media_result.scalars().all():
+                session.add(MediaAsset(
+                    lesson_id=draft_lesson.id,
+                    asset_type=asset.asset_type,
+                    cloudinary_url=asset.cloudinary_url,
+                    cloudinary_public_id=asset.cloudinary_public_id,
+                    original_filename=asset.original_filename,
+                    mime_type=asset.mime_type,
+                    file_size_bytes=asset.file_size_bytes,
+                    alt_text=asset.alt_text,
+                    duration_seconds=asset.duration_seconds,
+                    width=asset.width,
+                    height=asset.height,
+                    poster_url=asset.poster_url,
+                    streaming_url=asset.streaming_url,
+                    upload_status=asset.upload_status,
+                    sort_order=asset.sort_order,
+                    tags=asset.tags,
+                    uploaded_by=asset.uploaded_by,
+                ))
+
     await session.commit()
     return {
         "detail": f"Draft version created for course '{course_id}'",

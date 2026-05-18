@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  ArrowLeft, ChevronDown, ChevronRight, Plus, Trash2, Edit3, Save, X,
+  ArrowLeft, ChevronDown, ChevronRight, Trash2, Edit3, Save, X,
   BookOpen, Eye, GraduationCap, RefreshCw, AlertTriangle, CheckCircle2,
   FolderPlus, FilePlus, Info,
 } from 'lucide-react';
@@ -121,7 +121,7 @@ export const CourseDetail = ({ courseId, token, onBack, onCourseDeleted, onNavig
     } finally {
       setLoading(false);
     }
-  }, [courseId, token, initialLoad, selectedLessonId, expandedSections, onNavigateToDraft]);
+  }, [courseId, token, initialLoad, selectedLessonId, expandedSections]);
 
   useEffect(() => { loadCourseData(); }, [loadCourseData]);
 
@@ -817,6 +817,7 @@ export const CourseDetail = ({ courseId, token, onBack, onCourseDeleted, onNavig
                   lessonId={selectedLessonId}
                   token={token}
                   onLessonUpdated={handleLessonUpdated}
+                  onLessonDeleted={handleLessonDeleted}
                   readOnly={!isEditable}
                 />
               </>

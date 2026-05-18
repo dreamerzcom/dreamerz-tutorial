@@ -925,26 +925,113 @@ export const JourneyPlayer = ({
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="overflow-x-hidden"
+                            className="overflow-x-hidden space-y-4"
                           >
                             <div className="flex items-center gap-3 mb-4 sm:mb-6">
                               <div className="w-10 h-10 sm:w-12 sm:h-12 bg-sky-100 rounded-xl sm:rounded-2xl flex items-center justify-center flex-shrink-0">
-                                <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-sky-600" />
+                                <Paperclip className="w-5 h-5 sm:w-6 sm:h-6 text-sky-600" />
                               </div>
                               <div className="min-w-0 flex-1">
                                 <h3 className="font-bold text-slate-900 text-base sm:text-lg break-words">Media</h3>
-                                <p className="text-sm text-slate-500 truncate">Additional resources</p>
+                                <p className="text-sm text-slate-500 truncate">Attached files & study notes</p>
                               </div>
                             </div>
-                            <div className="bg-gradient-to-br from-sky-50 to-cyan-50 border border-sky-200 rounded-xl sm:rounded-2xl p-4 sm:p-6 overflow-x-hidden">
-                              <MarkdownContent variant="sky">
-                                {activeModule.content.study_notes || 'No study notes available for this lesson.'}
-                              </MarkdownContent>
-                            </div>
+
+                            {/* Attached files — images / videos / documents. This tab used
+                                to render only `content.study_notes` (a markdown blob), so
+                                uploaded media never showed up. Now we render the files
+                                first and fall back to study notes / an empty state below. */}
+                            {Array.isArray(activeModule.media_assets) && activeModule.media_assets.length > 0 ? (
+                              <div className="space-y-3">
+                                {activeModule.media_assets.map((asset) => {
+                                  const kind = asset.asset_type || asset.type;
+                                  const url = asset.cloudinary_url
+                                    || `${(process.env.REACT_APP_BACKEND_URL || '').replace(/\/+$/, '')}/api/content/media/${asset.id}`;
+                                  if (kind === 'image') {
+                                    return (
+                                      <div key={asset.id} className="rounded-xl overflow-hidden border border-slate-200 bg-white">
+                                        <img
+                                          src={url}
+                                          alt={asset.alt_text || asset.original_filename || ''}
+                                          className="w-full max-h-[480px] object-contain bg-slate-50"
+                                          loading="lazy"
+                                        />
+                                        {asset.original_filename && (
+                                          <p className="px-3 py-2 text-xs text-slate-500 truncate">{asset.original_filename}</p>
+                                        )}
+                                      </div>
+                                    );
+                                  }
+                                  if (kind === 'video') {
+                                    return (
+                                      <video
+                                        key={asset.id}
+                                        controls
+                                        preload="metadata"
+                                        poster={asset.poster_url || undefined}
+                                        className="w-full rounded-xl bg-black"
+                                      >
+                                        {asset.streaming_url && (
+                                          <source src={asset.streaming_url} type="application/x-mpegURL" />
+                                        )}
+                                        <source src={url} type={asset.mime_type || 'video/mp4'} />
+                                        Your browser cannot play this video.
+                                      </video>
+                                    );
+                                  }
+                                  // Document / unknown — show as a download link.
+                                  return (
+                                    <a
+                                      key={asset.id}
+                                      href={url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="flex items-center gap-3 bg-white border border-slate-200 rounded-xl px-4 py-3 hover:border-sky-300 hover:bg-sky-50 transition-colors"
+                                    >
+                                      <FileText className="w-5 h-5 text-slate-400 flex-shrink-0" />
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium text-slate-700 truncate">
+                                          {asset.original_filename || 'Attached file'}
+                                        </p>
+                                        {asset.file_size_bytes ? (
+                                          <p className="text-xs text-slate-400">
+                                            {(asset.file_size_bytes / 1024).toFixed(0)} KB
+                                          </p>
+                                        ) : null}
+                                      </div>
+                                    </a>
+                                  );
+                                })}
+                              </div>
+                            ) : null}
+
+                            {/* Optional study-notes markdown — only render when present and
+                                non-empty, so it doesn't drown out the empty state below. */}
+                            {activeModule.content?.study_notes ? (
+                              <div className="bg-gradient-to-br from-sky-50 to-cyan-50 border border-sky-200 rounded-xl sm:rounded-2xl p-4 sm:p-6 overflow-x-hidden">
+                                <MarkdownContent variant="sky">
+                                  {activeModule.content.study_notes}
+                                </MarkdownContent>
+                              </div>
+                            ) : null}
+
+                            {(!Array.isArray(activeModule.media_assets) || activeModule.media_assets.length === 0)
+                              && !activeModule.content?.study_notes && (
+                              <div className="text-center text-slate-500 py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                                <Paperclip className="w-8 h-8 mx-auto mb-2 text-slate-400" />
+                                <p className="text-sm font-medium">No media or study notes for this lesson yet.</p>
+                              </div>
+                            )}
                           </motion.div>
                         )}
 
-                        {contentSection === 'quiz' && (
+                        {/* Quiz tab — Quiz must only mount when there's at
+                            least one question. Mounting it with an empty
+                            `questions` array crashes (Quiz reads
+                            `questions[0].explanation`), which the global
+                            ErrorBoundary then catches as a sitewide white
+                            screen until the page is reloaded. */}
+                        {contentSection === 'quiz' && hasQuiz && (
                           <motion.div
                             key="quiz"
                             initial={{ opacity: 0 }}
@@ -975,7 +1062,7 @@ export const JourneyPlayer = ({
                             </div>
                           </motion.div>
                         )}
-                        {contentSection === 'quiz' && hasQuiz === false && (
+                        {contentSection === 'quiz' && !hasQuiz && (
                           <div className="text-center text-slate-500 py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
                             <HelpCircle className="w-8 h-8 mx-auto mb-2 text-slate-400" />
                             <p className="text-sm font-medium">No quiz available for this lesson.</p>

@@ -42,7 +42,24 @@ const fetchSignedTicket = async ({ token, resourceType, lessonSlug, tags }) => {
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
-    throw new Error(formatErrorDetail(data.detail) || 'Could not start upload');
+    const detail = formatErrorDetail(data.detail);
+    // Status-specific hints so the user / dev knows what to fix without
+    // digging into network tab. 503 is the common one — backend is up but
+    // CLOUDINARY_URL isn't set (or the backend was started before .env was
+    // updated, in which case restart).
+    if (res.status === 401) {
+      throw new Error('Your admin session expired. Please sign in again, then retry.');
+    }
+    if (res.status === 403) {
+      throw new Error('You need creator/admin role to upload media.');
+    }
+    if (res.status === 503) {
+      throw new Error(
+        detail
+          || 'Cloudinary is not configured on the backend. Set CLOUDINARY_URL in backend/.env (or Render env vars) and restart.'
+      );
+    }
+    throw new Error(detail || `Sign-upload failed (${res.status}). Check backend logs.`);
   }
   return res.json();
 };
@@ -68,15 +85,23 @@ const uploadToCloudinary = (file, ticket, onProgress) => new Promise((resolve, r
       try { resolve(JSON.parse(xhr.responseText)); }
       catch { reject(new Error('Cloudinary returned a malformed response')); }
     } else {
-      let msg = `Cloudinary upload failed (${xhr.status})`;
+      // Surface Cloudinary's own error message verbatim — these are
+      // usually descriptive (e.g. "Invalid Signature", "Resource not
+      // allowed by allowed_formats", "File size too large").
+      let msg = `Cloudinary upload failed (HTTP ${xhr.status})`;
       try {
         const body = JSON.parse(xhr.responseText);
-        if (body?.error?.message) msg = body.error.message;
-      } catch { /* ignore parse errors */ }
+        if (body?.error?.message) {
+          msg = `Cloudinary: ${body.error.message}`;
+        }
+      } catch { /* response wasn't JSON */ }
+      // Log the raw response so the browser console has the full picture.
+      // eslint-disable-next-line no-console
+      console.error('[MediaUploader] Cloudinary response', xhr.status, xhr.responseText);
       reject(new Error(msg));
     }
   };
-  xhr.onerror = () => reject(new Error('Network error during upload'));
+  xhr.onerror = () => reject(new Error('Network error reaching Cloudinary. Check your internet connection.'));
   xhr.send(form);
 });
 
@@ -104,7 +129,14 @@ const registerAsset = async ({ token, cloudResult, file, lessonSlug, tags, altTe
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
-    throw new Error(formatErrorDetail(data.detail) || 'Could not record asset');
+    const detail = formatErrorDetail(data.detail);
+    // The file is already uploaded to Cloudinary at this point — the DB
+    // row just couldn't be written. Tell the user so they don't think
+    // nothing happened (and so the orphan in Cloudinary is visible).
+    throw new Error(
+      `${detail || 'Could not record the upload in the database'} `
+      + `(the file did land on Cloudinary as ${cloudResult.public_id}; an admin can clean it up).`
+    );
   }
   return res.json();
 };
@@ -155,6 +187,10 @@ export const MediaUploader = ({
       } catch (e) {
         setStatus('error');
         setError(e.message || 'Upload failed');
+        // Mirror to the browser console so the dev tools have the full
+        // stack/context — the in-UI red box only shows the short message.
+        // eslint-disable-next-line no-console
+        console.error('[MediaUploader] Upload failed for', file?.name, e);
         // Stop processing further files on failure; user re-picks if they want
         break;
       }
@@ -170,9 +206,17 @@ export const MediaUploader = ({
         accept={accept}
         multiple={multiple}
         onChange={(e) => {
-          const files = e.target.files;
-          // Reset the input so picking the same file again still fires onChange
+          // Snapshot the FileList into a plain array BEFORE clearing the
+          // input value. Per the HTML spec, setting `.value = ''` on a
+          // file input also empties the live `.files` FileList — so the
+          // previous order (capture reference, clear, hand off) handed
+          // `handleFiles` an empty list and the whole upload silently
+          // no-op'd. Symptoms: no spinner, no error, no console line,
+          // no asset appears. Materialising via Array.from up front
+          // makes the reference independent of the input element.
+          const files = Array.from(e.target.files || []);
           e.target.value = '';
+          if (files.length === 0) return; // picker closed without selecting
           handleFiles(files);
         }}
         disabled={disabled || status === 'uploading'}

@@ -4,7 +4,11 @@ import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from './ui/button';
 
-// Error Boundary class component
+// Error Boundary class component.
+// Accepts an optional `resetKey` prop — when it changes (typically
+// location.pathname, fed in by the wrapper below), the error state is
+// cleared automatically. Without that, clicking "Go Home" only changed
+// the URL; the boundary stayed in its errored state until reload.
 export class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -19,10 +23,19 @@ export class ErrorBoundary extends React.Component {
     console.error('ErrorBoundary caught an error:', error, errorInfo);
   }
 
+  componentDidUpdate(prevProps) {
+    if (
+      this.state.hasError &&
+      prevProps.resetKey !== this.props.resetKey
+    ) {
+      this.setState({ hasError: false, error: null });
+    }
+  }
+
   render() {
     if (this.state.hasError) {
       return (
-        <ErrorDisplay 
+        <ErrorDisplay
           error={this.state.error}
           onRetry={() => this.setState({ hasError: false, error: null })}
         />

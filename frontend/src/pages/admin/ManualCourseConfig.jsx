@@ -29,7 +29,6 @@ export const ManualCourseConfig = ({ token, onCancel, onCreated }) => {
   const [isNewCategory, setIsNewCategory] = useState(false);
   const [categories, setCategories] = useState([]);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [busy, setBusy] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
 
@@ -44,6 +43,9 @@ export const ManualCourseConfig = ({ token, onCancel, onCreated }) => {
         }
       })
       .catch(() => setCategories([]));
+    // Run once on mount. Listing `categoryId` here would refetch every
+    // time the user picks a category and clobber their selection.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleCreate = async () => {
@@ -116,12 +118,6 @@ export const ManualCourseConfig = ({ token, onCancel, onCreated }) => {
             </button>
           </div>
         )}
-        {success && (
-          <div className="bg-emerald-50 text-emerald-700 text-sm px-4 py-2 rounded-lg">
-            {success}
-          </div>
-        )}
-
         <div className="grid sm:grid-cols-1 gap-4">
           <label className="block">
             <span className="text-sm font-medium text-slate-700">Course Title *</span>
