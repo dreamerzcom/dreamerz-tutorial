@@ -1425,6 +1425,32 @@ async def publish_course(
                         )
                         session.add(published_question)
 
+                # Copy media assets so learner-facing published lessons retain
+                # files uploaded in the draft editor (images/videos/documents).
+                draft_media_result = await session.execute(
+                    select(MediaAsset).where(MediaAsset.lesson_id == draft_lesson.id)
+                )
+                for draft_asset in draft_media_result.scalars().all():
+                    session.add(MediaAsset(
+                        lesson_id=published_lesson.id,
+                        asset_type=draft_asset.asset_type,
+                        cloudinary_url=draft_asset.cloudinary_url,
+                        cloudinary_public_id=draft_asset.cloudinary_public_id,
+                        original_filename=draft_asset.original_filename,
+                        mime_type=draft_asset.mime_type,
+                        file_size_bytes=draft_asset.file_size_bytes,
+                        alt_text=draft_asset.alt_text,
+                        duration_seconds=draft_asset.duration_seconds,
+                        width=draft_asset.width,
+                        height=draft_asset.height,
+                        poster_url=draft_asset.poster_url,
+                        streaming_url=draft_asset.streaming_url,
+                        upload_status=draft_asset.upload_status,
+                        sort_order=draft_asset.sort_order,
+                        tags=draft_asset.tags,
+                        uploaded_by=draft_asset.uploaded_by,
+                    ))
+
         # Clear the draft_version_id reference
         published.draft_version_id = None
 
@@ -2273,8 +2299,10 @@ class SignUploadRequest(BaseModel):
 
 _VIDEO_MAX_BYTES = 200 * 1024 * 1024     # 200 MB ceiling
 _IMAGE_MAX_BYTES = 25 * 1024 * 1024      # 25 MB ceiling
+_DOCUMENT_MAX_BYTES = 25 * 1024 * 1024   # 25 MB ceiling
 _VIDEO_FORMATS = "mp4,webm,mov,m4v"
 _IMAGE_FORMATS = "jpg,jpeg,png,webp,gif"
+_DOCUMENT_FORMATS = "pdf,doc,docx,xls,xlsx,ppt,pptx"
 
 
 @content_router.post("/media/sign-upload")
@@ -2323,11 +2351,18 @@ async def sign_upload(
     public_id = f"dreamerz/{_uuid.uuid4().hex[:16]}"
     folder = "dreamerz"
 
-    is_video = resource_type == "video"
-    max_bytes = _VIDEO_MAX_BYTES if is_video else _IMAGE_MAX_BYTES
-    allowed_formats = _VIDEO_FORMATS if is_video else (
-        _IMAGE_FORMATS if resource_type == "image" else f"{_IMAGE_FORMATS},{_VIDEO_FORMATS}"
-    )
+    if resource_type == "video":
+        max_bytes = _VIDEO_MAX_BYTES
+        allowed_formats = _VIDEO_FORMATS
+    elif resource_type == "raw":
+        max_bytes = _DOCUMENT_MAX_BYTES
+        allowed_formats = _DOCUMENT_FORMATS
+    elif resource_type == "image":
+        max_bytes = _IMAGE_MAX_BYTES
+        allowed_formats = _IMAGE_FORMATS
+    else:
+        max_bytes = _VIDEO_MAX_BYTES
+        allowed_formats = f"{_IMAGE_FORMATS},{_VIDEO_FORMATS},{_DOCUMENT_FORMATS}"
     tags_str = ",".join(body.tags or [])
 
     # Params included here are signed and cannot be changed by the client.

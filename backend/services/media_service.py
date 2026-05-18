@@ -93,10 +93,11 @@ async def upload_file(
         import cloudinary.uploader
 
         cloudinary.config(cloudinary_url=cloud_url)
+        resource_type = "raw" if type_info["category"] == "document" else "image"
         result = cloudinary.uploader.upload(
             file_data,
             public_id=public_id,
-            resource_type="auto",
+            resource_type=resource_type,
             folder="dreamerz",
         )
         url = result["secure_url"]
@@ -173,7 +174,10 @@ async def delete_file(session: AsyncSession, asset_id: int) -> bool:
             import cloudinary.uploader
 
             cloudinary.config(cloudinary_url=cloud_url)
-            cloudinary.uploader.destroy(asset.cloudinary_public_id)
+            resource_type = "raw" if asset.asset_type == "document" else asset.asset_type
+            if resource_type not in {"image", "video", "raw"}:
+                resource_type = "image"
+            cloudinary.uploader.destroy(asset.cloudinary_public_id, resource_type=resource_type)
         except Exception as e:
             logging.warning("Cloudinary delete failed: %s", e)
     else:

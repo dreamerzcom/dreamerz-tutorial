@@ -17,13 +17,27 @@ import { formatErrorDetail } from '../lib/utils';
 
 const API_BASE = (process.env.REACT_APP_BACKEND_URL || '').replace(/\/+$/, '');
 
+const DOCUMENT_EXTENSIONS = new Set(['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx']);
+const DOCUMENT_MIME_TYPES = new Set([
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+]);
+
 // 'auto' lets Cloudinary detect image vs. video from the file. Force one
-// of 'image' / 'video' if you want stricter validation (the backend
-// signs with the matching allowed_formats list).
+// of 'image' / 'video' / 'raw' if you want stricter validation (the backend
+// signs with the matching allowed_formats list). Cloudinary requires PDFs
+// and office files to go through the raw upload endpoint.
 const detectResourceType = (file) => {
   if (!file) return 'auto';
   if (file.type.startsWith('video/')) return 'video';
   if (file.type.startsWith('image/')) return 'image';
+  const ext = (file.name || '').split('.').pop()?.toLowerCase();
+  if (DOCUMENT_MIME_TYPES.has(file.type) || DOCUMENT_EXTENSIONS.has(ext)) return 'raw';
   return 'auto';
 };
 
@@ -145,7 +159,7 @@ export const MediaUploader = ({
   token,
   lessonSlug,
   tags = [],
-  resourceType,           // 'image' | 'video' | 'auto' (default: auto-detect from MIME)
+  resourceType,           // 'image' | 'video' | 'raw' | 'auto' (default: auto-detect from MIME)
   altText,
   accept,                 // file picker accept attribute (e.g. 'image/*,video/*')
   multiple = false,
