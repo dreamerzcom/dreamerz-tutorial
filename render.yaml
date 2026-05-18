@@ -38,6 +38,11 @@ services:
         value: onboarding@resend.dev  # Sandbox sender; replace with verified domain for production
       - key: FRONTEND_URL
         sync: false  # e.g. https://dreamerz-frontend.onrender.com — used in reset email link
+      - key: CLOUDINARY_URL
+        sync: false  # Full URL: cloudinary://<api_key>:<api_secret>@<cloud_name>
+                     # Find it in Cloudinary dashboard → Programmable Media → API Keys.
+                     # Without it: media uploads silently fall back to local disk
+                     # (which doesn't survive a Render redeploy on the free tier).
       - key: PYTHON_VERSION
         value: "3.11.6"
 

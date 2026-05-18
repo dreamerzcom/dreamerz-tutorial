@@ -17,7 +17,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from models.sql_models import MediaAsset, Lesson
 
 # ── Cloudinary setup (optional) ─────────────────────────
-CLOUDINARY_URL = os.environ.get("CLOUDINARY_URL", "")
+# Read CLOUDINARY_URL on every call rather than caching at import time.
+# A module-level constant captures whatever the environment was at process
+# start — so if the env var lands after import (eg. .env loaded later, or
+# rotated mid-process), uploads silently fall back to local disk forever.
+# The sign-upload route in routes/admin.py uses the same per-call lookup.
+def _cloudinary_url() -> str:
+    return os.environ.get("CLOUDINARY_URL", "").strip()
+
 
 UPLOADS_DIR = pathlib.Path(__file__).resolve().parent.parent / "uploads"
 
@@ -79,12 +86,13 @@ async def upload_file(
     public_id = f"dreamerz/{uuid.uuid4().hex[:16]}"
     ext = type_info["ext"]
 
-    if CLOUDINARY_URL:
+    cloud_url = _cloudinary_url()
+    if cloud_url:
         # Upload to Cloudinary
         import cloudinary
         import cloudinary.uploader
 
-        cloudinary.config(cloudinary_url=CLOUDINARY_URL)
+        cloudinary.config(cloudinary_url=cloud_url)
         result = cloudinary.uploader.upload(
             file_data,
             public_id=public_id,
@@ -157,13 +165,14 @@ async def delete_file(session: AsyncSession, asset_id: int) -> bool:
         raise ValueError("Media asset not found")
 
     url = asset.cloudinary_url
-    if url.startswith("http") and CLOUDINARY_URL:
+    cloud_url = _cloudinary_url()
+    if url.startswith("http") and cloud_url:
         # Delete from Cloudinary
         try:
             import cloudinary
             import cloudinary.uploader
 
-            cloudinary.config(cloudinary_url=CLOUDINARY_URL)
+            cloudinary.config(cloudinary_url=cloud_url)
             cloudinary.uploader.destroy(asset.cloudinary_public_id)
         except Exception as e:
             logging.warning("Cloudinary delete failed: %s", e)
