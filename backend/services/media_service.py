@@ -93,7 +93,18 @@ async def upload_file(
         import cloudinary.uploader
 
         cloudinary.config(cloudinary_url=cloud_url)
-        resource_type = "raw" if type_info["category"] == "document" else "image"
+        # PDFs are uploaded as 'image' resource_type — Cloudinary natively
+        # supports PDFs as images, delivers them with proper
+        # 'application/pdf' Content-Type, doesn't apply the default raw-PDF
+        # delivery restriction (which returns 401), and supports
+        # transformations like thumbnail generation. Other document types
+        # (docx/xlsx/pptx) stay as 'raw'.
+        if content_type == "application/pdf" or type_info["ext"] == "pdf":
+            resource_type = "image"
+        elif type_info["category"] == "document":
+            resource_type = "raw"
+        else:
+            resource_type = "image"
         result = cloudinary.uploader.upload(
             file_data,
             public_id=public_id,

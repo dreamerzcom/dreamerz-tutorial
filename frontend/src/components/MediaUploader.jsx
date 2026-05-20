@@ -30,13 +30,19 @@ const DOCUMENT_MIME_TYPES = new Set([
 
 // 'auto' lets Cloudinary detect image vs. video from the file. Force one
 // of 'image' / 'video' / 'raw' if you want stricter validation (the backend
-// signs with the matching allowed_formats list). Cloudinary requires PDFs
-// and office files to go through the raw upload endpoint.
+// signs with the matching allowed_formats list).
+//
+// PDFs are uploaded as 'image' resource_type — Cloudinary natively supports
+// PDFs as images, delivers them with proper 'application/pdf' Content-Type,
+// avoids the default raw-PDF delivery restriction (which returns 401), and
+// allows transformations like thumbnail generation. Other office documents
+// (docx/xlsx/pptx) still use 'raw'.
 const detectResourceType = (file) => {
   if (!file) return 'auto';
   if (file.type.startsWith('video/')) return 'video';
   if (file.type.startsWith('image/')) return 'image';
   const ext = (file.name || '').split('.').pop()?.toLowerCase();
+  if (file.type === 'application/pdf' || ext === 'pdf') return 'image';
   if (DOCUMENT_MIME_TYPES.has(file.type) || DOCUMENT_EXTENSIONS.has(ext)) return 'raw';
   return 'auto';
 };

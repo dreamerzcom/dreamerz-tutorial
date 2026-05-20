@@ -2304,7 +2304,10 @@ _VIDEO_MAX_BYTES = 200 * 1024 * 1024     # 200 MB ceiling
 _IMAGE_MAX_BYTES = 25 * 1024 * 1024      # 25 MB ceiling
 _DOCUMENT_MAX_BYTES = 25 * 1024 * 1024   # 25 MB ceiling
 _VIDEO_FORMATS = "mp4,webm,mov,m4v"
-_IMAGE_FORMATS = "jpg,jpeg,png,webp,gif"
+# 'pdf' is included so that PDFs can be uploaded as 'image' resource_type
+# (Cloudinary natively supports PDFs as images, with proper Content-Type
+# and no raw-PDF delivery restriction).
+_IMAGE_FORMATS = "jpg,jpeg,png,webp,gif,pdf"
 _DOCUMENT_FORMATS = "pdf,doc,docx,xls,xlsx,ppt,pptx"
 
 
@@ -2424,6 +2427,14 @@ def _mime_from_format(fmt: Optional[str], resource_type: str) -> Optional[str]:
         "webp": "image/webp", "gif": "image/gif", "svg": "image/svg+xml",
         "mp4": "video/mp4", "webm": "video/webm", "mov": "video/quicktime",
         "m4v": "video/x-m4v",
+        # PDF is uploaded as image resource_type but should keep proper mime
+        "pdf": "application/pdf",
+        "doc": "application/msword",
+        "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "xls": "application/vnd.ms-excel",
+        "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "ppt": "application/vnd.ms-powerpoint",
+        "pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
     }
     if fmt in overrides:
         return overrides[fmt]
@@ -2465,11 +2476,19 @@ async def register_upload(
             lesson_id = les.id
 
     resource_type = (body.resource_type or "").lower()
-    asset_type = (
-        "image" if resource_type == "image"
-        else "video" if resource_type == "video"
-        else "document"
-    )
+    # PDFs are uploaded as 'image' resource_type for proper delivery, but
+    # they should still be tagged as 'document' asset_type so the frontend
+    # renders them with the document UI (not <img>).
+    filename_lower = (body.original_filename or "").lower()
+    is_pdf = body.format == "pdf" or filename_lower.endswith(".pdf")
+    if is_pdf:
+        asset_type = "document"
+    elif resource_type == "image":
+        asset_type = "image"
+    elif resource_type == "video":
+        asset_type = "video"
+    else:
+        asset_type = "document"
 
     poster_url, streaming_url = (None, None)
     if asset_type == "video":

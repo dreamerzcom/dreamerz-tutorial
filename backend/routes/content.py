@@ -706,6 +706,8 @@ async def get_media(asset_id: str, session: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Media asset not found")
 
     url = asset.cloudinary_url or ""
+    is_pdf = asset.mime_type == 'application/pdf' or (asset.original_filename or '').lower().endswith('.pdf')
+
     if url.startswith("http"):
         return RedirectResponse(url=url)
 
@@ -714,10 +716,17 @@ async def get_media(asset_id: str, session: AsyncSession = Depends(get_db)):
     local_path = uploads_root / url
     if not local_path.exists():
         raise HTTPException(status_code=404, detail="Media file not found on disk")
+    
+    # For PDFs, serve inline for browser viewing
     return FileResponse(
         path=str(local_path),
-        media_type=asset.mime_type or "application/octet-stream",
+        media_type="application/pdf" if is_pdf else (asset.mime_type or "application/octet-stream"),
         filename=asset.original_filename,
+        headers={
+            "Content-Disposition": f'inline; filename="{asset.original_filename or local_path.name}"'
+        } if is_pdf else {
+            "Content-Disposition": f'attachment; filename="{asset.original_filename or local_path.name}"'
+        },
     )
 
 

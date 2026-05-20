@@ -5,7 +5,7 @@ import {
   BookOpen, Lightbulb, Rocket, Play, Award,
   Clock, Sparkles, ArrowLeft, Volume2,
   Languages, Mic, MessageCircle,
-  FileText, Paperclip, HelpCircle, Download
+  FileText, Paperclip, HelpCircle, Download, X, Eye
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Quiz } from './Quiz';
@@ -83,6 +83,22 @@ export const JourneyPlayer = ({
   const [collapsedSections, setCollapsedSections] = useState(() => new Set());
   const [quizAttempts, setQuizAttempts] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [viewingDocument, setViewingDocument] = useState(null); // Document viewer state
+  const [documentLoading, setDocumentLoading] = useState(false); // Document loading state
+
+  // For unsupported file types (not PDF/image/office), hide loader immediately
+  useEffect(() => {
+    if (!viewingDocument) return;
+    const mimeType = viewingDocument.mime_type;
+    const kind = viewingDocument.asset_type || viewingDocument.type;
+    const filename = viewingDocument.original_filename?.toLowerCase() || '';
+    const isPdf = mimeType === 'application/pdf' || filename.endsWith('.pdf');
+    const isImage = kind === 'image' || mimeType?.startsWith('image/');
+    const isOffice = /\.(docx?|xlsx?|pptx?)$/i.test(filename);
+    if (!isPdf && !isImage && !isOffice) {
+      setDocumentLoading(false);
+    }
+  }, [viewingDocument]);
 
   // Derive activeModule early so callbacks can reference it
   const activeModule = allLessons[activeModuleIndex];
@@ -1080,6 +1096,17 @@ export const JourneyPlayer = ({
                                         ) : null}
                                       </div>
                                       <div className="flex items-center gap-2 flex-shrink-0">
+                                        <button
+                                          onClick={() => {
+                                            setViewingDocument(asset);
+                                            setDocumentLoading(true);
+                                          }}
+                                          className="inline-flex items-center gap-1 text-xs text-slate-700 hover:text-slate-900"
+                                          title="View document"
+                                        >
+                                          <Eye className="w-3.5 h-3.5" />
+                                          View
+                                        </button>
                                         <a
                                           href={downloadUrl}
                                           target="_blank"
@@ -1388,6 +1415,131 @@ export const JourneyPlayer = ({
           onClose={() => setShowRoleplay(false)}
         />
       )}
+
+      {/* Document Viewer Modal */}
+      <AnimatePresence>
+        {viewingDocument && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 sm:p-8"
+            onClick={() => {
+              setViewingDocument(null);
+              setDocumentLoading(false);
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-slate-200 bg-slate-50">
+                <div className="flex items-center gap-3 min-w-0">
+                  <FileText className="w-5 h-5 text-slate-400 flex-shrink-0" />
+                  <p className="text-sm font-medium text-slate-900 truncate">
+                    {viewingDocument.original_filename || 'Document'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setViewingDocument(null);
+                    setDocumentLoading(false);
+                  }}
+                  className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-lg transition-colors flex-shrink-0"
+                  title="Close viewer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 overflow-auto bg-slate-900 p-4 sm:p-6 relative">
+                {documentLoading && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-slate-900 z-10">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                      <p className="text-slate-300 text-sm">Loading document...</p>
+                    </div>
+                  </div>
+                )}
+                {(() => {
+                  const kind = viewingDocument.asset_type || viewingDocument.type;
+                  const mimeType = viewingDocument.mime_type;
+                  const mediaEndpoint = `${backendBase}/api/content/media/${viewingDocument.id}`;
+                  const url = viewingDocument.cloudinary_url || mediaEndpoint;
+
+                  const filename = viewingDocument.original_filename?.toLowerCase() || '';
+
+                  // PDF - browsers can render natively via iframe
+                  if (mimeType === 'application/pdf' || filename.endsWith('.pdf')) {
+                    return (
+                      <iframe
+                        src={mediaEndpoint}
+                        title={viewingDocument.original_filename}
+                        className="w-full h-full min-h-[600px] bg-white rounded-lg"
+                        frameBorder="0"
+                        onLoad={() => setDocumentLoading(false)}
+                        onError={() => setDocumentLoading(false)}
+                      />
+                    );
+                  }
+
+                  // Office documents (docx/xlsx/pptx) - use Microsoft
+                  // Office Online Viewer. Requires file to be publicly
+                  // accessible (Cloudinary URLs are).
+                  if (/\.(docx?|xlsx?|pptx?)$/i.test(filename)) {
+                    const officeUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`;
+                    return (
+                      <iframe
+                        src={officeUrl}
+                        title={viewingDocument.original_filename}
+                        className="w-full h-full min-h-[600px] bg-white rounded-lg"
+                        frameBorder="0"
+                        onLoad={() => setDocumentLoading(false)}
+                        onError={() => setDocumentLoading(false)}
+                      />
+                    );
+                  }
+
+                  // Image
+                  if (kind === 'image' || mimeType?.startsWith('image/')) {
+                    return (
+                      <img
+                        src={url}
+                        alt={viewingDocument.alt_text || viewingDocument.original_filename || ''}
+                        className="max-w-full max-h-full object-contain mx-auto rounded-lg"
+                        onLoad={() => setDocumentLoading(false)}
+                      />
+                    );
+                  }
+
+                  // Other documents - show download message
+                  return (
+                    <div className="flex flex-col items-center justify-center h-full text-center">
+                      <FileText className="w-16 h-16 text-slate-400 mb-4" />
+                      <p className="text-slate-300 mb-4">This file type cannot be previewed in the browser.</p>
+                      <a
+                        href={`${mediaEndpoint}/download`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+                        onClick={() => setDocumentLoading(false)}
+                      >
+                        <Download className="w-4 h-4" />
+                        Download to view
+                      </a>
+                    </div>
+                  );
+                })()}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   );
