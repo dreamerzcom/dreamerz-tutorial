@@ -12,6 +12,22 @@ import axios from 'axios';
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
+// Per-tool branding for the AI Output header. The actual response styling
+// happens server-side via ai_service.TOOL_PERSONAS — the `tool_id` we send
+// to /api/ai picks a persona overlay on top of the tutor system prompt.
+// This map only labels the panel so the learner can see which model the
+// response is themed as. (All requests are answered by Claude under the
+// hood; the disclosure footer below the tabs makes that explicit.)
+const TOOL_THEMES = {
+  chatgpt:  { name: 'ChatGPT', icon: '🤖', label: 'ChatGPT-style answer' },
+  claude:   { name: 'Claude',  icon: '🧠', label: 'Claude-style answer' },
+  gemini:   { name: 'Gemini',  icon: '✨', label: 'Gemini-style answer' },
+  canva:    { name: 'Canva',   icon: '🎨', label: 'Canva-style brief' },
+  syllaby:  { name: 'Syllaby', icon: '🎬', label: 'Syllaby-style script' },
+};
+const getToolTheme = (toolId) =>
+  TOOL_THEMES[(toolId || '').toLowerCase()] || null;
+
 // Same key as useAuth — read once per request so a stale-on-mount token
 // after a refresh still authenticates correctly.
 const AUTH_STORAGE_KEY = 'dreamerz_beta_auth_v1';
@@ -507,16 +523,46 @@ export const PromptLabPanel = ({ toolId }) => {
           <div className="bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-slate-700/50 overflow-hidden min-h-[600px] flex flex-col">
             {/* Header with Tabs */}
             <div className="p-4 bg-slate-800/80 border-b border-slate-700/50">
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
                 <h2 className="font-semibold text-white flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-primary" />
-                  AI Output
+                  {(() => {
+                    const theme = getToolTheme(toolId);
+                    if (theme) {
+                      return (
+                        <>
+                          <span className="text-lg leading-none" aria-hidden="true">
+                            {theme.icon}
+                          </span>
+                          {theme.label}
+                        </>
+                      );
+                    }
+                    return (
+                      <>
+                        <Sparkles className="w-5 h-5 text-primary" />
+                        AI Output
+                      </>
+                    );
+                  })()}
                 </h2>
-                {isDemo && (
-                  <span className="text-xs bg-amber-500/20 text-amber-400 px-3 py-1 rounded-full font-medium">
-                    Demo Mode
-                  </span>
-                )}
+                <div className="flex items-center gap-2">
+                  {/* "Powered by Claude" disclosure when a tool persona is
+                      active — honest about the fact that this is styled as
+                      the named tool, not actually that tool's API. */}
+                  {getToolTheme(toolId) && (
+                    <span
+                      className="text-[10px] uppercase tracking-wide font-bold bg-slate-700 text-slate-300 px-2 py-0.5 rounded"
+                      title={`Themed as ${getToolTheme(toolId).name}, answered by Claude`}
+                    >
+                      via Claude
+                    </span>
+                  )}
+                  {isDemo && (
+                    <span className="text-xs bg-amber-500/20 text-amber-400 px-3 py-1 rounded-full font-medium">
+                      Demo Mode
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Tabs */}
