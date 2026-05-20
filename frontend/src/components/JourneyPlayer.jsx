@@ -1004,19 +1004,8 @@ export const JourneyPlayer = ({
                                           loading="lazy"
                                         />
                                         {asset.original_filename && (
-                                          <div className="px-3 py-2 flex items-center justify-between gap-3">
+                                          <div className="px-3 py-2">
                                             <p className="text-xs text-slate-500 truncate">{asset.original_filename}</p>
-                                            <div className="flex items-center gap-2 flex-shrink-0">
-                                              <a
-                                                href={downloadUrl}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="inline-flex items-center gap-1 text-xs text-slate-700 hover:text-slate-900"
-                                              >
-                                                <Download className="w-3.5 h-3.5" />
-                                                Download
-                                              </a>
-                                            </div>
                                           </div>
                                         )}
                                       </div>
@@ -1037,21 +1026,10 @@ export const JourneyPlayer = ({
                                           <source src={url} type={asset.mime_type || 'video/mp4'} />
                                           Your browser cannot play this video.
                                         </video>
-                                        <div className="px-3 py-2 flex items-center justify-between gap-3">
+                                        <div className="px-3 py-2">
                                           <p className="text-xs text-slate-500 truncate">
                                             {asset.original_filename || 'Video file'}
                                           </p>
-                                          <div className="flex items-center gap-2 flex-shrink-0">
-                                            <a
-                                              href={downloadUrl}
-                                              target="_blank"
-                                              rel="noopener noreferrer"
-                                              className="inline-flex items-center gap-1 text-xs text-slate-700 hover:text-slate-900"
-                                            >
-                                              <Download className="w-3.5 h-3.5" />
-                                              Download
-                                            </a>
-                                          </div>
                                         </div>
                                       </div>
                                     );
@@ -1107,15 +1085,6 @@ export const JourneyPlayer = ({
                                           <Eye className="w-3.5 h-3.5" />
                                           View
                                         </button>
-                                        <a
-                                          href={downloadUrl}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="inline-flex items-center gap-1 text-xs text-slate-700 hover:text-slate-900"
-                                        >
-                                          <Download className="w-3.5 h-3.5" />
-                                          Download
-                                        </a>
                                       </div>
                                     </div>
                                   );
@@ -1478,7 +1447,7 @@ export const JourneyPlayer = ({
                   if (mimeType === 'application/pdf' || filename.endsWith('.pdf')) {
                     return (
                       <iframe
-                        src={mediaEndpoint}
+                        src={`${mediaEndpoint}#toolbar=0`}
                         title={viewingDocument.original_filename}
                         className="w-full h-full min-h-[600px] bg-white rounded-lg"
                         frameBorder="0"
