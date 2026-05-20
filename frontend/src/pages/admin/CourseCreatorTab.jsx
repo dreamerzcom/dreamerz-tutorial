@@ -145,6 +145,8 @@ export const CourseCreatorTab = ({ token, onPublishSuccess }) => {
   const [editBuffer, setEditBuffer] = useState({});
   const [bulkRunning, setBulkRunning] = useState(false);
   const [previewMode, setPreviewMode] = useState('creator'); // 'creator' | 'learner'
+  const [editingModuleId, setEditingModuleId] = useState(null);
+  const [editingModuleTitle, setEditingModuleTitle] = useState('');
 
   const toggleModule = (id) =>
     setExpandedModules((s) => {
@@ -473,6 +475,30 @@ export const CourseCreatorTab = ({ token, onPublishSuccess }) => {
     } catch (e) {
       setError(e.message);
     }
+  };
+
+  // ── Rename Module ──
+  const startEditModule = (module) => {
+    setEditingModuleId(module.id);
+    setEditingModuleTitle(module.title);
+  };
+
+  const saveEditModule = (moduleId) => {
+    if (!editingModuleTitle.trim()) return;
+    setDraft((d) => {
+      const updated = { ...d, blueprint: { ...d.blueprint } };
+      updated.blueprint.modules = updated.blueprint.modules.map((m) =>
+        m.id === moduleId ? { ...m, title: editingModuleTitle.trim() } : m
+      );
+      return updated;
+    });
+    setEditingModuleId(null);
+    setEditingModuleTitle('');
+  };
+
+  const cancelEditModule = () => {
+    setEditingModuleId(null);
+    setEditingModuleTitle('');
   };
 
   // ── Derived: are all lessons generated? ──
@@ -896,10 +922,11 @@ export const CourseCreatorTab = ({ token, onPublishSuccess }) => {
                   const moduleLessons = module.lessons || [];
                   const moduleGenerated = moduleLessons.filter((l) => l.status === 'generated').length;
                   const moduleGenerating = moduleLessons.some((l) => generatingLessonIds.has(l.id));
+                  const isEditingModule = editingModuleId === module.id;
                   return (
                     <div key={module.id} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
                       <button
-                        onClick={() => toggleModule(module.id)}
+                        onClick={() => !isEditingModule && toggleModule(module.id)}
                         className="w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-slate-50"
                       >
                         {moduleOpen ? (
@@ -908,23 +935,70 @@ export const CourseCreatorTab = ({ token, onPublishSuccess }) => {
                           <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
                         )}
                         <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-slate-900 text-sm flex items-center gap-2">
-                            <span>Module {mIdx + 1}: {module.title}</span>
-                            {moduleGenerating && (
-                              <RefreshCw className="w-3.5 h-3.5 animate-spin text-primary" />
-                            )}
-                          </div>
-                          <div className="text-xs text-slate-500 mt-0.5 truncate">
-                            {module.description}
-                          </div>
+                          {isEditingModule ? (
+                            <input
+                              type="text"
+                              value={editingModuleTitle}
+                              onChange={(e) => setEditingModuleTitle(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') saveEditModule(module.id);
+                                if (e.key === 'Escape') cancelEditModule();
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              className="w-full text-sm font-semibold text-slate-900 bg-slate-50 border border-slate-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary"
+                              autoFocus
+                            />
+                          ) : (
+                            <div className="font-semibold text-slate-900 text-sm flex items-center gap-2">
+                              <span>Module {mIdx + 1}: {module.title}</span>
+                              {moduleGenerating && (
+                                <RefreshCw className="w-3.5 h-3.5 animate-spin text-primary" />
+                              )}
+                            </div>
+                          )}
+                          {!isEditingModule && (
+                            <div className="text-xs text-slate-500 mt-0.5 truncate">
+                              {module.description}
+                            </div>
+                          )}
                         </div>
-                        <span className={`text-[11px] px-2 py-0.5 rounded-full flex-shrink-0 ${
-                          moduleGenerated === moduleLessons.length
-                            ? 'bg-emerald-50 text-emerald-700'
-                            : 'bg-slate-100 text-slate-600'
-                        }`}>
-                          {moduleGenerated}/{moduleLessons.length}
-                        </span>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          {isEditingModule ? (
+                            <>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); saveEditModule(module.id); }}
+                                className="p-1 text-emerald-600 hover:bg-emerald-50"
+                                title="Save"
+                              >
+                                <Save className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); cancelEditModule(); }}
+                                className="p-1 text-slate-400 hover:bg-slate-100"
+                                title="Cancel"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); startEditModule(module); }}
+                                className="p-1 text-slate-400 hover:text-primary"
+                                title="Rename module"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                              </button>
+                            </>
+                          )}
+                          <span className={`text-[11px] px-2 py-0.5 rounded-full ${
+                            moduleGenerated === moduleLessons.length
+                              ? 'bg-emerald-50 text-emerald-700'
+                              : 'bg-slate-100 text-slate-600'
+                          }`}>
+                            {moduleGenerated}/{moduleLessons.length}
+                          </span>
+                        </div>
                       </button>
 
                       <AnimatePresence>

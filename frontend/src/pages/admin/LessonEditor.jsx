@@ -70,6 +70,13 @@ export const LessonEditor = ({ lessonId, token, onLessonUpdated, onLessonDeleted
     example: '',
     activity: '',
   });
+  const [initialContentForm, setInitialContentForm] = useState({
+    title: '',
+    estimated_minutes: 10,
+    explanation: '',
+    example: '',
+    activity: '',
+  });
   const [saving, setSaving] = useState(false);
 
   // Quiz edit state
@@ -103,13 +110,15 @@ export const LessonEditor = ({ lessonId, token, onLessonUpdated, onLessonDeleted
 
       // Populate content form from English content
       const enContent = data.contents?.en || {};
-      setContentForm({
+      const formData = {
         title: data.title || '',
         estimated_minutes: data.estimated_minutes || 10,
         explanation: enContent.explanation || '',
         example: enContent.example || '',
         activity: enContent.activity || '',
-      });
+      };
+      setContentForm(formData);
+      setInitialContentForm(formData);
 
       // Quiz
       setQuizQuestions(data.assessment?.questions || []);
@@ -130,6 +139,17 @@ export const LessonEditor = ({ lessonId, token, onLessonUpdated, onLessonDeleted
     setTimeout(() => setSuccess(''), 3000);
   };
 
+  // Check if there are unsaved changes in the content form
+  const hasUnsavedChanges = () => {
+    return (
+      contentForm.title !== initialContentForm.title ||
+      contentForm.estimated_minutes !== initialContentForm.estimated_minutes ||
+      contentForm.explanation !== initialContentForm.explanation ||
+      contentForm.example !== initialContentForm.example ||
+      contentForm.activity !== initialContentForm.activity
+    );
+  };
+
   // ── Content tab ──
   const saveContent = async () => {
     if (readOnly) return;
@@ -144,6 +164,12 @@ export const LessonEditor = ({ lessonId, token, onLessonUpdated, onLessonDeleted
           estimated_minutes: contentForm.estimated_minutes,
         }),
       });
+
+      // Update local lesson state with new title
+      setLesson(prev => ({ ...prev, title: contentForm.title }));
+
+      // Update initial form to match saved state
+      setInitialContentForm({ ...contentForm });
 
       // Save English content
       await adminFetch(`/lessons/${lessonId}/content/en`, token, {
@@ -418,7 +444,7 @@ export const LessonEditor = ({ lessonId, token, onLessonUpdated, onLessonDeleted
           <div className="flex justify-end pt-2">
             <button
               onClick={saveContent}
-              disabled={saving || readOnly}
+              disabled={saving || readOnly || !hasUnsavedChanges()}
               className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-primary/90 disabled:opacity-50"
             >
               {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}

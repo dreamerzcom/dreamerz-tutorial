@@ -680,7 +680,7 @@ export const CourseDetail = ({ courseId, token, onBack, onCourseDeleted, onNavig
                           <>
                             <button
                               onClick={() => startEditSection(section)}
-                              className="p-1 text-slate-400 hover:text-primary opacity-0 group-hover:opacity-100"
+                              className="p-1 text-slate-400 hover:text-primary"
                               title="Rename module"
                             >
                               <Edit3 className="w-3 h-3" />
