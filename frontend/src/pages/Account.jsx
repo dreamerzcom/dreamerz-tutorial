@@ -2,8 +2,8 @@ import { useEffect, useState, useRef } from 'react';
 import { Navigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  UserCircle2, Mail, CalendarDays, Clock3, MapPin, Phone, FileText,
-  Download, Upload, RotateCcw, Check, AlertTriangle, FileJson, Info, Shield, Globe, Lock,
+  UserCircle2, Mail, Clock3, MapPin, Phone, FileText,
+  Download, Upload, RotateCcw, Check, AlertTriangle, FileJson, Shield, Globe, Lock,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '../components/ui/button';
@@ -125,10 +125,6 @@ export const Account = () => {
     setShowResetConfirm(false);
     toast.success('Progress reset successfully!');
   };
-
-  const totalModules = Object.values(progress.completedModules || {}).reduce(
-    (acc, tool) => acc + Object.keys(tool).length, 0
-  );
 
   return (
     <>
@@ -327,32 +323,6 @@ export const Account = () => {
                 exit={{ opacity: 0, y: -20 }}
                 className="space-y-6"
               >
-                {/* Current Progress Summary */}
-                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-                  <h2 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                    <Info className="w-5 h-5 text-primary" />
-                    Current Progress Summary
-                  </h2>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-                    <div className="bg-slate-50 rounded-xl p-4">
-                      <div className="text-2xl font-bold text-primary">{totalModules}</div>
-                      <div className="text-xs text-slate-500">Modules Done</div>
-                    </div>
-                    <div className="bg-slate-50 rounded-xl p-4">
-                      <div className="text-2xl font-bold text-emerald-600">{progress.totalXP || 0}</div>
-                      <div className="text-xs text-slate-500">XP Earned</div>
-                    </div>
-                    <div className="bg-slate-50 rounded-xl p-4">
-                      <div className="text-2xl font-bold text-amber-600">{progress.currentStreak || 0}</div>
-                      <div className="text-xs text-slate-500">Day Streak</div>
-                    </div>
-                    <div className="bg-slate-50 rounded-xl p-4">
-                      <div className="text-2xl font-bold text-violet-600">{progress.badges?.length || 0}</div>
-                      <div className="text-xs text-slate-500">Badges</div>
-                    </div>
-                  </div>
-                </div>
-
                 {/* Progress Management */}
                 <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                   <div className="p-6 border-b border-slate-100">
