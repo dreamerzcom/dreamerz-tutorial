@@ -16,6 +16,7 @@ import { SafetyBanner } from './SafetyBanner';
 import { CoursePreviewVideo } from './CoursePreviewVideo';
 import { MarkdownContent } from './MarkdownContent';
 import { PromptLabPanel } from './PromptLabPanel';
+import { CanvaCreatorPanel } from './CanvaCreatorPanel';
 import { useLearningProgress } from '../hooks/useLearningProgress';
 
 const numericId = (value) => {
@@ -826,7 +827,13 @@ export const JourneyPlayer = ({
                                 speaking practice. Anything else just shows the
                                 activity markdown above. */}
                             {course?.category_id === 'ai-learning' && (
-                              <PromptLabPanel toolId={course.id} />
+                              // Canva course gets its own brief-builder + Magic
+                              // Studio deep-link panel; every other AI tool
+                              // (chatgpt / claude / gemini / syllaby / ...) keeps
+                              // the persona-themed PromptLabPanel.
+                              course.id === 'canva'
+                                ? <CanvaCreatorPanel />
+                                : <PromptLabPanel toolId={course.id} />
                             )}
                             {course?.category_id === 'spoken-writing-english' && (
                               <RoleplayChat
