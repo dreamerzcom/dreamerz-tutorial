@@ -31,10 +31,16 @@ const getToolTheme = (toolId) =>
 // Same key as useAuth — read once per request so a stale-on-mount token
 // after a refresh still authenticates correctly.
 const AUTH_STORAGE_KEY = 'dreamerz_beta_auth_v1';
+const TOKEN_KEY = 'dreamerz_beta_token_v1';
 const getAuthHeaders = () => {
   try {
-    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
-    const token = raw ? JSON.parse(raw)?.token : null;
+    // Try new TOKEN_KEY first
+    let token = localStorage.getItem(TOKEN_KEY);
+    if (!token) {
+      // Fallback to old STORAGE_KEY for migration
+      const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+      token = raw ? JSON.parse(raw)?.token : null;
+    }
     return token ? { Authorization: `Bearer ${token}` } : {};
   } catch {
     return {};

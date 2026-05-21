@@ -53,7 +53,7 @@ async def create_link(
         from models.sql_models import User
 
         result = await session.execute(
-            select(User.id).where(User.username == current_user["username"])
+            select(User.id).where(User.email == current_user["email"])
         )
         parent_user_id = result.scalar()
         if not parent_user_id:
@@ -90,7 +90,7 @@ async def create_link_by_identifier(
             raise HTTPException(status_code=400, detail="Student username or email is required")
 
         parent_result = await session.execute(
-            select(User).where(User.username == current_user["username"])
+            select(User).where(User.email == current_user["email"])
         )
         parent = parent_result.scalars().first()
         if not parent:
@@ -139,7 +139,7 @@ async def list_links(
         from models.sql_models import User
 
         result = await session.execute(
-            select(User.id).where(User.username == current_user["username"])
+            select(User.id).where(User.email == current_user["email"])
         )
         user_id = result.scalar()
         if not user_id:
@@ -174,7 +174,7 @@ async def update_link(
         from models.sql_models import User
 
         result = await session.execute(
-            select(User.id).where(User.username == current_user["username"])
+            select(User.id).where(User.email == current_user["email"])
         )
         user_id = result.scalar()
         if link["parent_user_id"] != user_id and not has_role(current_user, "admin"):
@@ -199,7 +199,7 @@ async def delete_link(
         from models.sql_models import User
 
         result = await session.execute(
-            select(User.id).where(User.username == current_user["username"])
+            select(User.id).where(User.email == current_user["email"])
         )
         user_id = result.scalar()
         if not user_id:
@@ -230,7 +230,7 @@ async def list_students(
         from models.sql_models import User
 
         result = await session.execute(
-            select(User.id).where(User.username == current_user["username"])
+            select(User.id).where(User.email == current_user["email"])
         )
         parent_user_id = result.scalar()
         if not parent_user_id:
@@ -259,7 +259,7 @@ async def get_student_overview(
 
         # Get current user ID
         result = await session.execute(
-            select(User.id).where(User.username == current_user["username"])
+            select(User.id).where(User.email == current_user["email"])
         )
         parent_user_id = result.scalar()
         if not parent_user_id:
@@ -321,7 +321,7 @@ async def get_student_courses(
         from models.sql_models import User
 
         result = await session.execute(
-            select(User.id).where(User.username == current_user["username"])
+            select(User.id).where(User.email == current_user["email"])
         )
         parent_user_id = result.scalar()
         if not parent_user_id:
@@ -352,7 +352,7 @@ async def get_student_course_report(
         from models.sql_models import User, Course
 
         result = await session.execute(
-            select(User.id).where(User.username == current_user["username"])
+            select(User.id).where(User.email == current_user["email"])
         )
         parent_user_id = result.scalar()
         if not parent_user_id:
@@ -443,7 +443,7 @@ async def get_student_course_lessons(
         from models.sql_models import User
 
         result = await session.execute(
-            select(User.id).where(User.username == current_user["username"])
+            select(User.id).where(User.email == current_user["email"])
         )
         parent_user_id = result.scalar()
         if not parent_user_id:

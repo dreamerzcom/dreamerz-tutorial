@@ -8,12 +8,19 @@ const API_BASE = (process.env.REACT_APP_BACKEND_URL || '').replace(/\/+$/, '');
 
 // Same key the rest of the app uses for the auth blob (see useAuth.js).
 const AUTH_STORAGE_KEY = 'dreamerz_beta_auth_v1';
+const TOKEN_KEY = 'dreamerz_beta_token_v1';
 
 const getAuthToken = () => {
   try {
-    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw)?.token || null;
+    // Try new TOKEN_KEY first
+    let token = localStorage.getItem(TOKEN_KEY);
+    if (!token) {
+      // Fallback to old STORAGE_KEY for migration
+      const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+      if (!raw) return null;
+      token = JSON.parse(raw)?.token;
+    }
+    return token;
   } catch {
     return null;
   }

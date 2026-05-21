@@ -28,8 +28,8 @@ export const ChangePassword = () => {
     event.preventDefault();
     setError('');
 
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters long.');
+    if (password.length < 8 || !/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
+      setError('Must be at least 8 characters long, with 1 uppercase letter and 1 number.');
       return;
     }
     if (password !== confirm) {
@@ -93,7 +93,7 @@ export const ChangePassword = () => {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className="w-full rounded-xl border-0 bg-transparent py-3 pl-12 pr-4 text-slate-900 outline-none"
-                      placeholder="At least 8 characters"
+                      placeholder="At least 8 characters, 1 uppercase, 1 number"
                       minLength={8}
                       autoComplete="new-password"
                       required

@@ -72,6 +72,8 @@ def _user_to_dict(user: User) -> dict:
         "updated_at": user.updated_at.isoformat() if user.updated_at else None,
         "last_login": user.last_login.isoformat() if user.last_login else None,
         "trial_expires_at": user.trial_expires_at.isoformat() if user.trial_expires_at else None,
+        "phone": user.phone,
+        "country_code": user.country_code,
     }
 
 
@@ -183,13 +185,13 @@ async def get_current_user(authorization: Optional[str] = Header(None)):
         )
     token = authorization.split(" ", 1)[1]
     payload = decode_access_token(token)
-    username = payload.get("sub")
-    if not username:
+    email = payload.get("sub")
+    if not email:
         raise HTTPException(status_code=401, detail="Invalid token payload")
 
     async with async_session() as session:
         result = await session.execute(
-            select(User).where(User.username == username.lower())
+            select(User).where(User.email == email.lower())
         )
         user = result.scalars().first()
 

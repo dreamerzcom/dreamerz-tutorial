@@ -43,7 +43,7 @@ async def start_assessment(
         from models.sql_models import User
 
         result = await session.execute(
-            select(User.id).where(User.username == current_user["username"])
+            select(User.id).where(User.email == current_user["email"])
         )
         user_id = result.scalar()
         if not user_id:
@@ -163,7 +163,7 @@ async def get_attempts_count(
         from models.sql_models import User
 
         result = await session.execute(
-            select(User.id).where(User.username == current_user["username"])
+            select(User.id).where(User.email == current_user["email"])
         )
         user_id = result.scalar()
         if not user_id:
@@ -192,7 +192,7 @@ async def get_attempt(
         from models.sql_models import User
 
         result = await session.execute(
-            select(User.id).where(User.username == current_user["username"])
+            select(User.id).where(User.email == current_user["email"])
         )
         user_id = result.scalar()
         if not user_id:
@@ -227,7 +227,7 @@ async def list_attempts(
         from models.sql_models import User
 
         result = await session.execute(
-            select(User.id).where(User.username == current_user["username"])
+            select(User.id).where(User.email == current_user["email"])
         )
         user_id = result.scalar()
         if not user_id:
@@ -258,7 +258,7 @@ async def get_best_attempt(
         from models.sql_models import User
 
         result = await session.execute(
-            select(User.id).where(User.username == current_user["username"])
+            select(User.id).where(User.email == current_user["email"])
         )
         user_id = result.scalar()
         if not user_id:
@@ -330,7 +330,7 @@ async def list_answers(
         from models.sql_models import User
 
         result = await session.execute(
-            select(User.id).where(User.username == current_user["username"])
+            select(User.id).where(User.email == current_user["email"])
         )
         user_id = result.scalar()
         if not user_id:

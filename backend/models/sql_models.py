@@ -429,7 +429,7 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    username: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    username: Mapped[str] = mapped_column(String(255), nullable=False)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     hashed_password: Mapped[str] = mapped_column(String(500), nullable=False)
     preferred_language: Mapped[str] = mapped_column(String(10), default="en")
@@ -443,6 +443,9 @@ class User(Base):
     # (admin / creator / supervisor) are never gated; learners get a value
     # populated at registration. See services/auth_service.py:is_trial_active.
     trial_expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Profile fields
+    phone: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    country_code: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
 
     def __repr__(self) -> str:
         return f"<User(id={self.id}, username='{self.username}', email='{self.email}')>"

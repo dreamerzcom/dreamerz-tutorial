@@ -1,13 +1,27 @@
 const API_BASE = (process.env.REACT_APP_BACKEND_URL || '').replace(/\/+$/, '');
 
 const getAuthHeaders = () => {
-  const STORAGE_KEY = 'dreamerz_beta_auth_v1';
+  const TOKEN_KEY = 'dreamerz_beta_token_v1';
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) return {};
-    const auth = JSON.parse(stored);
+    // Try new TOKEN_KEY first
+    let token = localStorage.getItem(TOKEN_KEY);
+    if (!token) {
+      // Fallback to old STORAGE_KEY for migration
+      const oldAuth = localStorage.getItem('dreamerz_beta_auth_v1');
+      if (oldAuth) {
+        try {
+          const parsed = JSON.parse(oldAuth);
+          if (parsed?.token) {
+            token = parsed.token;
+          }
+        } catch (e) {
+          console.error('Failed to parse old auth data', e);
+        }
+      }
+    }
+    if (!token) return { 'Content-Type': 'application/json' };
     return {
-      'Authorization': `Bearer ${auth.token}`,
+      'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json'
     };
   } catch (error) {

@@ -1,24 +1,46 @@
 import { createContext, useContext, useEffect, useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const STORAGE_KEY = 'dreamerz_beta_auth_v1';
+const TOKEN_KEY = 'dreamerz_beta_token_v1';
 const API_BASE = (process.env.REACT_APP_BACKEND_URL || '').replace(/\/+$/, '');
 
 const AuthContext = createContext(null);
 
-const getStoredAuth = () => {
+const getStoredToken = () => {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) return null;
-    return JSON.parse(stored);
+    // Try new TOKEN_KEY first
+    let token = localStorage.getItem(TOKEN_KEY);
+    if (token) return token;
+    
+    // Fallback to old STORAGE_KEY for migration
+    const oldAuth = localStorage.getItem('dreamerz_beta_auth_v1');
+    if (oldAuth) {
+      try {
+        const parsed = JSON.parse(oldAuth);
+        if (parsed?.token) {
+          // Migrate to new storage
+          saveToken(parsed.token);
+          localStorage.removeItem('dreamerz_beta_auth_v1');
+          return parsed.token;
+        }
+      } catch (e) {
+        console.error('Failed to parse old auth data', e);
+      }
+    }
+    
+    return null;
   } catch (error) {
-    console.error('Failed to parse auth from localStorage', error);
+    console.error('Failed to parse token from localStorage', error);
     return null;
   }
 };
 
-const saveAuth = (auth) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(auth));
+const saveToken = (token) => {
+  localStorage.setItem(TOKEN_KEY, token);
+};
+
+const clearToken = () => {
+  localStorage.removeItem(TOKEN_KEY);
 };
 
 const storePasswordCredential = async ({ username, email, password }) => {
@@ -42,6 +64,8 @@ const buildUserProfile = ({
   username,
   email,
   profile,
+  phone,
+  country_code,
   lastLoginAt,
   createdAt,
   preferredLanguage,
@@ -57,7 +81,8 @@ const buildUserProfile = ({
   preferredLanguage: preferredLanguage || 'en',
   firstName: profile?.firstName || '',
   lastName: profile?.lastName || '',
-  phone: profile?.phone || '',
+  phone: phone || profile?.phone || '',
+  country_code: country_code || profile?.country_code || '',
   bio: profile?.bio || '',
   location: profile?.location || '',
   lastLoginAt: lastLoginAt || new Date().toISOString(),
@@ -108,14 +133,47 @@ export const AuthProvider = ({ children }) => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const stored = getStoredAuth();
-    if (stored?.token && stored?.user) {
-      if (isTokenExpired(stored.token)) {
-        // Token expired — clear stored auth
-        localStorage.removeItem(STORAGE_KEY);
+    const storedToken = getStoredToken();
+    if (storedToken) {
+      if (isTokenExpired(storedToken)) {
+        // Token expired — clear stored token
+        clearToken();
       } else {
-        setUser(buildUserProfile(stored.user));
-        setToken(stored.token);
+        setToken(storedToken);
+        // Fetch fresh user data from backend
+        fetch(`${API_BASE}/api/auth/me`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${storedToken}`,
+          },
+        })
+          .then(res => {
+            if (res.ok) return res.json();
+            throw new Error('Failed to fetch user data');
+          })
+          .then(result => {
+            setUser(buildUserProfile({
+              username: result.username,
+              email: result.email,
+              preferredLanguage: result.preferred_language,
+              phone: result.phone,
+              country_code: result.country_code,
+              profile: result.profile,
+              createdAt: result.created_at,
+              lastLoginAt: new Date().toISOString(),
+              role: result.role,
+              aiGenerationEnabled: result.ai_generation_enabled,
+              trialExpiresAt: result.trial_expires_at,
+              trialDaysRemaining: result.trial_days_remaining,
+            }));
+          })
+          .catch(err => {
+            console.error('Failed to fetch user data on mount', err);
+            clearToken();
+            setToken(null);
+          })
+          .finally(() => setIsLoaded(true));
+        return;
       }
     }
     setIsLoaded(true);
@@ -139,27 +197,28 @@ export const AuthProvider = ({ children }) => {
       throw new Error(result.detail || result.message || 'Login failed');
     }
 
-    const auth = {
-      token: result.access_token,
-      user: buildUserProfile({
-        username: result.username,
-        email: result.email,
-        preferredLanguage: result.preferred_language,
-        profile: result.profile,
-        createdAt: result.created_at,
-        lastLoginAt: new Date().toISOString(),
-        role: result.role,
-        aiGenerationEnabled: result.ai_generation_enabled,
-        trialExpiresAt: result.trial_expires_at,
-        trialDaysRemaining: result.trial_days_remaining,
-      })
-    };
+    const token = result.access_token;
+    saveToken(token);
+    setToken(token);
 
-    saveAuth(auth);
-    setUser(auth.user);
-    setToken(auth.token);
+    const user = buildUserProfile({
+      username: result.username,
+      email: result.email,
+      preferredLanguage: result.preferred_language,
+      phone: result.phone,
+      country_code: result.country_code,
+      profile: result.profile,
+      createdAt: result.created_at,
+      lastLoginAt: new Date().toISOString(),
+      role: result.role,
+      aiGenerationEnabled: result.ai_generation_enabled,
+      trialExpiresAt: result.trial_expires_at,
+      trialDaysRemaining: result.trial_days_remaining,
+    });
+
+    setUser(user);
     await storePasswordCredential({ username: result.username || username, email: result.email || email, password });
-    return auth;
+    return { token, user };
   }, []);
 
   const register = useCallback(async ({ username, email, password, preferred_language, role }) => {
@@ -190,45 +249,36 @@ export const AuthProvider = ({ children }) => {
   // Swap in a fresh TokenResponse (e.g. after change-password).
   // Keeps the user logged in seamlessly without bouncing through /login.
   const applyAuthResponse = useCallback((response) => {
-    const auth = {
-      token: response.access_token,
-      user: buildUserProfile({
-        username: response.username,
-        email: response.email,
-        preferredLanguage: response.preferred_language,
-        profile: response.profile,
-        createdAt: response.created_at,
-        lastLoginAt: new Date().toISOString(),
-        role: response.role,
-        aiGenerationEnabled: response.ai_generation_enabled,
-        trialExpiresAt: response.trial_expires_at,
-        trialDaysRemaining: response.trial_days_remaining,
-      })
-    };
-    saveAuth(auth);
-    setUser(auth.user);
-    setToken(auth.token);
-    return auth;
+    const token = response.access_token;
+    saveToken(token);
+    setToken(token);
+
+    const user = buildUserProfile({
+      username: response.username,
+      email: response.email,
+      preferredLanguage: response.preferred_language,
+      phone: response.phone,
+      country_code: response.country_code,
+      profile: response.profile,
+      createdAt: response.created_at,
+      lastLoginAt: new Date().toISOString(),
+      role: response.role,
+      aiGenerationEnabled: response.ai_generation_enabled,
+      trialExpiresAt: response.trial_expires_at,
+      trialDaysRemaining: response.trial_days_remaining,
+    });
+
+    setUser(user);
+    return { token, user };
   }, []);
 
   const updateProfile = useCallback((updates) => {
     setUser((currentUser) => {
       if (!currentUser) return currentUser;
-
-      const nextUser = {
+      return {
         ...currentUser,
         ...updates
       };
-
-      const stored = getStoredAuth();
-      if (stored?.token) {
-        saveAuth({
-          ...stored,
-          user: nextUser
-        });
-      }
-
-      return nextUser;
     });
   }, []);
 
@@ -247,6 +297,8 @@ export const AuthProvider = ({ children }) => {
           username: result.username,
           email: result.email,
           preferredLanguage: result.preferred_language,
+          phone: result.phone,
+          country_code: result.country_code,
           profile: result.profile,
           createdAt: result.created_at,
           lastLoginAt: new Date().toISOString(),
@@ -255,10 +307,6 @@ export const AuthProvider = ({ children }) => {
           trialExpiresAt: result.trial_expires_at,
           trialDaysRemaining: result.trial_days_remaining,
         });
-        const stored = getStoredAuth();
-        if (stored?.token) {
-          saveAuth({ ...stored, user: updatedUser });
-        }
         setUser(updatedUser);
       }
     } catch (error) {
@@ -267,7 +315,7 @@ export const AuthProvider = ({ children }) => {
   }, [token]);
 
   const logout = useCallback(() => {
-    localStorage.removeItem(STORAGE_KEY);
+    clearToken();
     setUser(null);
     setToken(null);
     navigate('/');

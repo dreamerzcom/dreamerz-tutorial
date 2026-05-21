@@ -397,7 +397,7 @@ async def get_supervisor_learners(
     """Get list of learners assigned to current supervisor."""
     # Get the user record to check if they have supervisor assignments
     user_result = await session.execute(
-        select(User).where(User.username == current_user["username"].lower())
+        select(User).where(User.email == current_user["email"].lower())
     )
     user = user_result.scalars().first()
     if not user:
@@ -465,7 +465,7 @@ async def supervisor_self_link_learner(
 
     # Resolve current user (the supervisor making the request)
     sup_result = await session.execute(
-        select(User).where(User.username == current_user["username"].lower())
+        select(User).where(User.email == current_user["email"].lower())
     )
     supervisor = sup_result.scalars().first()
     if not supervisor:
@@ -582,7 +582,7 @@ async def remove_learner_from_current_supervisor(
     
     # Get current supervisor user
     supervisor_result = await session.execute(
-        select(User).where(User.username == current_user["username"].lower())
+        select(User).where(User.email == current_user["email"].lower())
     )
     supervisor = supervisor_result.scalars().first()
     if not supervisor:
@@ -627,7 +627,7 @@ async def get_learner_progress(
     # Verify assignment exists (admins bypass assignment check)
     if not has_role(current_user, "admin"):
         supervisor_result = await session.execute(
-            select(User).where(User.username == current_user["username"].lower())
+            select(User).where(User.email == current_user["email"].lower())
         )
         supervisor = supervisor_result.scalars().first()
         if not supervisor:

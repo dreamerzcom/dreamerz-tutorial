@@ -48,7 +48,7 @@ async def start_course(
         from models.sql_models import User
 
         result = await session.execute(
-            select(User.id).where(User.username == current_user["username"])
+            select(User.id).where(User.email == current_user["email"])
         )
         user_id = result.scalar()
         if not user_id:
@@ -76,7 +76,7 @@ async def get_enrollment(
         from models.sql_models import User
 
         result = await session.execute(
-            select(User.id).where(User.username == current_user["username"])
+            select(User.id).where(User.email == current_user["email"])
         )
         user_id = result.scalar()
         if not user_id:
@@ -105,7 +105,7 @@ async def update_enrollment(
         from models.sql_models import User
 
         result = await session.execute(
-            select(User.id).where(User.username == current_user["username"])
+            select(User.id).where(User.email == current_user["email"])
         )
         user_id = result.scalar()
         if not user_id:
@@ -132,7 +132,7 @@ async def list_enrollments(
         from models.sql_models import User
 
         result = await session.execute(
-            select(User.id).where(User.username == current_user["username"])
+            select(User.id).where(User.email == current_user["email"])
         )
         user_id = result.scalar()
         if not user_id:
@@ -156,7 +156,7 @@ async def complete_course(
         from models.sql_models import User
 
         result = await session.execute(
-            select(User.id).where(User.username == current_user["username"])
+            select(User.id).where(User.email == current_user["email"])
         )
         user_id = result.scalar()
         if not user_id:
@@ -184,7 +184,7 @@ async def delete_enrollment(
         from models.sql_models import User
 
         result = await session.execute(
-            select(User.id).where(User.username == current_user["username"])
+            select(User.id).where(User.email == current_user["email"])
         )
         user_id = result.scalar()
         if not user_id:
@@ -216,7 +216,7 @@ async def start_lesson(
         from models.sql_models import User
 
         result = await session.execute(
-            select(User.id).where(User.username == current_user["username"])
+            select(User.id).where(User.email == current_user["email"])
         )
         user_id = result.scalar()
         if not user_id:
@@ -249,7 +249,7 @@ async def get_lesson_progress_endpoint(
         from models.sql_models import User
 
         result = await session.execute(
-            select(User.id).where(User.username == current_user["username"])
+            select(User.id).where(User.email == current_user["email"])
         )
         user_id = result.scalar()
         if not user_id:
@@ -278,7 +278,7 @@ async def update_lesson_progress_endpoint(
         from models.sql_models import User
 
         result = await session.execute(
-            select(User.id).where(User.username == current_user["username"])
+            select(User.id).where(User.email == current_user["email"])
         )
         user_id = result.scalar()
         if not user_id:
@@ -314,7 +314,7 @@ async def complete_lesson_endpoint(
         from models.sql_models import User
 
         result = await session.execute(
-            select(User.id).where(User.username == current_user["username"])
+            select(User.id).where(User.email == current_user["email"])
         )
         user_id = result.scalar()
         if not user_id:
@@ -350,7 +350,7 @@ async def list_course_lesson_progress(
         from models.sql_models import User
 
         result = await session.execute(
-            select(User.id).where(User.username == current_user["username"])
+            select(User.id).where(User.email == current_user["email"])
         )
         user_id = result.scalar()
         if not user_id:
@@ -382,7 +382,7 @@ async def lesson_heartbeat(
         from models.sql_models import User
 
         result = await session.execute(
-            select(User.id).where(User.username == current_user["username"])
+            select(User.id).where(User.email == current_user["email"])
         )
         user_id = result.scalar()
         if not user_id:

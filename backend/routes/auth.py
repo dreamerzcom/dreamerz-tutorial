@@ -2,6 +2,7 @@
 
 import logging
 from datetime import datetime, timedelta, timezone
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
@@ -181,7 +182,7 @@ async def login_user(credentials: UserLogin, request: Request, session: AsyncSes
 
     user_lang = user.get("preferred_language", DEFAULT_LANGUAGE)
     token = create_access_token(
-        {"sub": user["username"], "email": user["email"], "lang": user_lang, "role": user.get("role", "learner")}
+        {"sub": user["email"], "email": user["email"], "lang": user_lang, "role": user.get("role", "learner")}
     )
 
     # Update last_login via SQLAlchemy
@@ -201,6 +202,8 @@ async def login_user(credentials: UserLogin, request: Request, session: AsyncSes
         "role": user.get("role", "learner"),
         "ai_generation_enabled": user.get("ai_generation_enabled", False),
         "preferred_language": user_lang,
+        "phone": user.get("phone"),
+        "country_code": user.get("country_code"),
         **_trial_payload(user),
     }
 
@@ -214,6 +217,8 @@ async def get_profile(current_user: dict = Depends(get_current_user)):
         "role": current_user.get("role", "learner"),
         "ai_generation_enabled": current_user.get("ai_generation_enabled", False),
         "preferred_language": current_user.get("preferred_language", DEFAULT_LANGUAGE),
+        "phone": current_user.get("phone"),
+        "country_code": current_user.get("country_code"),
         **_trial_payload(current_user),
     }
 
@@ -233,7 +238,7 @@ async def update_language(
         )
 
     result = await session.execute(
-        select(User).where(User.username == current_user["username"])
+        select(User).where(User.email == current_user["email"])
     )
     db_user = result.scalars().first()
     if db_user:
@@ -242,6 +247,45 @@ async def update_language(
         await session.commit()
 
     return {"preferred_language": lang}
+
+
+class ProfileUpdate(BaseModel):
+    username: Optional[str] = None
+    phone: Optional[str] = None
+    country_code: Optional[str] = None
+
+
+@router.put("/profile")
+async def update_profile(
+    body: ProfileUpdate,
+    current_user: dict = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+):
+    """Update the authenticated user's profile information."""
+    result = await session.execute(
+        select(User).where(User.email == current_user["email"])
+    )
+    db_user = result.scalars().first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Update fields only if they have values (not None and not empty string)
+    if body.username is not None and body.username != "":
+        db_user.username = body.username
+    if body.phone is not None and body.phone != "":
+        db_user.phone = body.phone
+    if body.country_code is not None and body.country_code != "":
+        db_user.country_code = body.country_code
+
+    db_user.updated_at = datetime.now(timezone.utc)
+    await session.commit()
+    await session.refresh(db_user)
+
+    return {
+        "username": db_user.username,
+        "phone": db_user.phone,
+        "country_code": db_user.country_code,
+    }
 
 
 @router.get("/languages")
@@ -286,7 +330,7 @@ async def change_password(
         )
 
     result = await session.execute(
-        select(User).where(User.username == current_user["username"])
+        select(User).where(User.email == current_user["email"])
     )
     user = result.scalars().first()
     if not user:
@@ -298,7 +342,7 @@ async def change_password(
 
     user_lang = current_user.get("preferred_language", DEFAULT_LANGUAGE)
     new_token = create_access_token(
-        {"sub": user.username, "email": user.email, "lang": user_lang, "role": user.role}
+        {"sub": user.email, "email": user.email, "lang": user_lang, "role": user.role}
     )
 
     return {
@@ -308,6 +352,8 @@ async def change_password(
         "created_at": user.created_at.isoformat() if user.created_at else None,
         "role": user.role,
         "preferred_language": user_lang,
+        "phone": user.phone,
+        "country_code": user.country_code,
         **_trial_payload(user),
     }
 
@@ -384,7 +430,7 @@ async def forgot_password(
 
     user_lang = user.preferred_language or DEFAULT_LANGUAGE
     new_token = create_access_token(
-        {"sub": user.username, "email": user.email, "lang": user_lang, "role": user.role}
+        {"sub": user.email, "email": user.email, "lang": user_lang, "role": user.role}
     )
 
     logger.info("Password reset via forgot-password for user %s", user.username)
@@ -396,5 +442,7 @@ async def forgot_password(
         "created_at": user.created_at.isoformat() if user.created_at else None,
         "role": user.role,
         "preferred_language": user_lang,
+        "phone": user.phone,
+        "country_code": user.country_code,
         **_trial_payload(user),
     }

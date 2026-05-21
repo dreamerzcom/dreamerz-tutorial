@@ -1,15 +1,13 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
-  UserCircle2, Mail, Clock3, MapPin, Phone, FileText,
-  Download, Upload, RotateCcw, Check, AlertTriangle, FileJson, Shield, Globe, Lock,
+  UserCircle2, Mail, Clock3, Phone, Globe, Lock,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { SEO } from '../components/SEO';
 import { useAuth } from '../hooks/useAuth';
-import { useProgress } from '../hooks/useProgress';
 import { useLanguage, LANGUAGES } from '../hooks/useLanguage';
 import { toast } from 'sonner';
 
@@ -21,31 +19,24 @@ const formatDateTime = (value) => {
 };
 
 export const Account = () => {
-  const { user, isAuthenticated, isLoaded: authLoaded, updateProfile } = useAuth();
+  const { user, isAuthenticated, isLoaded: authLoaded, token, refreshUser } = useAuth();
   const { language, setLanguage } = useLanguage();
-  const { progress, resetProgress, isLoaded: progressLoaded } = useProgress();
-  const [activeTab, setActiveTab] = useState('profile');
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
+    username: '',
     email: '',
     phone: '',
-    location: '',
-    bio: ''
+    countryCode: '+1'
   });
-  const [showResetConfirm, setShowResetConfirm] = useState(false);
-  const [importStatus, setImportStatus] = useState(null);
-  const fileInputRef = useRef(null);
+  const [usernameError, setUsernameError] = useState('');
+  const [phoneError, setPhoneError] = useState('');
 
   useEffect(() => {
     if (!user) return;
     setFormData({
-      firstName: user.firstName || '',
-      lastName: user.lastName || '',
+      username: user.username || '',
       email: user.email || '',
       phone: user.phone || '',
-      location: user.location || '',
-      bio: user.bio || ''
+      countryCode: user.country_code || '+1'
     });
   }, [user]);
 
@@ -53,7 +44,7 @@ export const Account = () => {
     return <Navigate to="/login" replace />;
   }
 
-  if (!authLoaded || !user || !progressLoaded) {
+  if (!authLoaded || !user) {
     return (
       <div className="min-h-screen bg-slate-50 pt-24 flex items-center justify-center">
         <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
@@ -61,7 +52,7 @@ export const Account = () => {
     );
   }
 
-  const displayName = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.username;
+  const displayName = user.username;
 
   // Profile handlers
   const handleChange = (field) => (event) => {
@@ -69,61 +60,72 @@ export const Account = () => {
       ...current,
       [field]: event.target.value
     }));
+    // Clear error when user starts typing
+    if (field === 'username') setUsernameError('');
+    if (field === 'phone') setPhoneError('');
   };
 
-  const handleSubmit = (event) => {
-    event.preventDefault();
-    updateProfile(formData);
-    toast.success('Profile updated successfully.');
-  };
-
-  // Data & Progress handlers
-  const handleExportProgress = () => {
-    try {
-      const dataStr = JSON.stringify(progress, null, 2);
-      const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
-      const exportFileDefaultName = `dreamerz_progress_${new Date().toISOString().split('T')[0]}.json`;
-      const linkElement = document.createElement('a');
-      linkElement.setAttribute('href', dataUri);
-      linkElement.setAttribute('download', exportFileDefaultName);
-      linkElement.click();
-      toast.success('Progress exported successfully!');
-    } catch (error) {
-      toast.error('Failed to export progress');
-      console.error('Export error:', error);
+  const validateUsername = () => {
+    const username = formData.username.trim();
+    if (username.length === 0) {
+      setUsernameError('Name is required.');
+      return false;
     }
+    if (username.length < 3) {
+      setUsernameError('Name must be at least 3 characters long.');
+      return false;
+    }
+    if (!/^[a-zA-Z0-9\s]+$/.test(username)) {
+      setUsernameError('Name can only contain letters, numbers, and spaces.');
+      return false;
+    }
+    setUsernameError('');
+    return true;
   };
 
-  const handleImportProgress = (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const validatePhone = () => {
+    const phone = formData.phone.trim();
+    if (phone.length > 0 && !/^\d+$/.test(phone)) {
+      setPhoneError('Phone number can only contain numbers.');
+      return false;
+    }
+    setPhoneError('');
+    return true;
+  };
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const importedData = JSON.parse(e.target?.result);
-        if (!importedData.version || !importedData.completedModules) {
-          throw new Error('Invalid progress file format');
-        }
-        localStorage.setItem('dreamerz_beta_progress_v1', JSON.stringify(importedData));
-        setImportStatus('success');
-        toast.success('Progress imported! Refreshing...');
-        setTimeout(() => {
-          window.location.reload();
-        }, 1500);
-      } catch (error) {
-        setImportStatus('error');
-        toast.error('Invalid progress file. Please check the format.');
-        console.error('Import error:', error);
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    const usernameValid = validateUsername();
+    const phoneValid = validatePhone();
+    if (!usernameValid || !phoneValid) return;
+
+    try {
+      const API_BASE = (process.env.REACT_APP_BACKEND_URL || '').replace(/\/+$/, '');
+      const res = await fetch(`${API_BASE}/api/auth/profile`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          username: formData.username,
+          phone: formData.phone || null,
+          country_code: formData.countryCode || null,
+        }),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.detail || 'Failed to update profile');
       }
-    };
-    reader.readAsText(file);
-  };
 
-  const handleResetConfirm = () => {
-    resetProgress();
-    setShowResetConfirm(false);
-    toast.success('Progress reset successfully!');
+      // Refresh user data from backend to ensure consistency
+      await refreshUser();
+
+      toast.success('Profile updated successfully.');
+    } catch (err) {
+      toast.error(err.message || 'Failed to update profile');
+    }
   };
 
   return (
@@ -158,293 +160,155 @@ export const Account = () => {
             </div>
           </motion.div>
 
-          {/* Tab Buttons */}
-          <div className="flex gap-2 mb-8">
-            <button
-              onClick={() => setActiveTab('profile')}
-              className={`px-5 py-2.5 rounded-full font-medium text-sm transition-all ${
-                activeTab === 'profile'
-                  ? 'bg-primary text-white shadow-sm'
-                  : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-              }`}
-            >
-              Profile
-            </button>
-            <button
-              onClick={() => setActiveTab('data')}
-              className={`px-5 py-2.5 rounded-full font-medium text-sm transition-all ${
-                activeTab === 'data'
-                  ? 'bg-primary text-white shadow-sm'
-                  : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-              }`}
-            >
-              Data & Progress
-            </button>
-          </div>
+          {/* Profile Form */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8">
+              <div className="mb-6">
+                <h2 className="text-xl font-bold text-slate-900">Profile details</h2>
+                <p className="text-slate-600 mt-1">Keep your personal details up to date.</p>
+              </div>
 
-          <AnimatePresence mode="wait">
-            {activeTab === 'profile' ? (
-              <motion.div
-                key="profile"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-              >
-                <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8">
-                  <div className="mb-6">
-                    <h2 className="text-2xl font-bold text-slate-900">Profile details</h2>
-                    <p className="text-slate-600 mt-2">Keep your personal details up to date.</p>
+              <form className="space-y-4" onSubmit={handleSubmit}>
+                <label className="block text-sm font-medium text-slate-700">
+                  Full Name
+                  <div className="relative">
+                    <input
+                      value={formData.username}
+                      onChange={handleChange('username')}
+                      onBlur={validateUsername}
+                      className={`mt-1.5 w-full rounded-xl border px-4 py-2.5 text-slate-900 outline-none focus:ring-1 ${
+                        usernameError
+                          ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500 bg-rose-50'
+                          : 'border-slate-200 bg-slate-50 focus:border-primary focus:ring-primary'
+                      }`}
+                      placeholder="Your full name"
+                    />
+                    {usernameError && (
+                      <div className="absolute z-10 mt-2 left-0 right-0 bg-rose-600 text-white text-xs rounded-lg px-3 py-2 shadow-lg">
+                        <div className="relative">
+                          {usernameError}
+                          <div className="absolute -top-1 left-4 w-2 h-2 bg-rose-600 transform rotate-45"></div>
+                        </div>
+                      </div>
+                    )}
                   </div>
+                </label>
 
-                  <form className="space-y-5" onSubmit={handleSubmit}>
-                    <div className="grid sm:grid-cols-2 gap-5">
-                      <label className="block text-sm font-medium text-slate-700">
-                        First name
-                        <input
-                          value={formData.firstName}
-                          onChange={handleChange('firstName')}
-                          className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-                          placeholder="First name"
-                        />
-                      </label>
-                      <label className="block text-sm font-medium text-slate-700">
-                        Last name
-                        <input
-                          value={formData.lastName}
-                          onChange={handleChange('lastName')}
-                          className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-                          placeholder="Last name"
-                        />
-                      </label>
-                    </div>
+                <label className="block text-sm font-medium text-slate-700">
+                  Email address
+                  <input
+                    type="email"
+                    value={formData.email}
+                    readOnly
+                    className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-slate-500 outline-none cursor-not-allowed"
+                    placeholder="email@example.com"
+                  />
+                </label>
 
-                    <label className="block text-sm font-medium text-slate-700">
-                      Email address
-                      <input
-                        type="email"
-                        value={formData.email}
-                        readOnly
-                        className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-100 px-4 py-3 text-slate-500 outline-none cursor-not-allowed"
-                        placeholder="email@example.com"
-                      />
-                    </label>
-
-                    <div className="grid sm:grid-cols-2 gap-5">
-                      <label className="block text-sm font-medium text-slate-700">
-                        <span className="flex items-center gap-2">
-                          <Phone className="w-4 h-4 text-slate-400" />
-                          Phone
-                        </span>
-                        <input
-                          value={formData.phone}
-                          onChange={handleChange('phone')}
-                          className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-                          placeholder="Phone number"
-                        />
-                      </label>
-                      <label className="block text-sm font-medium text-slate-700">
-                        <span className="flex items-center gap-2">
-                          <MapPin className="w-4 h-4 text-slate-400" />
-                          Location
-                        </span>
-                        <input
-                          value={formData.location}
-                          onChange={handleChange('location')}
-                          className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-                          placeholder="City, State"
-                        />
-                      </label>
-                    </div>
-
-                    <label className="block text-sm font-medium text-slate-700">
-                      <span className="flex items-center gap-2">
-                        <Globe className="w-4 h-4 text-slate-400" />
-                        Preferred Language
-                      </span>
-                      <select
-                        value={language}
-                        onChange={(e) => setLanguage(e.target.value)}
-                        className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary appearance-none cursor-pointer"
-                      >
-                        {LANGUAGES.map((lang) => (
-                          <option key={lang.code} value={lang.code}>
-                            {lang.flag} {lang.nativeName} ({lang.name})
-                          </option>
-                        ))}
-                      </select>
-                      <p className="mt-1 text-xs text-slate-400">Course content will be displayed in this language when available</p>
-                    </label>
-
-                    <label className="block text-sm font-medium text-slate-700">
-                      <span className="flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-slate-400" />
-                        Bio
-                      </span>
-                      <textarea
-                        value={formData.bio}
-                        onChange={handleChange('bio')}
-                        rows={5}
-                        className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
-                        placeholder="Tell us a bit about yourself"
-                      />
-                    </label>
-
-                    <div className="flex justify-end">
-                      <Button type="submit">Save profile</Button>
-                    </div>
-                  </form>
-                </div>
-
-                <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8 mt-6">
-                  <div className="flex items-start justify-between gap-4 flex-wrap">
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0">
-                        <Lock className="w-5 h-5 text-slate-600" />
-                      </div>
-                      <div>
-                        <h3 className="text-base font-semibold text-slate-900">Password</h3>
-                        <p className="text-sm text-slate-500 mt-1">Choose a new password whenever you want.</p>
-                      </div>
-                    </div>
-                    <Link
-                      to="/reset-password"
-                      className="text-sm font-semibold text-primary hover:text-primary/80 px-4 py-2 rounded-xl border border-primary/20 hover:bg-primary/5 transition-colors"
+                <label className="block text-sm font-medium text-slate-700">
+                  <span className="flex items-center gap-2">
+                    <Phone className="w-4 h-4 text-slate-400" />
+                    Phone
+                  </span>
+                  <div className="mt-1.5 flex gap-2 relative">
+                    <select
+                      value={formData.countryCode}
+                      onChange={handleChange('countryCode')}
+                      className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-slate-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary appearance-none cursor-pointer w-28"
                     >
-                      Reset password
-                    </Link>
-                  </div>
-                </div>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="data"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="space-y-6"
-              >
-                {/* Progress Management */}
-                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                  <div className="p-6 border-b border-slate-100">
-                    <h2 className="font-semibold text-slate-900 flex items-center gap-2">
-                      <FileJson className="w-5 h-5 text-primary" />
-                      Progress Management
-                    </h2>
-                  </div>
-                  <div className="divide-y divide-slate-100">
-                    {/* Export */}
-                    <div className="p-6 flex items-center justify-between gap-4">
-                      <div>
-                        <h3 className="font-medium text-slate-900">Export Progress</h3>
-                        <p className="text-sm text-slate-500">Download your progress as a JSON file for backup</p>
-                      </div>
-                      <Button
-                        onClick={handleExportProgress}
-                        variant="outline"
-                        className="border-primary text-primary hover:bg-primary/10"
-                        data-testid="export-progress-btn"
-                      >
-                        <Download className="w-4 h-4 mr-2" />
-                        Export
-                      </Button>
-                    </div>
-                    {/* Import */}
-                    <div className="p-6 flex items-center justify-between gap-4">
-                      <div>
-                        <h3 className="font-medium text-slate-900">Import Progress</h3>
-                        <p className="text-sm text-slate-500">Restore progress from a previously exported file</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="file"
-                          ref={fileInputRef}
-                          onChange={handleImportProgress}
-                          accept=".json"
-                          className="hidden"
-                          data-testid="import-progress-input"
-                        />
-                        <Button
-                          onClick={() => fileInputRef.current?.click()}
-                          variant="outline"
-                          className="border-emerald-500 text-emerald-600 hover:bg-emerald-50"
-                          data-testid="import-progress-btn"
-                        >
-                          <Upload className="w-4 h-4 mr-2" />
-                          Import
-                        </Button>
-                        {importStatus === 'success' && (
-                          <Check className="w-5 h-5 text-emerald-500" />
-                        )}
-                      </div>
+                      <option value="+1">🇺🇸 +1</option>
+                      <option value="+44">🇬🇧 +44</option>
+                      <option value="+91">🇮🇳 +91</option>
+                      <option value="+86">🇨🇳 +86</option>
+                      <option value="+81">🇯🇵 +81</option>
+                      <option value="+49">🇩🇪 +49</option>
+                      <option value="+33">🇫🇷 +33</option>
+                      <option value="+61">🇦🇺 +61</option>
+                      <option value="+55">🇧🇷 +55</option>
+                      <option value="+39">🇮🇹 +39</option>
+                      <option value="+34">🇪🇸 +34</option>
+                      <option value="+7">🇷🇺 +7</option>
+                      <option value="+82">🇰🇷 +82</option>
+                      <option value="+31">🇳🇱 +31</option>
+                      <option value="+27">🇿🇦 +27</option>
+                      <option value="+52">🇲🇽 +52</option>
+                      <option value="+1">🇨🇦 +1</option>
+                      <option value="+65">🇸🇬 +65</option>
+                      <option value="+64">🇳🇿 +64</option>
+                      <option value="+351">🇵🇹 +351</option>
+                    </select>
+                    <div className="flex-1 relative">
+                      <input
+                        value={formData.phone}
+                        onChange={handleChange('phone')}
+                        onBlur={validatePhone}
+                        className={`w-full rounded-xl border px-4 py-2.5 text-slate-900 outline-none focus:ring-1 ${
+                          phoneError
+                            ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500 bg-rose-50'
+                            : 'border-slate-200 bg-slate-50 focus:border-primary focus:ring-primary'
+                        }`}
+                        placeholder="Phone number"
+                      />
+                      {phoneError && (
+                        <div className="absolute z-10 mt-2 left-0 right-0 bg-rose-600 text-white text-xs rounded-lg px-3 py-2 shadow-lg">
+                          <div className="relative">
+                            {phoneError}
+                            <div className="absolute -top-1 left-4 w-2 h-2 bg-rose-600 transform rotate-45"></div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
-                </div>
+                </label>
 
-                {/* Reset Progress */}
-                <div className="bg-rose-50 rounded-2xl border border-rose-200 p-6">
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 bg-rose-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <AlertTriangle className="w-6 h-6 text-rose-600" />
-                    </div>
-                    <div className="flex-grow">
-                      <h3 className="font-semibold text-rose-900 mb-1">Reset All Progress</h3>
-                      <p className="text-rose-700 text-sm mb-4">
-                        This will permanently delete all your completed modules, XP, streaks, and badges.
-                        Consider exporting your progress first!
-                      </p>
-                      <AnimatePresence>
-                        {!showResetConfirm ? (
-                          <Button
-                            onClick={() => setShowResetConfirm(true)}
-                            variant="outline"
-                            className="border-rose-300 text-rose-700 hover:bg-rose-100"
-                            data-testid="reset-progress-btn"
-                          >
-                            <RotateCcw className="w-4 h-4 mr-2" />
-                            Reset Progress
-                          </Button>
-                        ) : (
-                          <motion.div
-                            initial={{ opacity: 0, y: -10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -10 }}
-                            className="flex items-center gap-3 flex-wrap"
-                          >
-                            <span className="text-rose-800 font-medium">Are you absolutely sure?</span>
-                            <Button
-                              onClick={handleResetConfirm}
-                              className="bg-rose-600 hover:bg-rose-700 text-white"
-                              data-testid="reset-confirm-btn"
-                            >
-                              Yes, Delete Everything
-                            </Button>
-                            <Button
-                              onClick={() => setShowResetConfirm(false)}
-                              variant="ghost"
-                              className="text-slate-600"
-                            >
-                              Cancel
-                            </Button>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Safety & Privacy Link */}
-                <div className="text-center">
-                  <Link
-                    to="/parents"
-                    className="inline-flex items-center gap-2 text-primary hover:text-primary/80 font-medium"
+                <label className="block text-sm font-medium text-slate-700">
+                  <span className="flex items-center gap-2">
+                    <Globe className="w-4 h-4 text-slate-400" />
+                    Preferred Language
+                  </span>
+                  <select
+                    value={language}
+                    onChange={(e) => setLanguage(e.target.value)}
+                    className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-slate-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary appearance-none cursor-pointer"
                   >
-                    <Shield className="w-4 h-4" />
-                    View Safety & Privacy Information
-                  </Link>
+                    {LANGUAGES.map((lang) => (
+                      <option key={lang.code} value={lang.code}>
+                        {lang.flag} {lang.nativeName} ({lang.name})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-xs text-slate-400">Course content will be displayed in this language when available</p>
+                </label>
+
+                <div className="flex justify-end pt-2">
+                  <Button type="submit">Save profile</Button>
                 </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+              </form>
+            </div>
+
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 mt-4">
+              <div className="flex items-start justify-between gap-4 flex-wrap">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0">
+                    <Lock className="w-5 h-5 text-slate-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-semibold text-slate-900">Password</h3>
+                    <p className="text-sm text-slate-500 mt-1">Choose a new password whenever you want.</p>
+                  </div>
+                </div>
+                <Link
+                  to="/reset-password"
+                  className="text-sm font-semibold text-primary hover:text-primary/80 px-4 py-2 rounded-xl border border-primary/20 hover:bg-primary/5 transition-colors"
+                >
+                  Reset password
+                </Link>
+              </div>
+            </div>
+          </motion.div>
         </div>
       </div>
     </>
