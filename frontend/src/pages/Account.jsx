@@ -9,6 +9,7 @@ import { Button } from '../components/ui/button';
 import { SEO } from '../components/SEO';
 import { useAuth } from '../hooks/useAuth';
 import { useLanguage, LANGUAGES } from '../hooks/useLanguage';
+import { useTheme } from '../hooks/useTheme';
 import { toast } from 'sonner';
 
 const formatDateTime = (value) => {
@@ -21,12 +22,14 @@ const formatDateTime = (value) => {
 export const Account = () => {
   const { user, isAuthenticated, isLoaded: authLoaded, token, refreshUser } = useAuth();
   const { language, setLanguage } = useLanguage();
+  // Theme persists locally via useTheme (localStorage), so it survives
+  // logout. The server copy (user.theme) is for cross-device sync only.
+  const { theme, setTheme } = useTheme();
   const [formData, setFormData] = useState({
     username: '',
     email: '',
     phone: '',
     countryCode: '+1',
-    theme: 'light'
   });
   const [usernameError, setUsernameError] = useState('');
   const [phoneError, setPhoneError] = useState('');
@@ -38,8 +41,15 @@ export const Account = () => {
       email: user.email || '',
       phone: user.phone || '',
       countryCode: user.country_code || '+1',
-      theme: user.theme || 'light'
     });
+    // Cross-device sync: if the server has a saved preference that's
+    // different from this device's, adopt the server's. Only runs once
+    // per user-object change, so toggling locally afterwards isn't
+    // clobbered.
+    if (user.theme && user.theme !== theme) {
+      setTheme(user.theme);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   if (authLoaded && !isAuthenticated) {
@@ -113,7 +123,7 @@ export const Account = () => {
           username: formData.username,
           phone: formData.phone || null,
           country_code: formData.countryCode || null,
-          theme: formData.theme,
+          theme,
         }),
       });
 
@@ -122,15 +132,10 @@ export const Account = () => {
         throw new Error(error.detail || 'Failed to update profile');
       }
 
-      // Apply theme immediately without waiting for refresh
-      const root = document.documentElement;
-      if (formData.theme === 'dark') {
-        root.classList.add('dark');
-      } else {
-        root.classList.remove('dark');
-      }
-
-      // Refresh user data from backend to ensure consistency
+      // useTheme already applied the DOM class + wrote to localStorage
+      // when the user clicked the Light/Dark toggle; nothing extra to do
+      // on save. We just refresh the user blob so the server's copy
+      // matches if a remote update happened.
       await refreshUser();
 
       toast.success('Profile updated successfully.');
@@ -302,9 +307,9 @@ export const Account = () => {
                   <div className="mt-1.5 flex gap-3">
                     <button
                       type="button"
-                      onClick={() => setFormData({ ...formData, theme: 'light' })}
+                      onClick={() => setTheme('light')}
                       className={`flex-1 flex items-center justify-center gap-2 rounded-xl border px-4 py-3 transition-all ${
-                        formData.theme === 'light'
+                        theme === 'light'
                           ? 'border-primary bg-primary/10 text-primary'
                           : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300'
                       }`}
@@ -314,9 +319,9 @@ export const Account = () => {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setFormData({ ...formData, theme: 'dark' })}
+                      onClick={() => setTheme('dark')}
                       className={`flex-1 flex items-center justify-center gap-2 rounded-xl border px-4 py-3 transition-all ${
-                        formData.theme === 'dark'
+                        theme === 'dark'
                           ? 'border-primary bg-primary/10 text-primary'
                           : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300'
                       }`}
