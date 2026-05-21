@@ -39,11 +39,13 @@ const ROLE_OPTIONS = [
     value: 'supervisor',
     label: 'Parent / Supervisor',
     description: 'I want to monitor a learner\u2019s progress.',
+    disabled: true,
   },
   {
     value: 'creator',
     label: 'Course Creator',
     description: 'I want to build and publish courses.',
+    disabled: true,
   },
 ];
 
@@ -286,12 +288,16 @@ export const Register = () => {
                 <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                 <select
                   value={role}
-                  onChange={(e) => setRole(e.target.value)}
+                  onChange={(e) => {
+                    const target = ROLE_OPTIONS.find((o) => o.value === e.target.value);
+                    if (!target || target.disabled) return;
+                    setRole(e.target.value);
+                  }}
                   className="w-full rounded-xl border-0 bg-transparent py-3 pl-12 pr-4 text-slate-900 outline-none appearance-none cursor-pointer"
                 >
                   {ROLE_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
+                    <option key={opt.value} value={opt.value} disabled={opt.disabled}>
+                      {opt.label}{opt.disabled ? ' — coming soon' : ''}
                     </option>
                   ))}
                 </select>
