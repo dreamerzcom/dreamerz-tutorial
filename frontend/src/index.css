@@ -144,24 +144,79 @@
 
 /* Branded tints — the old values (50% saturation, 20% lightness)
    were too vibrant and made every chip look like a warning. These
-   are quieter, with text adjusted to maintain ~7:1 contrast. */
+   are quieter, with text adjusted to maintain ~7:1 contrast.
+   The -50 shade is the page/chip tint; -100 is a slightly stronger
+   icon/badge background (e.g. circular avatar tiles on /parents). */
 .dark .bg-primary\/10  { background-color: hsl(243 80% 68% / 0.16) !important; }
 .dark .bg-primary\/20  { background-color: hsl(243 80% 68% / 0.24) !important; }
+.dark .bg-blue-50      { background-color: hsl(215 30% 14%) !important; }
+.dark .bg-blue-100     { background-color: hsl(215 35% 18%) !important; }
 .dark .bg-emerald-50   { background-color: hsl(155 30% 13%) !important; }
+.dark .bg-emerald-100  { background-color: hsl(155 35% 17%) !important; }
 .dark .bg-amber-50     { background-color: hsl(40 30% 13%)  !important; }
+.dark .bg-amber-100    { background-color: hsl(40 35% 17%)  !important; }
 .dark .bg-rose-50      { background-color: hsl(0 30% 14%)   !important; }
+.dark .bg-rose-100     { background-color: hsl(0 35% 18%)   !important; }
 .dark .bg-sky-50       { background-color: hsl(210 30% 14%) !important; }
+.dark .bg-sky-100      { background-color: hsl(210 35% 18%) !important; }
 .dark .bg-violet-50    { background-color: hsl(265 30% 15%) !important; }
+.dark .bg-violet-100   { background-color: hsl(265 35% 19%) !important; }
 .dark .bg-indigo-50    { background-color: hsl(235 30% 15%) !important; }
+.dark .bg-indigo-100   { background-color: hsl(235 35% 19%) !important; }
+.dark .bg-cyan-50      { background-color: hsl(190 30% 13%) !important; }
+.dark .bg-cyan-100     { background-color: hsl(190 35% 17%) !important; }
+.dark .bg-teal-50      { background-color: hsl(170 30% 13%) !important; }
+.dark .bg-teal-100     { background-color: hsl(170 35% 17%) !important; }
 
+/* Icon / accent text — separate stops at -500/-600/-700 so all the
+   little colored icons on /parents (Mail, Clock, Shield, etc.) keep
+   their identity instead of glowing pure neon on a dark surface. */
+.dark .text-blue-500    { color: hsl(215 70% 68%) !important; }
+.dark .text-blue-600    { color: hsl(215 65% 64%) !important; }
+.dark .text-blue-700    { color: hsl(215 60% 72%) !important; }
+.dark .text-emerald-500 { color: hsl(155 55% 62%) !important; }
+.dark .text-emerald-600 { color: hsl(155 50% 60%) !important; }
 .dark .text-emerald-700 { color: hsl(155 50% 70%) !important; }
+.dark .text-amber-500   { color: hsl(40 70% 65%)  !important; }
+.dark .text-amber-600   { color: hsl(40 65% 62%)  !important; }
 .dark .text-amber-700   { color: hsl(40 60% 70%)  !important; }
+.dark .text-rose-500    { color: hsl(0 70% 68%)   !important; }
+.dark .text-rose-600    { color: hsl(0 65% 64%)   !important; }
 .dark .text-rose-700    { color: hsl(0 60% 75%)   !important; }
+.dark .text-sky-500     { color: hsl(210 70% 68%) !important; }
+.dark .text-sky-600     { color: hsl(210 65% 64%) !important; }
 .dark .text-sky-700     { color: hsl(210 60% 72%) !important; }
+.dark .text-violet-500  { color: hsl(265 70% 72%) !important; }
+.dark .text-violet-600  { color: hsl(265 65% 68%) !important; }
 .dark .text-violet-700  { color: hsl(265 60% 76%) !important; }
+.dark .text-indigo-500  { color: hsl(235 70% 72%) !important; }
+.dark .text-indigo-600  { color: hsl(235 65% 68%) !important; }
 .dark .text-indigo-700  { color: hsl(235 60% 76%) !important; }
+.dark .text-cyan-600    { color: hsl(190 65% 60%) !important; }
+.dark .text-teal-600    { color: hsl(170 60% 55%) !important; }
+
+/* Matching borders for the same color stops. */
+.dark .border-blue-100    { border-color: hsl(215 30% 22%) !important; }
+.dark .border-emerald-100 { border-color: hsl(155 30% 22%) !important; }
+.dark .border-amber-100   { border-color: hsl(40 30% 22%)  !important; }
+.dark .border-rose-100    { border-color: hsl(0 30% 22%)   !important; }
+.dark .border-violet-100  { border-color: hsl(265 30% 24%) !important; }
+.dark .border-sky-100     { border-color: hsl(210 30% 22%) !important; }
 
 .dark .bg-rose-600 { background-color: hsl(0 70% 50%) !important; }
+
+/* Page-shell gradients: many pages use `bg-gradient-to-b from-white
+   to-slate-50` as the body background. In dark mode that gradient
+   reverses (card-color at top, page-color at bottom) and looks like
+   a banding artifact. Pin both stops to the page background so the
+   gradient becomes invisible. The colored gradients used inside cards
+   (e.g. from-primary/10 to-violet-500/10) still work — they sit on top
+   of the dark surface as translucent overlays. */
+.dark .from-white  { --tw-gradient-from: hsl(220 18% 7%) !important; --tw-gradient-to: hsl(220 18% 7% / 0) !important; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important; }
+.dark .to-slate-50 { --tw-gradient-to: hsl(220 18% 7%) !important; }
+.dark .to-white    { --tw-gradient-to: hsl(220 18% 7%) !important; }
+.dark .from-slate-50 { --tw-gradient-from: hsl(220 18% 7%) !important; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, hsl(220 18% 7% / 0)) !important; }
+.dark .via-white   { --tw-gradient-via: hsl(220 18% 7%) !important; }
 
 /* Hover affordances */
 .dark .hover\:bg-slate-50:hover      { background-color: hsl(220 15% 15%) !important; }
