@@ -29,221 +29,185 @@
   }
 
   .dark {
-    --background: 222 47% 11%;
-    --foreground: 210 40% 98%;
-    --card: 217 33% 17%;
-    --card-foreground: 210 40% 98%;
-    --popover: 217 33% 17%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 243 75% 60%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 217 33% 25%;
-    --secondary-foreground: 210 40% 98%;
-    --accent: 217 91% 60%;
-    --accent-foreground: 0 0% 100%;
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
-    --destructive: 0 84% 60%;
+    /* Professional dark palette — GitHub / Linear / Vercel inspired.
+       Near-black background with a faint cool tint (not the previous
+       saturated navy). Cards sit clearly above the page via a 5pp
+       lightness step, and elevated surfaces step up another 4pp so
+       there is real visual hierarchy. Borders are low-contrast cool
+       gray, never the old hsl(217 33% 25%) which read as "blue line on
+       blue card". */
+    --background:           220 18% 7%;    /* page shell — #0e1116 */
+    --foreground:           210 14% 92%;   /* primary text — soft off-white */
+    --card:                 220 17% 11%;   /* card surface — #161a21 */
+    --card-foreground:      210 14% 92%;
+    --popover:              220 17% 13%;   /* popovers / menus sit above cards */
+    --popover-foreground:   210 14% 92%;
+    --primary:              243 80% 68%;   /* primary brand — a touch lighter than the light-mode version so it carries on dark */
+    --primary-foreground:   0 0% 100%;
+    --secondary:            220 14% 16%;   /* secondary surface — buttons, chips */
+    --secondary-foreground: 210 14% 92%;
+    --accent:               217 85% 62%;
+    --accent-foreground:    0 0% 100%;
+    --muted:                220 16% 12%;   /* slightly elevated; reads as a quiet panel */
+    --muted-foreground:     220 9%  62%;   /* secondary text — warm-gray for hierarchy */
+    --destructive:          0 65% 55%;
     --destructive-foreground: 0 0% 100%;
-    --border: 217 33% 25%;
-    --input: 217 33% 25%;
-    --ring: 243 75% 60%;
+    --border:               220 14% 19%;   /* subtle hairline — visible but never shouty */
+    --input:                220 14% 14%;
+    --ring:                 243 80% 68%;
   }
 }
 
-/* Dark mode overrides for common Tailwind classes */
-.dark .bg-white {
-  background-color: hsl(217 33% 17%) !important;
-}
+/* ──────────────────────────────────────────────────────────────────────
+   Dark-mode overrides for raw Tailwind utilities used across the app.
+   Most components don't use Tailwind's `dark:` variants — they hard-code
+   light-mode colors — so we re-paint those classes here instead of
+   rewriting every component. Values are tuned for the palette above.
+   ────────────────────────────────────────────────────────────────────── */
 
-.dark .bg-slate-50 {
-  background-color: hsl(217 33% 17%) !important;
-}
+/* Surfaces. The original mapping crushed bg-white and bg-slate-50 to
+   the same shade, so cards sitting on the page background disappeared.
+   Now bg-slate-50 matches the page shell and bg-white matches the card,
+   which is how the components intend them. */
+.dark .bg-white      { background-color: hsl(220 17% 11%) !important; }
+.dark .bg-slate-50   { background-color: hsl(220 18% 7%)  !important; }
+.dark .bg-slate-100  { background-color: hsl(220 15% 15%) !important; }
+.dark .bg-slate-200  { background-color: hsl(220 14% 20%) !important; }
+.dark .bg-white\/80  { background-color: hsl(220 17% 11% / 0.8) !important; }
 
-.dark .bg-slate-100 {
-  background-color: hsl(217 33% 25%) !important;
-}
-
-.dark .bg-slate-200 {
-  background-color: hsl(217 33% 30%) !important;
+.dark body,
+.dark .min-h-screen {
+  background-color: hsl(220 18% 7%) !important;
 }
 
 .dark .bg-gradient-hero {
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%) !important;
+  background: linear-gradient(135deg, #0b0e13 0%, #14181f 50%, #0b0e13 100%) !important;
 }
 
-.dark .text-slate-900 {
-  color: hsl(210 40% 98%) !important;
-}
+/* Text hierarchy. The previous override mapped 700/600/500/400 to the
+   same gray, killing emphasis. Now each step is genuinely distinct. */
+.dark .text-slate-900 { color: hsl(210 14% 94%) !important; }  /* headings */
+.dark .text-slate-800 { color: hsl(210 14% 90%) !important; }
+.dark .text-slate-700 { color: hsl(210 12% 84%) !important; }  /* body */
+.dark .text-slate-600 { color: hsl(220 9%  72%) !important; }  /* secondary */
+.dark .text-slate-500 { color: hsl(220 9%  62%) !important; }  /* tertiary */
+.dark .text-slate-400 { color: hsl(220 9%  52%) !important; }  /* placeholder-ish */
+.dark .text-slate-300 { color: hsl(220 9%  46%) !important; }
+.dark .text-white     { color: hsl(210 14% 96%) !important; }
 
-.dark .text-slate-700 {
-  color: hsl(210 40% 98%) !important;
-}
+/* Borders — quiet, low-contrast hairlines. */
+.dark .border-slate-100  { border-color: hsl(220 14% 16%) !important; }
+.dark .border-slate-200  { border-color: hsl(220 14% 19%) !important; }
+.dark .border-slate-300  { border-color: hsl(220 14% 24%) !important; }
+.dark .border-white\/50  { border-color: hsl(220 14% 22% / 0.5) !important; }
 
-.dark .text-slate-600 {
-  color: hsl(215 20% 65%) !important;
-}
-
-.dark .text-slate-500 {
-  color: hsl(215 20% 65%) !important;
-}
-
-.dark .text-slate-400 {
-  color: hsl(215 20% 65%) !important;
-}
-
-.dark .text-slate-300 {
-  color: hsl(215 25% 75%) !important;
-}
-
-.dark .border-slate-200 {
-  border-color: hsl(217 33% 25%) !important;
-}
-
-.dark .border-slate-100 {
-  border-color: hsl(217 33% 25%) !important;
-}
-
-.dark .border-white\/50 {
-  border-color: hsl(217 33% 25% / 0.5) !important;
-}
-
-.dark .bg-white\/80 {
-  background-color: hsl(217 33% 17% / 0.8) !important;
-}
-
-.dark body {
-  background-color: hsl(222 47% 11%) !important;
-}
-
-.dark .min-h-screen {
-  background-color: hsl(222 47% 11%) !important;
-}
-
-.dark .bg-slate-50 {
-  background-color: hsl(217 33% 17%) !important;
-}
-
-.dark .shadow-lg {
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5) !important;
-}
-
+/* Shadows — colored dark mode shadows look muddy. Plain black with
+   moderate alpha + a 1px inset top highlight reads like "lifted off the
+   page" the way it does in Linear / Stripe / Vercel. */
 .dark .shadow-sm {
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.5) !important;
+  box-shadow: 0 1px 2px 0 hsl(0 0% 0% / 0.4) !important;
+}
+.dark .shadow-md {
+  box-shadow: 0 2px 4px -1px hsl(0 0% 0% / 0.4), 0 4px 6px -2px hsl(0 0% 0% / 0.3) !important;
+}
+.dark .shadow-lg {
+  box-shadow: 0 4px 6px -1px hsl(0 0% 0% / 0.4), 0 10px 15px -3px hsl(0 0% 0% / 0.3) !important;
+}
+.dark .shadow-xl {
+  box-shadow: 0 10px 25px -5px hsl(0 0% 0% / 0.5), 0 20px 35px -10px hsl(0 0% 0% / 0.4) !important;
 }
 
-/* Interactive elements in dark mode */
-.dark input {
-  background-color: hsl(217 33% 25%) !important;
-  color: hsl(210 40% 98%) !important;
-  border-color: hsl(217 33% 35%) !important;
+/* Form inputs — use the dim `--input` lightness so they read as
+   "recessed" instead of glowing against the card. */
+.dark input,
+.dark select,
+.dark textarea {
+  background-color: hsl(220 14% 14%) !important;
+  color: hsl(210 14% 92%) !important;
+  border-color: hsl(220 14% 22%) !important;
 }
-
-.dark input:focus {
-  border-color: hsl(243 75% 60%) !important;
-  outline-color: hsl(243 75% 60%) !important;
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: hsl(220 9% 48%) !important;
 }
-
-.dark select {
-  background-color: hsl(217 33% 25%) !important;
-  color: hsl(210 40% 98%) !important;
-  border-color: hsl(217 33% 35%) !important;
-}
-
-.dark select:focus {
-  border-color: hsl(243 75% 60%) !important;
-  outline-color: hsl(243 75% 60%) !important;
+.dark input:focus,
+.dark select:focus,
+.dark textarea:focus {
+  border-color: hsl(243 80% 68%) !important;
+  outline-color: hsl(243 80% 68%) !important;
+  box-shadow: 0 0 0 2px hsl(243 80% 68% / 0.25) !important;
 }
 
 .dark button {
-  color: hsl(210 40% 98%) !important;
+  color: inherit;  /* let each button keep its own intended text color */
 }
 
-.dark .bg-primary\/10 {
-  background-color: hsl(243 75% 50% / 0.2) !important;
-}
+/* Branded tints — the old values (50% saturation, 20% lightness)
+   were too vibrant and made every chip look like a warning. These
+   are quieter, with text adjusted to maintain ~7:1 contrast. */
+.dark .bg-primary\/10  { background-color: hsl(243 80% 68% / 0.16) !important; }
+.dark .bg-primary\/20  { background-color: hsl(243 80% 68% / 0.24) !important; }
+.dark .bg-emerald-50   { background-color: hsl(155 30% 13%) !important; }
+.dark .bg-amber-50     { background-color: hsl(40 30% 13%)  !important; }
+.dark .bg-rose-50      { background-color: hsl(0 30% 14%)   !important; }
+.dark .bg-sky-50       { background-color: hsl(210 30% 14%) !important; }
+.dark .bg-violet-50    { background-color: hsl(265 30% 15%) !important; }
+.dark .bg-indigo-50    { background-color: hsl(235 30% 15%) !important; }
 
-.dark .hover\:bg-slate-50:hover {
-  background-color: hsl(217 33% 25%) !important;
-}
+.dark .text-emerald-700 { color: hsl(155 50% 70%) !important; }
+.dark .text-amber-700   { color: hsl(40 60% 70%)  !important; }
+.dark .text-rose-700    { color: hsl(0 60% 75%)   !important; }
+.dark .text-sky-700     { color: hsl(210 60% 72%) !important; }
+.dark .text-violet-700  { color: hsl(265 60% 76%) !important; }
+.dark .text-indigo-700  { color: hsl(235 60% 76%) !important; }
 
-.dark .hover\:border-slate-300:hover {
-  border-color: hsl(217 33% 35%) !important;
-}
+.dark .bg-rose-600 { background-color: hsl(0 70% 50%) !important; }
 
-/* Card styles in dark mode */
+/* Hover affordances */
+.dark .hover\:bg-slate-50:hover      { background-color: hsl(220 15% 15%) !important; }
+.dark .hover\:bg-slate-100:hover     { background-color: hsl(220 14% 18%) !important; }
+.dark .hover\:border-slate-300:hover { border-color: hsl(220 14% 26%) !important; }
+
+/* Card styles — add a 1px inset top highlight (hsl 0 0% 100% / 0.04)
+   so the card edge catches a tiny bit of light against the page. This
+   is the visual trick Linear / Stripe / Vercel use to keep dark cards
+   from feeling flat. */
 .dark .card-professional {
-  background-color: hsl(217 33% 17%) !important;
-  border-color: hsl(217 33% 25%) !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+  background-color: hsl(220 17% 11%) !important;
+  border-color: hsl(220 14% 19%) !important;
+  box-shadow:
+    inset 0 1px 0 0 hsl(0 0% 100% / 0.04),
+    0 1px 3px hsl(0 0% 0% / 0.5),
+    0 4px 16px hsl(0 0% 0% / 0.25) !important;
 }
-
 .dark .card-professional:hover {
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4) !important;
-  border-color: hsl(217 33% 30%) !important;
+  border-color: hsl(220 14% 26%) !important;
+  background-color: hsl(220 17% 12%) !important;
+  box-shadow:
+    inset 0 1px 0 0 hsl(0 0% 100% / 0.05),
+    0 2px 6px hsl(0 0% 0% / 0.55),
+    0 10px 30px hsl(0 0% 0% / 0.35) !important;
 }
 
 .dark .card-glass {
-  background-color: hsl(217 33% 17% / 0.8) !important;
-  border-color: hsl(217 33% 25% / 0.5) !important;
+  background-color: hsl(220 17% 11% / 0.7) !important;
+  border-color: hsl(220 14% 22% / 0.5) !important;
 }
 
-/* Badge styles in dark mode */
-.dark .badge-beginner {
-  background-color: hsl(150 50% 20%) !important;
-  color: hsl(150 50% 80%) !important;
-}
+/* Status badges — tuned to the new tints above. */
+.dark .badge-beginner    { background-color: hsl(155 30% 13%) !important; color: hsl(155 50% 70%) !important; }
+.dark .badge-intermediate{ background-color: hsl(40 30% 13%)  !important; color: hsl(40 60% 70%)  !important; }
+.dark .badge-advanced    { background-color: hsl(0 30% 14%)   !important; color: hsl(0 60% 75%)   !important; }
 
-.dark .badge-intermediate {
-  background-color: hsl(45 50% 20%) !important;
-  color: hsl(45 50% 80%) !important;
-}
+/* Scrollbar — a touch lighter than the page so it's visible but not
+   distracting. */
+.dark ::-webkit-scrollbar-thumb       { background: hsl(220 14% 22%); }
+.dark ::-webkit-scrollbar-thumb:hover { background: hsl(220 14% 30%); }
 
-.dark .badge-advanced {
-  background-color: hsl(0 50% 20%) !important;
-  color: hsl(0 50% 80%) !important;
-}
-
-/* Additional common patterns */
-.dark .bg-emerald-50 {
-  background-color: hsl(150 50% 20%) !important;
-}
-
-.dark .bg-amber-50 {
-  background-color: hsl(45 50% 20%) !important;
-}
-
-.dark .bg-rose-50 {
-  background-color: hsl(0 50% 20%) !important;
-}
-
-.dark .text-emerald-700 {
-  color: hsl(150 50% 80%) !important;
-}
-
-.dark .text-amber-700 {
-  color: hsl(45 50% 80%) !important;
-}
-
-.dark .text-rose-700 {
-  color: hsl(0 50% 80%) !important;
-}
-
-.dark .bg-rose-600 {
-  background-color: hsl(0 70% 40%) !important;
-}
-
-.dark .bg-rose-50 {
-  background-color: hsl(0 50% 20%) !important;
-}
-
-/* Scrollbar in dark mode */
-.dark ::-webkit-scrollbar-thumb {
-  background: hsl(217 33% 35%);
-}
-
-.dark ::-webkit-scrollbar-thumb:hover {
-  background: hsl(217 33% 45%);
+/* Text selection in dark mode */
+.dark ::selection {
+  background: hsl(243 80% 68% / 0.45);
+  color: hsl(210 14% 96%);
 }
 
 @layer base {
