@@ -27,6 +27,223 @@
     --ring: 243 75% 50%;
     --radius: 1rem;
   }
+
+  .dark {
+    --background: 222 47% 11%;
+    --foreground: 210 40% 98%;
+    --card: 217 33% 17%;
+    --card-foreground: 210 40% 98%;
+    --popover: 217 33% 17%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 243 75% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 217 33% 25%;
+    --secondary-foreground: 210 40% 98%;
+    --accent: 217 91% 60%;
+    --accent-foreground: 0 0% 100%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 217 33% 25%;
+    --input: 217 33% 25%;
+    --ring: 243 75% 60%;
+  }
+}
+
+/* Dark mode overrides for common Tailwind classes */
+.dark .bg-white {
+  background-color: hsl(217 33% 17%) !important;
+}
+
+.dark .bg-slate-50 {
+  background-color: hsl(217 33% 17%) !important;
+}
+
+.dark .bg-slate-100 {
+  background-color: hsl(217 33% 25%) !important;
+}
+
+.dark .bg-slate-200 {
+  background-color: hsl(217 33% 30%) !important;
+}
+
+.dark .bg-gradient-hero {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%) !important;
+}
+
+.dark .text-slate-900 {
+  color: hsl(210 40% 98%) !important;
+}
+
+.dark .text-slate-700 {
+  color: hsl(210 40% 98%) !important;
+}
+
+.dark .text-slate-600 {
+  color: hsl(215 20% 65%) !important;
+}
+
+.dark .text-slate-500 {
+  color: hsl(215 20% 65%) !important;
+}
+
+.dark .text-slate-400 {
+  color: hsl(215 20% 65%) !important;
+}
+
+.dark .text-slate-300 {
+  color: hsl(215 25% 75%) !important;
+}
+
+.dark .border-slate-200 {
+  border-color: hsl(217 33% 25%) !important;
+}
+
+.dark .border-slate-100 {
+  border-color: hsl(217 33% 25%) !important;
+}
+
+.dark .border-white\/50 {
+  border-color: hsl(217 33% 25% / 0.5) !important;
+}
+
+.dark .bg-white\/80 {
+  background-color: hsl(217 33% 17% / 0.8) !important;
+}
+
+.dark body {
+  background-color: hsl(222 47% 11%) !important;
+}
+
+.dark .min-h-screen {
+  background-color: hsl(222 47% 11%) !important;
+}
+
+.dark .bg-slate-50 {
+  background-color: hsl(217 33% 17%) !important;
+}
+
+.dark .shadow-lg {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5) !important;
+}
+
+.dark .shadow-sm {
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Interactive elements in dark mode */
+.dark input {
+  background-color: hsl(217 33% 25%) !important;
+  color: hsl(210 40% 98%) !important;
+  border-color: hsl(217 33% 35%) !important;
+}
+
+.dark input:focus {
+  border-color: hsl(243 75% 60%) !important;
+  outline-color: hsl(243 75% 60%) !important;
+}
+
+.dark select {
+  background-color: hsl(217 33% 25%) !important;
+  color: hsl(210 40% 98%) !important;
+  border-color: hsl(217 33% 35%) !important;
+}
+
+.dark select:focus {
+  border-color: hsl(243 75% 60%) !important;
+  outline-color: hsl(243 75% 60%) !important;
+}
+
+.dark button {
+  color: hsl(210 40% 98%) !important;
+}
+
+.dark .bg-primary\/10 {
+  background-color: hsl(243 75% 50% / 0.2) !important;
+}
+
+.dark .hover\:bg-slate-50:hover {
+  background-color: hsl(217 33% 25%) !important;
+}
+
+.dark .hover\:border-slate-300:hover {
+  border-color: hsl(217 33% 35%) !important;
+}
+
+/* Card styles in dark mode */
+.dark .card-professional {
+  background-color: hsl(217 33% 17%) !important;
+  border-color: hsl(217 33% 25%) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+}
+
+.dark .card-professional:hover {
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4) !important;
+  border-color: hsl(217 33% 30%) !important;
+}
+
+.dark .card-glass {
+  background-color: hsl(217 33% 17% / 0.8) !important;
+  border-color: hsl(217 33% 25% / 0.5) !important;
+}
+
+/* Badge styles in dark mode */
+.dark .badge-beginner {
+  background-color: hsl(150 50% 20%) !important;
+  color: hsl(150 50% 80%) !important;
+}
+
+.dark .badge-intermediate {
+  background-color: hsl(45 50% 20%) !important;
+  color: hsl(45 50% 80%) !important;
+}
+
+.dark .badge-advanced {
+  background-color: hsl(0 50% 20%) !important;
+  color: hsl(0 50% 80%) !important;
+}
+
+/* Additional common patterns */
+.dark .bg-emerald-50 {
+  background-color: hsl(150 50% 20%) !important;
+}
+
+.dark .bg-amber-50 {
+  background-color: hsl(45 50% 20%) !important;
+}
+
+.dark .bg-rose-50 {
+  background-color: hsl(0 50% 20%) !important;
+}
+
+.dark .text-emerald-700 {
+  color: hsl(150 50% 80%) !important;
+}
+
+.dark .text-amber-700 {
+  color: hsl(45 50% 80%) !important;
+}
+
+.dark .text-rose-700 {
+  color: hsl(0 50% 80%) !important;
+}
+
+.dark .bg-rose-600 {
+  background-color: hsl(0 70% 40%) !important;
+}
+
+.dark .bg-rose-50 {
+  background-color: hsl(0 50% 20%) !important;
+}
+
+/* Scrollbar in dark mode */
+.dark ::-webkit-scrollbar-thumb {
+  background: hsl(217 33% 35%);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: hsl(217 33% 45%);
 }
 
 @layer base {

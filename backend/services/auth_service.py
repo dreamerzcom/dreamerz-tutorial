@@ -74,6 +74,7 @@ def _user_to_dict(user: User) -> dict:
         "trial_expires_at": user.trial_expires_at.isoformat() if user.trial_expires_at else None,
         "phone": user.phone,
         "country_code": user.country_code,
+        "theme": user.theme,
     }
 
 

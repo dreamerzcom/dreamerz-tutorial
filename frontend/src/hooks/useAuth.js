@@ -66,6 +66,7 @@ const buildUserProfile = ({
   profile,
   phone,
   country_code,
+  theme,
   lastLoginAt,
   createdAt,
   preferredLanguage,
@@ -85,6 +86,7 @@ const buildUserProfile = ({
   country_code: country_code || profile?.country_code || '',
   bio: profile?.bio || '',
   location: profile?.location || '',
+  theme: theme || 'light',
   lastLoginAt: lastLoginAt || new Date().toISOString(),
   createdAt: createdAt || new Date().toISOString(),
   // Free-trial bookkeeping. `trialExpiresAt` is an ISO string for learners
@@ -92,7 +94,7 @@ const buildUserProfile = ({
   trialExpiresAt: trialExpiresAt || null,
   // We cache the server-computed number too, but `useAuth` recomputes from
   // `trialExpiresAt` on every render so the Navbar countdown stays current.
-  trialDaysRemaining: typeof trialDaysRemaining === 'number' ? trialDaysRemaining : null,
+  trialDaysRemaining: trialDaysRemaining || null,
 });
 
 // Recompute days remaining locally so the Navbar badge updates as time
@@ -158,6 +160,7 @@ export const AuthProvider = ({ children }) => {
               preferredLanguage: result.preferred_language,
               phone: result.phone,
               country_code: result.country_code,
+              theme: result.theme,
               profile: result.profile,
               createdAt: result.created_at,
               lastLoginAt: new Date().toISOString(),
@@ -207,6 +210,7 @@ export const AuthProvider = ({ children }) => {
       preferredLanguage: result.preferred_language,
       phone: result.phone,
       country_code: result.country_code,
+      theme: result.theme,
       profile: result.profile,
       createdAt: result.created_at,
       lastLoginAt: new Date().toISOString(),
@@ -259,6 +263,7 @@ export const AuthProvider = ({ children }) => {
       preferredLanguage: response.preferred_language,
       phone: response.phone,
       country_code: response.country_code,
+      theme: response.theme,
       profile: response.profile,
       createdAt: response.created_at,
       lastLoginAt: new Date().toISOString(),
@@ -299,6 +304,7 @@ export const AuthProvider = ({ children }) => {
           preferredLanguage: result.preferred_language,
           phone: result.phone,
           country_code: result.country_code,
+          theme: result.theme,
           profile: result.profile,
           createdAt: result.created_at,
           lastLoginAt: new Date().toISOString(),

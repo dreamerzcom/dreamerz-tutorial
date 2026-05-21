@@ -446,6 +446,7 @@ class User(Base):
     # Profile fields
     phone: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
     country_code: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
+    theme: Mapped[str] = mapped_column(String(10), default="light", nullable=False)
 
     def __repr__(self) -> str:
         return f"<User(id={self.id}, username='{self.username}', email='{self.email}')>"

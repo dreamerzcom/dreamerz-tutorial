@@ -47,6 +47,7 @@ class TokenResponse(BaseModel):
     preferred_language: str = "en"
     phone: Optional[str] = None
     country_code: Optional[str] = None
+    theme: str = "light"
     # Free-trial bookkeeping. `trial_expires_at` is ISO-8601 (or null for
     # exempt roles); `trial_days_remaining` is null for exempt roles and a
     # non-negative int for learners (0 = already expired).
@@ -65,6 +66,7 @@ class UserInfoResponse(BaseModel):
     trial_days_remaining: Optional[int] = None
     phone: Optional[str] = None
     country_code: Optional[str] = None
+    theme: str = "light"
 
 
 class AdminUserResponse(BaseModel):

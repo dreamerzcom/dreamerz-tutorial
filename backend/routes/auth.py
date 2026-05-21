@@ -204,6 +204,7 @@ async def login_user(credentials: UserLogin, request: Request, session: AsyncSes
         "preferred_language": user_lang,
         "phone": user.get("phone"),
         "country_code": user.get("country_code"),
+        "theme": user.get("theme", "light"),
         **_trial_payload(user),
     }
 
@@ -219,6 +220,7 @@ async def get_profile(current_user: dict = Depends(get_current_user)):
         "preferred_language": current_user.get("preferred_language", DEFAULT_LANGUAGE),
         "phone": current_user.get("phone"),
         "country_code": current_user.get("country_code"),
+        "theme": current_user.get("theme", "light"),
         **_trial_payload(current_user),
     }
 
@@ -253,6 +255,7 @@ class ProfileUpdate(BaseModel):
     username: Optional[str] = None
     phone: Optional[str] = None
     country_code: Optional[str] = None
+    theme: Optional[str] = None
 
 
 @router.put("/profile")
@@ -276,6 +279,8 @@ async def update_profile(
         db_user.phone = body.phone
     if body.country_code is not None and body.country_code != "":
         db_user.country_code = body.country_code
+    if body.theme is not None and body.theme in ["light", "dark"]:
+        db_user.theme = body.theme
 
     db_user.updated_at = datetime.now(timezone.utc)
     await session.commit()
@@ -285,6 +290,7 @@ async def update_profile(
         "username": db_user.username,
         "phone": db_user.phone,
         "country_code": db_user.country_code,
+        "theme": db_user.theme,
     }
 
 
@@ -354,6 +360,7 @@ async def change_password(
         "preferred_language": user_lang,
         "phone": user.phone,
         "country_code": user.country_code,
+        "theme": user.theme,
         **_trial_payload(user),
     }
 
@@ -444,5 +451,6 @@ async def forgot_password(
         "preferred_language": user_lang,
         "phone": user.phone,
         "country_code": user.country_code,
+        "theme": user.theme,
         **_trial_payload(user),
     }

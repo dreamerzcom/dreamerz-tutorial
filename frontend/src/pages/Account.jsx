@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  UserCircle2, Mail, Clock3, Phone, Globe, Lock,
+  UserCircle2, Mail, Clock3, Phone, Globe, Lock, Palette, Sun, Moon,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '../components/ui/button';
@@ -25,7 +25,8 @@ export const Account = () => {
     username: '',
     email: '',
     phone: '',
-    countryCode: '+1'
+    countryCode: '+1',
+    theme: 'light'
   });
   const [usernameError, setUsernameError] = useState('');
   const [phoneError, setPhoneError] = useState('');
@@ -36,7 +37,8 @@ export const Account = () => {
       username: user.username || '',
       email: user.email || '',
       phone: user.phone || '',
-      countryCode: user.country_code || '+1'
+      countryCode: user.country_code || '+1',
+      theme: user.theme || 'light'
     });
   }, [user]);
 
@@ -111,12 +113,21 @@ export const Account = () => {
           username: formData.username,
           phone: formData.phone || null,
           country_code: formData.countryCode || null,
+          theme: formData.theme,
         }),
       });
 
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.detail || 'Failed to update profile');
+      }
+
+      // Apply theme immediately without waiting for refresh
+      const root = document.documentElement;
+      if (formData.theme === 'dark') {
+        root.classList.add('dark');
+      } else {
+        root.classList.remove('dark');
       }
 
       // Refresh user data from backend to ensure consistency
@@ -281,6 +292,39 @@ export const Account = () => {
                     ))}
                   </select>
                   <p className="mt-1 text-xs text-slate-400">Course content will be displayed in this language when available</p>
+                </label>
+
+                <label className="block text-sm font-medium text-slate-700">
+                  <span className="flex items-center gap-2">
+                    <Palette className="w-4 h-4 text-slate-400" />
+                    Theme
+                  </span>
+                  <div className="mt-1.5 flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, theme: 'light' })}
+                      className={`flex-1 flex items-center justify-center gap-2 rounded-xl border px-4 py-3 transition-all ${
+                        formData.theme === 'light'
+                          ? 'border-primary bg-primary/10 text-primary'
+                          : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300'
+                      }`}
+                    >
+                      <Sun className="w-5 h-5" />
+                      Light
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, theme: 'dark' })}
+                      className={`flex-1 flex items-center justify-center gap-2 rounded-xl border px-4 py-3 transition-all ${
+                        formData.theme === 'dark'
+                          ? 'border-primary bg-primary/10 text-primary'
+                          : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300'
+                      }`}
+                    >
+                      <Moon className="w-5 h-5" />
+                      Dark
+                    </button>
+                  </div>
                 </label>
 
                 <div className="flex justify-end pt-2">

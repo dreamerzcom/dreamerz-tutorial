@@ -26,11 +26,28 @@ import { TrialExpired } from "./pages/TrialExpired";
 import { AdminPanel } from "./pages/AdminPanel";
 import { ParentDashboard } from "./pages/ParentDashboard";
 import { ParentStudentDetail } from "./pages/ParentStudentDetail";
-import { AuthProvider } from "./hooks/useAuth";
+import { AuthProvider, useAuth } from "./hooks/useAuth";
 import { LanguageProvider } from "./hooks/useLanguage";
 import { LearningProgressProvider } from "./hooks/useLearningProgress";
 import { ProgressProvider } from "./hooks/useProgress";
 import { useEffect } from "react";
+
+/** Apply theme class to root element based on user preference */
+const ThemeProvider = ({ children }) => {
+  const { user } = useAuth();
+  
+  useEffect(() => {
+    const theme = user?.theme || 'light';
+    const root = document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+  }, [user?.theme]);
+  
+  return children;
+};
 
 /** Scroll to top on route change */
 const ScrollToTop = () => {
@@ -96,6 +113,7 @@ function App() {
           <LanguageProvider>
           <LearningProgressProvider>
           <ProgressProvider>
+            <ThemeProvider>
             <RouteAwareErrorBoundary>
               <Navbar />
               <main className="flex-grow pt-16">
@@ -180,6 +198,7 @@ function App() {
               </main>
               <Footer />
             </RouteAwareErrorBoundary>
+            </ThemeProvider>
             <Toaster position="bottom-right" />
           </ProgressProvider>
           </LearningProgressProvider>
