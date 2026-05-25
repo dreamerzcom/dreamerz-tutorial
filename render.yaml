@@ -29,7 +29,9 @@ services:
       - key: JWT_SECRET
         generateValue: true  # Render auto-generates a secure random value
       - key: CORS_ORIGINS
-        sync: false  # Set after frontend deploys (e.g. https://dreamerz-frontend.onrender.com)
+        sync: false  # Comma-separated origins, e.g.
+                     # https://dreamerz.com,https://www.dreamerz.com
+                     # (the bare onrender.com URLs can stay alongside during the cutover).
       - key: ADMIN_EMAILS
         sync: false  # Comma-separated emails granted admin access
       - key: RESEND_API_KEY
@@ -37,7 +39,9 @@ services:
       - key: SENDER_EMAIL
         value: onboarding@resend.dev  # Sandbox sender; replace with verified domain for production
       - key: FRONTEND_URL
-        sync: false  # e.g. https://dreamerz-frontend.onrender.com — used in reset email link
+        sync: false  # Canonical public URL (e.g. https://dreamerz.com).
+                     # Used by services/email_service.py to build the absolute
+                     # links in welcome / password-reset emails.
       - key: CLOUDINARY_URL
         sync: false  # Full URL: cloudinary://<api_key>:<api_secret>@<cloud_name>
                      # Find it in Cloudinary dashboard → Programmable Media → API Keys.
@@ -56,7 +60,9 @@ services:
     autoDeploy: true
     envVars:
       - key: REACT_APP_BACKEND_URL
-        sync: false  # Set to backend URL (e.g. https://dreamerz-backend.onrender.com)
+        sync: false  # Backend URL the SPA calls (e.g. https://api.dreamerz.com
+                     # if you've pointed an `api` subdomain at the backend
+                     # service, otherwise https://dreamerz-backend.onrender.com).
     routes:
       - type: rewrite
         source: /*

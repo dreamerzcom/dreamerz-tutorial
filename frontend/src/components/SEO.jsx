@@ -4,7 +4,7 @@ const defaultMeta = {
   title: 'DreamerZ_Lite — AI & Conversational English Learning',
   description: 'Learn AI responsibly with DreamerZ_Lite. Hands-on prompt engineering, AI tools, and conversational English skills for learners 11 years and above.',
   image: '/og-image.png',
-  url: 'https://dreamerz.beta',
+  url: 'https://dreamerz.com',
   type: 'website'
 };
 

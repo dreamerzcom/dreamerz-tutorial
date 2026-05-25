@@ -10,6 +10,11 @@ logger = logging.getLogger(__name__)
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
 SENDER_EMAIL = os.environ.get("SENDER_EMAIL", "onboarding@resend.dev")
 SENDER_NAME = os.environ.get("SENDER_NAME", "DreamerZ")
+# Public frontend URL — used to build absolute links inside HTML emails.
+# Defaults to the production domain so emails sent from a dev box that
+# forgot to set the env var still point somewhere sensible. Trailing
+# slash trimmed so `{FRONTEND_URL}/learn` never collapses to `//learn`.
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://dreamerz.com").rstrip("/")
 
 RESEND_API_URL = "https://api.resend.com/emails"
 
@@ -192,7 +197,7 @@ def build_welcome_email(username: str) -> str:
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td align="center" style="padding:4px 0 28px;">
-                    <a href="https://dreamerz-frontend.onrender.com/learn" target="_blank"
+                    <a href="{FRONTEND_URL}/learn" target="_blank"
                        style="display:inline-block; background:linear-gradient(135deg, #4f46e5, #7c3aed); color:#ffffff; text-decoration:none; font-weight:700; font-size:16px; padding:14px 36px; border-radius:14px; letter-spacing:0.3px;">
                       Start Learning Now &rarr;
                     </a>
@@ -263,11 +268,11 @@ def build_welcome_email(username: str) -> str:
           <tr>
             <td style="background-color:#1e293b; border-radius:0 0 20px 20px; padding:28px 40px; text-align:center;">
               <p style="color:#94a3b8; font-size:13px; margin:0 0 8px;">
-                <a href="https://dreamerz-frontend.onrender.com/learn" style="color:#818cf8; text-decoration:none; font-weight:600;">Courses</a>
+                <a href="{FRONTEND_URL}/learn" style="color:#818cf8; text-decoration:none; font-weight:600;">Courses</a>
                 &nbsp;&middot;&nbsp;
-                <a href="https://dreamerz-frontend.onrender.com/parents" style="color:#818cf8; text-decoration:none; font-weight:600;">For Parents</a>
+                <a href="{FRONTEND_URL}/parents" style="color:#818cf8; text-decoration:none; font-weight:600;">For Parents</a>
                 &nbsp;&middot;&nbsp;
-                <a href="https://dreamerz-frontend.onrender.com/account" style="color:#818cf8; text-decoration:none; font-weight:600;">My Account</a>
+                <a href="{FRONTEND_URL}/account" style="color:#818cf8; text-decoration:none; font-weight:600;">My Account</a>
               </p>
               <p style="color:#64748b; font-size:12px; margin:0;">
                 &copy; 2026 DreamerZ. Made with ❤️ for AI & Conversational-English learners.
