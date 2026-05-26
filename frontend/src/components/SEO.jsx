@@ -1,8 +1,8 @@
 import { Helmet } from 'react-helmet-async';
 
 const defaultMeta = {
-  title: 'DreamerZ_Lite — AI & Conversational English Learning',
-  description: 'Learn AI responsibly with DreamerZ_Lite. Hands-on prompt engineering, AI tools, and conversational English skills for learners 11 years and above.',
+  title: 'DreamerZ — AI & Conversational English Learning',
+  description: 'Learn AI responsibly with DreamerZ. Hands-on prompt engineering, AI tools, and conversational English skills for learners 11 years and above.',
   image: '/og-image.png',
   url: 'https://dreamerz.com',
   type: 'website'
@@ -17,7 +17,7 @@ export const SEO = ({
   noIndex = false
 }) => {
   const seo = {
-    title: title ? `${title} | DreamerZ_Lite` : defaultMeta.title,
+    title: title ? `${title} | DreamerZ` : defaultMeta.title,
     description: description || defaultMeta.description,
     image: image || defaultMeta.image,
     url: url || defaultMeta.url,
@@ -37,7 +37,7 @@ export const SEO = ({
       <meta property="og:image" content={seo.image} />
       <meta property="og:url" content={seo.url} />
       <meta property="og:type" content={seo.type} />
-      <meta property="og:site_name" content="DreamerZ_Lite" />
+      <meta property="og:site_name" content="DreamerZ" />
 
       {/* Twitter Card */}
       <meta name="twitter:card" content="summary_large_image" />

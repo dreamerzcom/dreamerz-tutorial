@@ -147,7 +147,7 @@ export const Parents = () => {
             Safe AI Learning for Your Child
           </h1>
           <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-            DreamerZ_Lite helps learners 11 years and above learn about AI responsibly.
+            DreamerZ helps learners 11 years and above learn about AI responsibly.
             Here's everything you need to know about what we teach and how we keep them safe.
           </p>
 
@@ -172,7 +172,7 @@ export const Parents = () => {
         >
           <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-3">
             <BookOpen className="w-6 h-6 text-primary" />
-            What DreamerZ_Lite Teaches
+            What DreamerZ Teaches
           </h2>
           
           <div className="grid gap-6">

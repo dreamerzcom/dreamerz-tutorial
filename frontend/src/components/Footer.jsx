@@ -65,7 +65,7 @@ export const Footer = () => {
         {/* Bottom Bar */}
         <div className="border-t border-slate-800 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-sm text-slate-500">
-            © {new Date().getFullYear()} DreamerZ_Lite. Made with{' '}
+            © {new Date().getFullYear()} DreamerZ. Made with{' '}
             <Heart className="w-3 h-3 inline text-rose-500" /> for AI & Conversational-English learners.
           </p>
           

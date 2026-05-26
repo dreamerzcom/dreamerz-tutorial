@@ -39,7 +39,7 @@ export const Landing = () => {
   return (
     <>
       <SEO
-        title="Learn AI & Conversational English skills — DreamerZ_Lite"
+        title="Learn AI & Conversational English skills — DreamerZ"
         description="Hands-on AI and Conversational English courses with real lessons and progress tracking. Suitable for learners 11 years and above."
       />
       <div className="min-h-screen bg-white">
@@ -58,7 +58,7 @@ export const Landing = () => {
             >
               <div className="inline-flex items-center gap-2 bg-emerald-500/15 text-emerald-300 px-3 py-1 rounded-full mb-6 text-xs font-semibold border border-emerald-500/20">
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                Structured High-quality Curated Courses
+                High-quality Curated Courses
               </div>
 
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white leading-[1.05] mb-5 max-w-3xl mx-auto">
