@@ -65,7 +65,7 @@ export const Navbar = () => {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/home" className="flex items-center gap-2" data-testid="nav-logo">
-            <img src="/icons/logo.jpg" alt="DreamerZ" className="w-9 h-9 rounded-xl object-cover" />
+            <img src="/icons/logo.jpg" alt="DreamerZ" className="w-16 h-16 rounded-xl object-cover" />
             <span className="font-bold text-lg text-slate-900">
               DreamerZ
             </span>
