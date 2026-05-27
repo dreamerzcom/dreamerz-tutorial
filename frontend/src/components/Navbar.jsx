@@ -65,11 +65,9 @@ export const Navbar = () => {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/home" className="flex items-center gap-2" data-testid="nav-logo">
-            <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center">
-              <BookOpen className="w-5 h-5 text-white" />
-            </div>
+            <img src="/icons/logo.jpg" alt="DreamerZ" className="w-9 h-9 rounded-xl object-cover" />
             <span className="font-bold text-lg text-slate-900">
-              DreamerZ<span className="text-primary">_Lite</span>
+              DreamerZ
             </span>
           </Link>
 

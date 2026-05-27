@@ -1,5 +1,6 @@
 // craco.config.js
 const path = require("path");
+const CompressionPlugin = require("compression-webpack-plugin");
 require("dotenv").config();
 
 // Check if we're in development/preview mode (not production build)
@@ -69,6 +70,56 @@ const webpackConfig = {
       if (config.enableHealthCheck && healthPluginInstance) {
         webpackConfig.plugins.push(healthPluginInstance);
       }
+
+      // Production optimizations
+      if (!isDevServer) {
+        // Gzip pre-compression for static assets
+        webpackConfig.plugins.push(
+          new CompressionPlugin({
+            algorithm: "gzip",
+            test: /\.(js|css|html|svg)$/,
+            threshold: 10240,
+            minRatio: 0.8,
+          })
+        );
+
+        // Split vendor chunks for better long-term caching
+        webpackConfig.optimization = {
+          ...webpackConfig.optimization,
+          splitChunks: {
+            chunks: "all",
+            cacheGroups: {
+              react: {
+                test: /[\\/]node_modules[\\/](react|react-dom|react-router-dom)[\\/]/,
+                name: "vendor-react",
+                priority: 40,
+              },
+              radix: {
+                test: /[\\/]node_modules[\\/]@radix-ui[\\/]/,
+                name: "vendor-radix",
+                priority: 30,
+              },
+              framer: {
+                test: /[\\/]node_modules[\\/]framer-motion[\\/]/,
+                name: "vendor-framer",
+                priority: 30,
+              },
+              recharts: {
+                test: /[\\/]node_modules[\\/](recharts|d3-.*)[\\/]/,
+                name: "vendor-recharts",
+                priority: 30,
+              },
+              vendor: {
+                test: /[\\/]node_modules[\\/]/,
+                name: "vendor-misc",
+                priority: 10,
+                reuseExistingChunk: true,
+              },
+            },
+          },
+        };
+      }
+
       return webpackConfig;
     },
   },

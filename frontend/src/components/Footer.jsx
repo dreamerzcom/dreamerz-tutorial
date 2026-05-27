@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Shield, BookOpen, Heart } from 'lucide-react';
+import { Shield, Heart } from 'lucide-react';
 
 export const Footer = () => {
   return (
@@ -9,11 +9,9 @@ export const Footer = () => {
           {/* Brand */}
           <div className="md:col-span-2">
             <Link to="/home" className="flex items-center gap-2 mb-4">
-              <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center">
-                <BookOpen className="w-5 h-5 text-white" />
-              </div>
+              <img src="/icons/logo.jpg" alt="DreamerZ" className="w-9 h-9 rounded-xl object-cover" />
               <span className="font-bold text-lg text-white">
-                DreamerZ<span className="text-primary">_Lite</span>
+                DreamerZ
               </span>
             </Link>
             <p className="text-sm leading-relaxed max-w-md">

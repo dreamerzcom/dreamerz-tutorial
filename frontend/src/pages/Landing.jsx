@@ -240,7 +240,7 @@ export const Landing = () => {
               <div className="flex items-center gap-2">
                 <BookOpen className="w-5 h-5 text-primary" />
                 <span className="font-semibold text-slate-900">
-                  DreamerZ<span className="text-primary">_Lite</span>
+                  DreamerZ
                 </span>
               </div>
               <div className="flex items-center gap-4 text-sm text-slate-500">
