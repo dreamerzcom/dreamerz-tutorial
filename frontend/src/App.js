@@ -1,6 +1,7 @@
 import "@/App.css";
 import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
+import { GoogleOAuthProvider } from "@react-oauth/google";
 import { Toaster } from "./components/ui/sonner";
 import { Navbar } from "./components/Navbar";
 import { Footer } from "./components/Footer";
@@ -105,6 +106,7 @@ function App() {
   }, []);
 
   return (
+    <GoogleOAuthProvider clientId={process.env.REACT_APP_GOOGLE_CLIENT_ID || ""}>
     <HelmetProvider>
       <div className="App flex flex-col min-h-screen">
         <BrowserRouter>
@@ -207,6 +209,7 @@ function App() {
         </BrowserRouter>
       </div>
     </HelmetProvider>
+    </GoogleOAuthProvider>
   );
 }
 

@@ -431,7 +431,7 @@ class User(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     username: Mapped[str] = mapped_column(String(255), nullable=False)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
-    hashed_password: Mapped[str] = mapped_column(String(500), nullable=False)
+    hashed_password: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     preferred_language: Mapped[str] = mapped_column(String(10), default="en")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     role: Mapped[str] = mapped_column(String(20), default="learner", nullable=False)
@@ -447,6 +447,9 @@ class User(Base):
     phone: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
     country_code: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
     theme: Mapped[str] = mapped_column(String(10), default="light", nullable=False)
+    # Social login fields (nullable — only set for OAuth users)
+    social_provider: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    social_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
 
     def __repr__(self) -> str:
         return f"<User(id={self.id}, username='{self.username}', email='{self.email}')>"

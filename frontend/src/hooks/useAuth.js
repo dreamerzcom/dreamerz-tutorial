@@ -225,6 +225,42 @@ export const AuthProvider = ({ children }) => {
     return { token, user };
   }, []);
 
+  const socialLogin = useCallback(async ({ provider, token }) => {
+    const response = await fetch(`${API_BASE}/api/auth/social`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ provider, token }),
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.detail || 'Social login failed');
+    }
+
+    const accessToken = result.access_token;
+    saveToken(accessToken);
+    setToken(accessToken);
+
+    const user = buildUserProfile({
+      username: result.username,
+      email: result.email,
+      preferredLanguage: result.preferred_language,
+      phone: result.phone,
+      country_code: result.country_code,
+      theme: result.theme,
+      profile: result.profile,
+      createdAt: result.created_at,
+      lastLoginAt: new Date().toISOString(),
+      role: result.role,
+      aiGenerationEnabled: result.ai_generation_enabled,
+      trialExpiresAt: result.trial_expires_at,
+      trialDaysRemaining: result.trial_days_remaining,
+    });
+
+    setUser(user);
+    return { token: accessToken, user };
+  }, []);
+
   const register = useCallback(async ({ username, email, password, preferred_language, role }) => {
     const response = await fetch(`${API_BASE}/api/auth/register`, {
       method: 'POST',
@@ -345,6 +381,7 @@ export const AuthProvider = ({ children }) => {
         isTrialActive,
         isTrialExpired,
         login,
+        socialLogin,
         register,
         applyAuthResponse,
         updateProfile,

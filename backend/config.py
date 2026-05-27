@@ -60,6 +60,9 @@ MAX_REQUEST_SIZE = int(os.environ.get("MAX_REQUEST_SIZE", 10_000_000))  # 10 MB
 CURRICULUM_JSON_PATH = ROOT_DIR / "curriculum_data.json"
 SITE_CONFIG_JSON_PATH = ROOT_DIR / "site_config_seed.json"
 
+# ── Social OAuth ──────────────────────────────────────
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
+
 # ── Admin ─────────────────────────────────────────────────
 # Hardcoded admin emails — these accounts automatically get admin privileges.
 ADMIN_EMAILS = [

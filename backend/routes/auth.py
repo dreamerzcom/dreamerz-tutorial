@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from config import USERNAME_REGEX, EMAIL_REGEX, ADMIN_EMAILS, SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE
+from config import USERNAME_REGEX, EMAIL_REGEX, ADMIN_EMAILS, SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE, GOOGLE_CLIENT_ID
 from database import get_db
 from models.sql_models import User
 from models.user import UserCreate, UserLogin, TokenResponse, UserInfoResponse, LanguageUpdate
@@ -57,11 +57,140 @@ def _trial_payload(user_like) -> dict:
 from services.email_service import send_welcome_email
 from middleware.rate_limit import check_auth_rate_limit
 
+import re as _re
+
+def _make_username_from_email(email: str) -> str:
+    base = email.split("@")[0]
+    base = _re.sub(r"[^a-zA-Z0-9]", "", base) or "user"
+    return base[:30].lower()
+
 logger = logging.getLogger(__name__)
 
 _VALID_LANG_CODES = {lang["code"] for lang in SUPPORTED_LANGUAGES}
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+class SocialLoginRequest(BaseModel):
+    provider: str  # "google"
+    token: str     # ID token from the provider
+
+
+@router.post("/social", response_model=TokenResponse)
+async def social_login(body: SocialLoginRequest, session: AsyncSession = Depends(get_db)):
+    """Sign in or register via a social OAuth provider (Google).
+
+    Verifies the provider's ID token, then either finds the existing user
+    by social_id/email or creates a new account — no password required.
+    Returns a DreamerZ JWT identical to the normal login response.
+    """
+    provider = body.provider.lower()
+
+    if provider == "google":
+        import httpx
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(
+                    "https://www.googleapis.com/oauth2/v3/userinfo",
+                    headers={"Authorization": f"Bearer {body.token}"},
+                    timeout=10,
+                )
+            if resp.status_code != 200:
+                raise HTTPException(status_code=401, detail="Invalid Google token.")
+            id_info = resp.json()
+        except HTTPException:
+            raise
+        except Exception:
+            raise HTTPException(status_code=401, detail="Could not verify Google token.")
+
+        social_id = id_info.get("sub", "")
+        email = id_info.get("email", "").strip().lower()
+        if not social_id:
+            raise HTTPException(status_code=401, detail="Google token missing user ID.")
+    else:
+        raise HTTPException(status_code=400, detail=f"Unsupported provider: {provider}")
+
+    if not email:
+        raise HTTPException(status_code=400, detail="No email returned from provider.")
+
+    now = datetime.now(timezone.utc)
+
+    # Try to find existing user by social_id first, then fall back to email
+    result = await session.execute(
+        select(User).where(
+            or_(
+                (User.social_provider == provider) & (User.social_id == social_id),
+                User.email == email,
+            )
+        )
+    )
+    db_user = result.scalars().first()
+
+    if db_user:
+        # Update social fields if this is the first social login on an existing email account
+        if not db_user.social_provider:
+            db_user.social_provider = provider
+            db_user.social_id = social_id
+        db_user.last_login = now
+        await session.commit()
+        await session.refresh(db_user)
+    else:
+        # Create new account
+        username = _make_username_from_email(email)
+        # Ensure username uniqueness
+        suffix = 1
+        base = username
+        while True:
+            existing = await session.execute(select(User).where(User.username == username))
+            if not existing.scalars().first():
+                break
+            username = f"{base}{suffix}"
+            suffix += 1
+
+        is_admin_email = email in ADMIN_EMAILS
+        final_role = "admin" if is_admin_email else "learner"
+        trial_expires = None if final_role in TRIAL_EXEMPT_ROLES or is_admin_email else now + timedelta(days=TRIAL_DURATION_DAYS)
+
+        db_user = User(
+            username=username,
+            email=email,
+            hashed_password=None,
+            preferred_language=DEFAULT_LANGUAGE,
+            role=final_role,
+            social_provider=provider,
+            social_id=social_id,
+            created_at=now,
+            updated_at=now,
+            last_login=now,
+            trial_expires_at=trial_expires,
+        )
+        session.add(db_user)
+        await session.commit()
+        await session.refresh(db_user)
+
+        try:
+            send_welcome_email(to_email=email, username=db_user.username)
+        except Exception:
+            pass
+
+    user_lang = db_user.preferred_language or DEFAULT_LANGUAGE
+    token = create_access_token(
+        {"sub": db_user.email, "email": db_user.email, "lang": user_lang, "role": db_user.role}
+    )
+
+    return {
+        "access_token": token,
+        "username": db_user.username,
+        "email": db_user.email,
+        "created_at": db_user.created_at.isoformat() if db_user.created_at else None,
+        "role": db_user.role,
+        "ai_generation_enabled": db_user.ai_generation_enabled,
+        "preferred_language": user_lang,
+        "phone": db_user.phone,
+        "country_code": db_user.country_code,
+        "theme": db_user.theme,
+        **_trial_payload(db_user),
+    }
 
 
 @router.post("/register", response_model=UserInfoResponse)
