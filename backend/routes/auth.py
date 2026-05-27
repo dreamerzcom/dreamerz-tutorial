@@ -305,6 +305,18 @@ async def login_user(credentials: UserLogin, request: Request, session: AsyncSes
 
     user = await authenticate_user(username, email, credentials.password)
     if not user:
+        # Check if the account exists to give a more helpful error
+        from sqlalchemy import select as _select
+        _lookup = email or username
+        _stmt = _select(User).where(
+            (User.email == _lookup) | (User.username == _lookup)
+        )
+        _result = await session.execute(_stmt)
+        _exists = _result.scalars().first()
+        if not _exists:
+            raise HTTPException(
+                status_code=404, detail="No account found with that email. Please create a new account."
+            )
         raise HTTPException(
             status_code=401, detail="Invalid Email or Password."
         )
