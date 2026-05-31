@@ -152,7 +152,16 @@ const CONTEXT_SUGGESTIONS = [
   "I have [time frame] to complete this"
 ];
 
-export const PromptLabPanel = ({ toolId }) => {
+export const PromptLabPanel = ({ toolId, lessonTitle, lessonPresets }) => {
+  // When the parent supplies lesson-specific presets (one per blockquoted
+  // prompt in the lesson activity), they replace the generic PRESETS strip
+  // above the form. The shape is identical to PRESETS so loadPreset() works
+  // without changes. Passing nothing -> the generic strip renders, preserving
+  // behaviour for the existing chatgpt / claude / gemini / syllaby courses.
+  const activePresets = (lessonPresets && lessonPresets.length > 0) ? lessonPresets : PRESETS;
+  const presetsLabel = (lessonPresets && lessonPresets.length > 0)
+    ? `Try these in "${lessonTitle || 'this lesson'}"`
+    : 'Quick Presets';
   // Form state
   const [goal, setGoal] = useState('');
   const [context, setContext] = useState('');
@@ -337,21 +346,22 @@ export const PromptLabPanel = ({ toolId }) => {
             </div>
 
             <div className="p-5 space-y-5">
-              {/* Presets */}
+              {/* Presets — lesson-specific when provided, otherwise generic */}
               <div>
                 <label className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2 block">
-                  Quick Presets
+                  {presetsLabel}
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  {PRESETS.map(preset => (
+                  {activePresets.map(preset => (
                     <button
                       key={preset.id}
                       onClick={() => loadPreset(preset)}
-                      className="flex items-center gap-2 px-3 py-2 bg-slate-700/50 hover:bg-slate-700 rounded-xl text-sm text-slate-300 hover:text-white transition-all border border-slate-600/50 hover:border-primary/50"
+                      className="flex items-center gap-2 px-3 py-2 bg-slate-700/50 hover:bg-slate-700 rounded-xl text-sm text-slate-300 hover:text-white transition-all border border-slate-600/50 hover:border-primary/50 max-w-full text-left"
+                      title={preset.goal}
                       data-testid={`preset-${preset.id}`}
                     >
                       <span>{preset.icon}</span>
-                      <span>{preset.name}</span>
+                      <span className="truncate max-w-[18rem]">{preset.name}</span>
                     </button>
                   ))}
                 </div>

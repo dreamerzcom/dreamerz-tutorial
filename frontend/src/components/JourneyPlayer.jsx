@@ -131,6 +131,37 @@ export const JourneyPlayer = ({
     return activeModule.content.explanation;
   }, [activeModule, contentSection]);
 
+  // Extract lesson-specific prompts from the activity markdown so the
+  // embedded PromptLabPanel can pre-load them as clickable chips. Looks for
+  // single-line italic-blockquote prompts (`> *...*`) which is the convention
+  // we use across the AI Foundation course's labs. Falls back to null when
+  // no prompts are present — PromptLabPanel will then show its generic
+  // presets, preserving behaviour for existing AI courses.
+  const lessonPresets = useMemo(() => {
+    const activity = activeModule?.content?.activity;
+    if (!activity || typeof activity !== 'string') return null;
+    // Match `> *...*` blockquotes. Italic content can span multiple lines
+    // inside a single quote block — we collapse whitespace.
+    const regex = /^>\s*\*([\s\S]+?)\*\s*$/gm;
+    const matches = [...activity.matchAll(regex)].slice(0, 4);
+    if (!matches.length) return null;
+    return matches.map((m, i) => {
+      const goal = m[1].replace(/\s+/g, ' ').trim();
+      // First few words as the chip label; full goal lives in the title
+      // tooltip and is what fills the form on click.
+      const label = goal.split(' ').slice(0, 6).join(' ') + (goal.split(' ').length > 6 ? '…' : '');
+      return {
+        id: `lesson-prompt-${i}`,
+        name: label,
+        icon: '\u{1F4A1}',
+        goal,
+        context: `I'm working through the lesson "${activeModule.title}". Apply it to my situation, don't give me generic advice.`,
+        constraints: 'Be specific to my context. Avoid platitudes. Cite which part of my prompt you used.',
+        format: 'short-paragraph',
+      };
+    });
+  }, [activeModule]);
+
   const stopSpeech = useCallback(() => {
     if (typeof window !== 'undefined' && window.speechSynthesis) {
       window.speechSynthesis.cancel();
@@ -833,7 +864,11 @@ export const JourneyPlayer = ({
                               // the persona-themed PromptLabPanel.
                               course.id === 'canva'
                                 ? <CanvaCreatorPanel />
-                                : <PromptLabPanel toolId={course.id} />
+                                : <PromptLabPanel
+                                    toolId={course.id}
+                                    lessonTitle={activeModule.title}
+                                    lessonPresets={lessonPresets}
+                                  />
                             )}
                             {course?.category_id === 'spoken-writing-english' && (
                               <RoleplayChat
