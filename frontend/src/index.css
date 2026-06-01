@@ -399,3 +399,76 @@
 .badge-advanced {
   @apply bg-rose-50 text-rose-700;
 }
+
+/* ─────────────────────────────────────────────
+   Copy protection
+   Applied to .no-copy zones (lesson content).
+   Deterrent only — determined users can still
+   inspect/screenshot. The goal is to stop
+   casual copying via select / right-click / drag.
+   ───────────────────────────────────────────── */
+.no-copy,
+.no-copy * {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Re-allow selection inside legitimate input fields nested in
+   protected zones (e.g. lab prompt textareas), so users can still
+   type and edit. */
+.no-copy input,
+.no-copy textarea,
+.no-copy [contenteditable="true"] {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}
+
+/* Block printing of lesson content. The page can still print —
+   but the protected blocks are replaced with a notice. */
+@media print {
+  .no-copy {
+    visibility: hidden !important;
+    position: relative;
+  }
+  .no-copy::before {
+    content: "This content is protected. Printing is disabled.";
+    visibility: visible;
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 13px;
+    color: #94a3b8;
+    padding: 2rem;
+    font-style: italic;
+  }
+}
+
+/* When the copy-protected route is active, body picks up this
+   class via useCopyProtection — used to blank the entire page on
+   print (so chrome around the content doesn't help reconstruct it). */
+@media print {
+  body.copy-protected-route * {
+    visibility: hidden !important;
+  }
+  body.copy-protected-route::after {
+    content: "Lesson content is protected. Printing is disabled.";
+    visibility: visible;
+    display: block;
+    position: fixed;
+    top: 40%;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 18px;
+    color: #475569;
+  }
+}

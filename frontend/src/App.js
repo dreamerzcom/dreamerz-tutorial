@@ -31,7 +31,14 @@ import { AuthProvider, useAuth } from "./hooks/useAuth";
 import { LanguageProvider } from "./hooks/useLanguage";
 import { LearningProgressProvider } from "./hooks/useLearningProgress";
 import { ProgressProvider } from "./hooks/useProgress";
+import { useCopyProtection } from "./hooks/useCopyProtection";
 import { useEffect } from "react";
+
+/** Activates copy/print/dev-tools shortcut blocking on learning routes. */
+const CopyProtectionGate = () => {
+  useCopyProtection();
+  return null;
+};
 
 /** Apply theme class to root element based on user preference */
 const ThemeProvider = ({ children }) => {
@@ -111,6 +118,7 @@ function App() {
       <div className="App flex flex-col min-h-screen">
         <BrowserRouter>
           <ScrollToTop />
+          <CopyProtectionGate />
           <AuthProvider>
           <LanguageProvider>
           <LearningProgressProvider>

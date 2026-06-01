@@ -53,8 +53,23 @@ export const MarkdownContent = ({ children, variant = 'light', className = '' })
     return <div className={`${s.text} text-sm italic opacity-60`}>No content available.</div>;
   }
 
+  // Block casual copy paths at the component level. CSS in index.css
+  // disables text selection; these handlers stop the OS-level events
+  // that survive selection (right-click menu, drag-to-desktop, copy
+  // shortcut if a selection somehow exists).
+  const blockEvent = (e) => {
+    e.preventDefault();
+    return false;
+  };
+
   return (
-    <div className={`markdown-body leading-relaxed text-[15px] ${s.text} ${className}`}>
+    <div
+      className={`markdown-body no-copy leading-relaxed text-[15px] ${s.text} ${className}`}
+      onCopy={blockEvent}
+      onCut={blockEvent}
+      onContextMenu={blockEvent}
+      onDragStart={blockEvent}
+    >
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
