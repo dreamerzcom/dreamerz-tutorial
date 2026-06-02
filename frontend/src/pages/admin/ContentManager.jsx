@@ -16,7 +16,8 @@ import { ManualCourseConfig } from './ManualCourseConfig';
  */
 export const ContentManager = ({ token }) => {
   const { user, isAdmin, refreshUser } = useAuth();
-  const canUseAI = !!user?.aiGenerationEnabled;
+  // Admins always have AI generation access (backend enforces same rule)
+  const canUseAI = !!user?.aiGenerationEnabled || isAdmin();
 
   const [view, setView] = useState('list'); // 'list' | 'detail' | 'choose' | 'creator' | 'manual-config'
   const [selectedCourseId, setSelectedCourseId] = useState(null);

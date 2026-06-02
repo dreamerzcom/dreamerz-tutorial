@@ -23,13 +23,13 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
 from pydantic import BaseModel, Field
 
-from services.auth_service import get_current_admin, require_ai_generation_enabled
+from services.auth_service import get_current_creator, require_ai_generation_enabled
 from services import document_parser, course_generator
 
 router = APIRouter(
     prefix="/admin/course-gen",
     tags=["course-generation"],
-    dependencies=[Depends(get_current_admin)],
+    dependencies=[Depends(get_current_creator)],
 )
 
 logger = logging.getLogger(__name__)
@@ -267,7 +267,7 @@ async def update_lesson_validation(draft_id: int, payload: ValidationUpdate):
 @router.post("/drafts/{draft_id}/publish")
 async def publish_draft_endpoint(
     draft_id: int,
-    current_admin: dict = Depends(get_current_admin),
+    current_user: dict = Depends(get_current_creator),
 ):
     """Publish a draft course by changing status to 'published'.
 
@@ -278,7 +278,7 @@ async def publish_draft_endpoint(
     try:
         result = await course_generator.publish_draft(
             draft_id=draft_id,
-            admin_username=current_admin.get("username", "admin"),
+            admin_username=current_user.get("username", "admin"),
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
@@ -291,9 +291,9 @@ async def publish_draft_endpoint(
 
 # ── 7. List drafts ────────────────────────────────────────
 @router.get("/drafts")
-async def get_drafts(current_admin: dict = Depends(get_current_admin)):
+async def get_drafts(current_user: dict = Depends(get_current_creator)):
     drafts = await course_generator.list_drafts(
-        admin_username=current_admin.get("username"),
+        admin_username=current_user.get("username"),
     )
     return drafts
 

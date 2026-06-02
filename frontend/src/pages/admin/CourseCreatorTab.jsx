@@ -737,6 +737,12 @@ export const CourseCreatorTab = ({ token, onPublishSuccess }) => {
             <label className="text-sm font-medium text-slate-700">Source Documents *</label>
             <div
               onClick={() => !busy && fileInputRef.current?.click()}
+              onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (!busy) handleFilesSelect(e.dataTransfer.files);
+              }}
               className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${busy ? 'opacity-60 pointer-events-none' : ''} ${fieldErrors.files ? 'border-red-400 bg-red-50/40 hover:border-red-500' : 'border-slate-200 hover:border-primary/60 hover:bg-slate-50'}`}
             >
               <input
@@ -745,7 +751,7 @@ export const CourseCreatorTab = ({ token, onPublishSuccess }) => {
                 multiple
                 className="hidden"
                 accept=".pdf,.docx,.txt,.md"
-                onChange={(e) => handleFilesSelect(e.target.files)}
+                onChange={(e) => { handleFilesSelect(e.target.files); e.target.value = ''; }}
               />
               <Upload className="w-6 h-6 text-slate-400 mx-auto mb-2" />
               <p className="text-sm font-medium text-slate-700">
