@@ -76,7 +76,7 @@ modules; each module contains paired theory + lab lessons.
 To start a course: click into the course card → it opens the journey
 player. Progress, XP, and completion are tracked automatically.
 
-# Supervisor dashboard (parents / teachers / mentors)
+# Supervisor dashboard (teachers / mentors / guardians)
 
 People who supervise a learner can access /parents/dashboard to monitor
 progress. Supervisors are added per-learner. Public landing page for

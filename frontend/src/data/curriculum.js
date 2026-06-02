@@ -609,7 +609,7 @@ Then copy-paste the entire response.
 **The difference:** 
 - Wrong: You learn nothing, risk getting caught, violate trust
 - Right: You improve your writing, understand the topic better, and maintain integrity`,
-    activity: 'Create your own "AI Ethics Pledge" with 5 promises about how you\'ll use AI tools. Share it with a parent or teacher and discuss why each point matters. Consider putting it somewhere you\'ll see it often!',
+    activity: 'Create your own "AI Ethics Pledge" with 5 promises about how you\'ll use AI tools. Share it with a supervisor or teacher and discuss why each point matters. Consider putting it somewhere you\'ll see it often!',
     quiz: {
       questions: [
         {
@@ -1871,7 +1871,7 @@ Problem: AI can be wrong
 **Responsible:**
 Using Gemini's connected Search to verify, and checking other sources too
 Why it's better: You're thinking critically`,
-    activity: 'Think about your own AI use. Write down 3 situations where AI helped you appropriately and 3 situations where you should NOT use AI. Discuss with a parent or teacher!',
+    activity: 'Think about your own AI use. Write down 3 situations where AI helped you appropriately and 3 situations where you should NOT use AI. Discuss with a supervisor or teacher!',
     quiz: {
       questions: [
         {
@@ -2892,7 +2892,7 @@ Wants to help others
 **The Authenticity Test:**
 Ask yourself:
 - Is this really my story/experience?
-- Would I say this if my teacher/parents watched?
+- Would I say this if my teacher/supervisor watched?
 - Am I helping or just seeking attention?
 - Would I respect someone who created this?`,
     activity: 'Think about content you consume online. Can you identify 3 creators who seem authentic and 3 who seem fake? What makes the difference? Discuss with friends or family.',

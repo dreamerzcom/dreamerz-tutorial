@@ -97,12 +97,12 @@ const privacyPromises = [
 const safetyGuidance = [
   {
     situation: "If the AI says something that seems wrong or confusing",
-    action: "Don't just accept it! Ask a parent, teacher, or search for the answer from a trusted source.",
+    action: "Don't just accept it! Ask a supervisor, teacher, or search for the answer from a trusted source.",
     icon: '🤔'
   },
   {
     situation: "If you accidentally share personal information",
-    action: "Tell a parent right away. It's okay - mistakes happen. We can help you stay safe.",
+    action: "Tell a supervisor right away. It's okay - mistakes happen. We can help you stay safe.",
     icon: '😰'
   },
   {
@@ -112,7 +112,7 @@ const safetyGuidance = [
   },
   {
     situation: "If someone asks you to use AI for something that feels wrong",
-    action: "Trust your gut. Talk to a parent or teacher. Using AI to cheat, bully, or create harmful content is never okay.",
+    action: "Trust your gut. Talk to a supervisor or teacher. Using AI to cheat, bully, or create harmful content is never okay.",
     icon: '🚨'
   }
 ];
@@ -340,7 +340,7 @@ export const Parents = () => {
         >
           <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-3">
             <Heart className="w-6 h-6 text-rose-500" />
-            Tips for Parents
+            Tips for Supervisors
           </h2>
           
           <div className="grid sm:grid-cols-2 gap-4">
@@ -354,7 +354,7 @@ export const Parents = () => {
             </div>
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
               <h3 className="font-semibold text-slate-900 mb-2">🧪 Explore Together</h3>
-              <p className="text-sm text-slate-600">Try the Prompt Lab together! It's a great way to learn alongside your child and bond.</p>
+              <p className="text-sm text-slate-600">Try the Prompt Lab together! It's a great way to learn alongside your learner.</p>
             </div>
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
               <h3 className="font-semibold text-slate-900 mb-2">🎯 Reinforce Critical Thinking</h3>

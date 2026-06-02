@@ -83,7 +83,7 @@ export const Landing = () => {
                 <Link to="/parents">
                   <Button className="bg-white/10 backdrop-blur text-white border border-white/20 font-medium px-8 py-3.5 rounded-full hover:bg-white/20 transition-all w-full sm:w-auto">
                     <Users className="w-4 h-4 mr-2" />
-                    For parents
+                    For supervisor
                   </Button>
                 </Link>
               </div>
@@ -115,7 +115,7 @@ export const Landing = () => {
                     'Write your first AI prompt — and improve it iteratively',
                     'Spot AI hallucinations before you act on them',
                     'Practise conversational English with an AI roleplay partner',
-                    'Earn XP and build a streak you can show your parents',
+                    'Earn XP and build a streak you can show your supervisor',
                   ].map((line) => (
                     <li key={line} className="flex items-start gap-2 text-sm text-slate-700">
                       <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" />
@@ -137,17 +137,17 @@ export const Landing = () => {
                 className="bg-white rounded-2xl border border-slate-100 p-7 lg:p-8"
               >
                 <div className="inline-flex items-center gap-2 bg-rose-50 text-rose-700 px-3 py-1 rounded-full mb-4 text-xs font-bold">
-                  <Shield className="w-3.5 h-3.5" /> FOR PARENTS
+                  <Shield className="w-3.5 h-3.5" /> FOR SUPERVISORS
                 </div>
                 <h3 className="text-2xl font-bold text-slate-900 mb-3">You stay in control</h3>
                 <p className="text-slate-600 mb-5">
-                  Track every quiz score. See exactly which lessons your child has finished.
+                  Track every quiz score. See exactly which lessons your learner has finished.
                 </p>
                 <ul className="space-y-2.5 mb-6">
                   {[
                     'Per-learner progress dashboard with lesson-level detail',
                     'AI conversations stay on-topic and age-appropriate',
-                    'Delete your child\'s data any time, no questions asked',
+                    'Delete your learner\'s data any time, no questions asked',
                   ].map((line) => (
                     <li key={line} className="flex items-start gap-2 text-sm text-slate-700">
                       <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" />
@@ -168,10 +168,10 @@ export const Landing = () => {
           <section className="py-14 bg-white">
             <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
               <h3 className="text-xl font-bold text-slate-900 text-center mb-2">
-                Questions parents usually ask
+                Questions supervisors usually ask
               </h3>
               <p className="text-sm text-slate-500 text-center mb-8">
-                Couldn't find an answer? <Link to="/parents" className="text-primary hover:underline">See the parent guide.</Link>
+                Couldn't find an answer? <Link to="/parents" className="text-primary hover:underline">See the supervisor guide.</Link>
               </p>
               <div className="space-y-3">
                 {faqs.map((faq, i) => (
