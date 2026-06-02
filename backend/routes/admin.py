@@ -2256,14 +2256,21 @@ async def upload_media(
     file: UploadFile = File(...),
     lesson_slug: Optional[str] = Form(None),
     section_slug: Optional[str] = Form(None),
+    module_slug: Optional[str] = Form(None),
+    is_highlight: Optional[bool] = Form(False),
     tags: Optional[str] = Form(None),
     current_user: dict = Depends(get_current_creator),
     session: AsyncSession = Depends(get_db),
 ):
-    """Upload a media file. Optionally attach to a lesson."""
+    """Upload a media file. Optionally attach to a lesson or a module.
+
+    If both lesson_slug and module_slug are provided, lesson wins (preserves
+    existing single-target behaviour).
+    """
     file_data = await file.read()
 
     lesson_id = None
+    module_id = None
     # Accept either lesson_slug or section_slug (backward compat)
     slug = lesson_slug or section_slug
     if slug:
@@ -2274,6 +2281,15 @@ async def upload_media(
         if les:
             lesson_id = les.id
 
+    # Only attach to a module if no lesson was resolved.
+    if module_slug and not lesson_id:
+        result = await session.execute(
+            select(Module).where(Module.slug == module_slug)
+        )
+        mod = result.scalars().first()
+        if mod:
+            module_id = mod.id
+
     tag_list = [t.strip() for t in tags.split(",")] if tags else None
 
     asset = await media_service.upload_file(
@@ -2283,6 +2299,8 @@ async def upload_media(
         content_type=file.content_type,
         uploaded_by=current_user.get("username", "admin"),
         lesson_id=lesson_id,
+        module_id=module_id,
+        is_highlight=bool(is_highlight) or (module_id is not None and (file.content_type or "").startswith("video/")),
         tags=tag_list,
     )
     await session.commit()
@@ -2297,6 +2315,7 @@ class SignUploadRequest(BaseModel):
     constrained ticket the browser then sends straight to Cloudinary."""
     resource_type: str = "auto"          # 'image' | 'video' | 'raw' | 'auto'
     lesson_slug: Optional[str] = None    # echoed back, not signed; used on /register
+    module_slug: Optional[str] = None    # echoed back; sets module-level hero media
     tags: Optional[list[str]] = None     # namespace, e.g. ['lesson-banner']
 
 
@@ -2398,6 +2417,7 @@ async def sign_upload(
         "upload_url": f"https://api.cloudinary.com/v1_1/{cloud_name}/{resource_type}/upload",
         # Echoed so /register can re-use them.
         "lesson_slug": body.lesson_slug,
+        "module_slug": body.module_slug,
     }
 
 
@@ -2414,6 +2434,8 @@ class RegisterUploadRequest(BaseModel):
     duration: Optional[float] = None
     original_filename: Optional[str] = None
     lesson_slug: Optional[str] = None
+    module_slug: Optional[str] = None    # attach this asset to a module instead
+    is_highlight: Optional[bool] = None  # mark as hero video — auto-shown at top
     tags: Optional[list[str]] = None
     alt_text: Optional[str] = None
 
@@ -2467,6 +2489,7 @@ async def register_upload(
     """
     # Resolve lesson, if attached
     lesson_id = None
+    module_id = None
     if body.lesson_slug:
         result = await session.execute(
             select(Lesson).where(Lesson.slug == body.lesson_slug)
@@ -2474,6 +2497,17 @@ async def register_upload(
         les = result.scalars().first()
         if les:
             lesson_id = les.id
+
+    # Resolve module, if attached. A media asset attaches to either a
+    # lesson or a module, not both — if both slugs come in, lesson wins
+    # (preserves existing behaviour for callers that send extra fields).
+    if body.module_slug and not lesson_id:
+        result = await session.execute(
+            select(Module).where(Module.slug == body.module_slug)
+        )
+        mod = result.scalars().first()
+        if mod:
+            module_id = mod.id
 
     resource_type = (body.resource_type or "").lower()
     # PDFs are uploaded as 'image' resource_type for proper delivery, but
@@ -2494,8 +2528,14 @@ async def register_upload(
     if asset_type == "video":
         poster_url, streaming_url = _derive_video_urls(body.secure_url)
 
+    # Default is_highlight: True when this is a video attached to a module
+    # (the typical "module hero infographic" case). Callers can override.
+    auto_highlight = (asset_type == "video" and module_id is not None)
+    is_highlight = body.is_highlight if body.is_highlight is not None else auto_highlight
+
     asset = MediaAsset(
         lesson_id=lesson_id,
+        module_id=module_id,
         asset_type=asset_type,
         cloudinary_url=body.secure_url,
         cloudinary_public_id=body.public_id,
@@ -2508,6 +2548,7 @@ async def register_upload(
         poster_url=poster_url,
         streaming_url=streaming_url,
         upload_status="ready",
+        is_highlight=is_highlight,
         tags=body.tags or [],
         alt_text=body.alt_text,
         uploaded_by=current_user.get("username", "admin"),

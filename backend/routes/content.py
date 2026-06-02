@@ -53,6 +53,13 @@ def _serialize_media_asset(asset: MediaAsset) -> dict:
         "file_size_bytes": asset.file_size_bytes,
         "alt_text": asset.alt_text,
         "duration_seconds": asset.duration_seconds,
+        # Video-specific fields — populated by /media/register for uploads
+        # with resource_type='video'. Empty for images/documents.
+        "poster_url": asset.poster_url,
+        "streaming_url": asset.streaming_url,
+        "upload_status": asset.upload_status,
+        "width": asset.width,
+        "height": asset.height,
         "sort_order": asset.sort_order,
         "tags": asset.tags,
         "is_highlight": asset.is_highlight,
@@ -186,6 +193,8 @@ def _eager_load_course_options():
         selectinload(Course.modules)
         .selectinload(Module.lessons)
         .selectinload(Lesson.module),
+        # Module-level media (hero infographic video at top of module).
+        selectinload(Course.modules).selectinload(Module.media_assets),
     ]
 
 
@@ -207,6 +216,8 @@ def _eager_load_course_with_content():
         .selectinload(Module.lessons)
         .selectinload(Lesson.module)
         .selectinload(Module.course),
+        # Module-level media (hero infographic video at top of module).
+        selectinload(Course.modules).selectinload(Module.media_assets),
     ]
 
 
@@ -450,12 +461,27 @@ def serialize_full_course(course: Course, course_id: str, lang: str) -> dict:
             }
             mod_lessons.append(lesson_dict)
 
+        # Module-level media (infographic videos, hero images, etc.).
+        # Surface the full list and call out a hero_video — the first video
+        # marked is_highlight, or just the first video if none are flagged.
+        mod_media = [
+            _serialize_media_asset(a)
+            for a in sorted(mod.media_assets or [], key=lambda a: a.sort_order)
+        ]
+        videos = [m for m in mod_media if m.get("asset_type") == "video"]
+        hero = next((m for m in videos if m.get("is_highlight")), None)
+        if hero is None and videos:
+            hero = videos[0]
+
         sections_with_lessons.append({
             "id": mod.slug,
             "db_id": mod.id,
             "title": mod.title,
+            "description": mod.description,
             "sort_order": mod.sort_order,
             "lessons": mod_lessons,
+            "media_assets": mod_media,
+            "hero_video": hero,
         })
 
     course_dict["id"] = course_id

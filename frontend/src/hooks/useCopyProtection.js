@@ -37,10 +37,71 @@ export const useCopyProtection = () => {
   useEffect(() => {
     if (!protectedRoute) {
       document.body.classList.remove('copy-protected-route');
+      document.body.classList.remove('tab-hidden');
+      document.body.classList.remove('screen-capture-active');
       return;
     }
 
     document.body.classList.add('copy-protected-route');
+
+    // ─── Visibility-change blur ─────────────────────────────
+    // When the user switches tab / minimises / opens the app-switcher
+    // on mobile, blur the lesson content. This is a deterrent for the
+    // "screenshot a side-by-side window" trick — won't stop a
+    // screenshot taken while focused on the tab.
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        document.body.classList.add('tab-hidden');
+      } else {
+        document.body.classList.remove('tab-hidden');
+      }
+    };
+
+    // Also blur on `blur` (window loses focus, e.g. Cmd+Tab on Mac
+    // doesn't always fire visibilitychange immediately).
+    const handleBlur = () => document.body.classList.add('tab-hidden');
+    const handleFocus = () => document.body.classList.remove('tab-hidden');
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('blur', handleBlur);
+    window.addEventListener('focus', handleFocus);
+
+    // ─── In-browser screen-capture detection ──────────────────
+    // navigator.mediaDevices.getDisplayMedia is what tools like Loom
+    // and built-in Chrome recording use. Wrap it so we know when it's
+    // invoked from the page itself. (Doesn't catch OS-level recorders
+    // like OBS, QuickTime, Android/iOS screen recording — those are
+    // outside the browser sandbox entirely.)
+    let originalGetDisplayMedia = null;
+    if (
+      typeof navigator !== 'undefined' &&
+      navigator.mediaDevices &&
+      typeof navigator.mediaDevices.getDisplayMedia === 'function'
+    ) {
+      originalGetDisplayMedia = navigator.mediaDevices.getDisplayMedia.bind(
+        navigator.mediaDevices
+      );
+      navigator.mediaDevices.getDisplayMedia = async (constraints) => {
+        // Mark body so CSS can blur lesson content while a capture
+        // request is in flight. We let the request proceed (rejecting
+        // it would be hostile UX if the user is legitimately screen-
+        // sharing in a parallel app), but the content is hidden.
+        document.body.classList.add('screen-capture-active');
+        try {
+          const stream = await originalGetDisplayMedia(constraints);
+          // When the user stops sharing, the stream's tracks end.
+          stream.getVideoTracks().forEach((track) => {
+            track.addEventListener('ended', () => {
+              document.body.classList.remove('screen-capture-active');
+            });
+          });
+          return stream;
+        } catch (err) {
+          document.body.classList.remove('screen-capture-active');
+          throw err;
+        }
+      };
+    }
 
     const handleKeyDown = (e) => {
       // Let inputs work normally — typing in a textarea must not be blocked.
@@ -92,7 +153,21 @@ export const useCopyProtection = () => {
     return () => {
       document.removeEventListener('keydown', handleKeyDown, true);
       document.removeEventListener('contextmenu', handleContextMenu, true);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('blur', handleBlur);
+      window.removeEventListener('focus', handleFocus);
+      // Restore the original getDisplayMedia in case some other part of
+      // the app needs it (e.g. a future "share my screen" support call).
+      if (
+        originalGetDisplayMedia &&
+        typeof navigator !== 'undefined' &&
+        navigator.mediaDevices
+      ) {
+        navigator.mediaDevices.getDisplayMedia = originalGetDisplayMedia;
+      }
       document.body.classList.remove('copy-protected-route');
+      document.body.classList.remove('tab-hidden');
+      document.body.classList.remove('screen-capture-active');
     };
   }, [protectedRoute]);
 };

@@ -472,3 +472,87 @@
     color: #475569;
   }
 }
+
+/* ─────────────────────────────────────────────
+   Watermark overlay
+   Visible faintly in the UI, prominent in screenshots.
+   Identifies the viewer in any leaked screen capture.
+   ───────────────────────────────────────────── */
+.watermark-overlay {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 5;
+  user-select: none;
+}
+
+.watermark-overlay__grid {
+  position: absolute;
+  inset: -25%;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 80px 60px;
+  transform: rotate(-30deg);
+  transform-origin: center;
+}
+
+.watermark-overlay__cell {
+  display: inline-block;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(79, 70, 229, 0.08);  /* indigo at ~8% opacity */
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+  text-align: center;
+}
+
+.dark .watermark-overlay__cell {
+  color: rgba(199, 210, 254, 0.08);
+}
+
+/* Print: make the watermark more visible if anyone bypasses the print
+   blanking. (Belt-and-braces — print is already blanked above.) */
+@media print {
+  .watermark-overlay__cell {
+    color: rgba(0, 0, 0, 0.18) !important;
+  }
+}
+
+/* ─────────────────────────────────────────────
+   Tab-hidden content blur
+   When the user switches away (Cmd+Tab, mobile app switcher), blur
+   protected content so cross-window screenshots are less useful.
+   useCopyProtection toggles body.tab-hidden on visibilitychange.
+   ───────────────────────────────────────────── */
+body.tab-hidden .no-copy {
+  filter: blur(20px) saturate(50%) !important;
+  transition: filter 80ms ease-out;
+}
+
+body.tab-hidden .watermark-overlay__cell {
+  color: rgba(79, 70, 229, 0.45) !important;  /* watermark goes BOLD on blur */
+}
+
+/* When in-browser screen recording is detected, blur even harder
+   and surface a notice. Body picks up .screen-capture-active. */
+body.screen-capture-active .no-copy {
+  filter: blur(40px) saturate(0%) !important;
+}
+
+body.screen-capture-active::before {
+  content: "Screen recording detected — lesson content is hidden.";
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #1e1b4b;
+  color: white;
+  padding: 1rem 2rem;
+  border-radius: 1rem;
+  font-size: 16px;
+  font-weight: 600;
+  z-index: 9999;
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5);
+}

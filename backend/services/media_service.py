@@ -49,9 +49,20 @@ ALLOWED_TYPES = {
     "application/vnd.openxmlformats-officedocument.presentationml.presentation": {
         "ext": "pptx", "category": "document",
     },
+    # Videos (small server-side path — large files should use signed direct
+    # upload via /media/sign-upload + /media/register; this is for tests and
+    # for sub-50MB uploads from the basic media uploader).
+    "video/mp4": {"ext": "mp4", "category": "video"},
+    "video/webm": {"ext": "webm", "category": "video"},
+    "video/quicktime": {"ext": "mov", "category": "video"},
+    "video/x-m4v": {"ext": "m4v", "category": "video"},
 }
 
-MAX_FILE_SIZE = 16 * 1024 * 1024  # 16 MB
+# Default ceiling for the server-side upload path. Videos get a higher
+# ceiling than documents since they're naturally larger; for anything
+# bigger, use the signed direct-to-Cloudinary upload path.
+MAX_FILE_SIZE = 16 * 1024 * 1024              # 16 MB for docs/images
+MAX_VIDEO_FILE_SIZE = 50 * 1024 * 1024        # 50 MB for video
 
 
 def validate_upload(filename: str, content_type: str, size: int) -> dict:
@@ -59,14 +70,28 @@ def validate_upload(filename: str, content_type: str, size: int) -> dict:
     if content_type not in ALLOWED_TYPES:
         raise ValueError(
             f"File type '{content_type}' is not allowed. "
-            f"Accepted: PDF, DOCX, PNG, JPG, WEBP, SVG, XLSX, PPTX"
+            f"Accepted: PDF, DOCX, PNG, JPG, WEBP, SVG, XLSX, PPTX, MP4, WEBM, MOV"
         )
-    if size > MAX_FILE_SIZE:
+    type_info = ALLOWED_TYPES[content_type]
+    ceiling = MAX_VIDEO_FILE_SIZE if type_info["category"] == "video" else MAX_FILE_SIZE
+    if size > ceiling:
         raise ValueError(
             f"File size ({size // 1024 // 1024}MB) exceeds the "
-            f"{MAX_FILE_SIZE // 1024 // 1024}MB limit."
+            f"{ceiling // 1024 // 1024}MB limit for {type_info['category']} files. "
+            f"For larger videos, use the signed direct-upload path."
         )
-    return ALLOWED_TYPES[content_type]
+    return type_info
+
+
+def _derive_video_poster_url(secure_url: str) -> str | None:
+    """Derive a Cloudinary poster (thumbnail) URL from the base video URL.
+
+    Same transformation pattern as routes/admin.py::_derive_video_urls.
+    """
+    if "/upload/" not in secure_url:
+        return None
+    base_no_ext = secure_url.rsplit(".", 1)[0]
+    return base_no_ext.replace("/upload/", "/upload/so_0,c_thumb,w_640/") + ".jpg"
 
 
 async def upload_file(
@@ -76,15 +101,27 @@ async def upload_file(
     content_type: str,
     uploaded_by: str,
     lesson_id: int = None,
+    module_id: int = None,
+    is_highlight: bool = False,
     tags: list = None,
 ) -> dict:
     """Upload a file to Cloudinary (or local disk) and create a MediaAsset record.
+
+    For videos, this is the small-file convenience path (≤ 50 MB). Large
+    videos should use the signed direct-upload flow (/media/sign-upload +
+    /media/register) so the bytes don't pass through this backend.
 
     Returns the created media asset as a dict.
     """
     type_info = validate_upload(filename, content_type, len(file_data))
     public_id = f"dreamerz/{uuid.uuid4().hex[:16]}"
     ext = type_info["ext"]
+
+    duration = None
+    width = None
+    height = None
+    poster_url = None
+    streaming_url = None
 
     cloud_url = _cloudinary_url()
     if cloud_url:
@@ -101,6 +138,8 @@ async def upload_file(
         # (docx/xlsx/pptx) stay as 'raw'.
         if content_type == "application/pdf" or type_info["ext"] == "pdf":
             resource_type = "image"
+        elif type_info["category"] == "video":
+            resource_type = "video"
         elif type_info["category"] == "document":
             resource_type = "raw"
         else:
@@ -113,6 +152,17 @@ async def upload_file(
         )
         url = result["secure_url"]
         cloud_public_id = result["public_id"]
+
+        # For videos, capture metadata + derive poster.
+        if resource_type == "video":
+            duration = result.get("duration")
+            width = result.get("width")
+            height = result.get("height")
+            poster_url = _derive_video_poster_url(url)
+            # HLS adaptive streaming URL — Cloudinary serves on-the-fly.
+            if "/upload/" in url:
+                base_no_ext = url.rsplit(".", 1)[0]
+                streaming_url = base_no_ext.replace("/upload/", "/upload/sp_auto/") + ".m3u8"
     else:
         # Local fallback: save to ./uploads/
         UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
@@ -124,6 +174,7 @@ async def upload_file(
 
     asset = MediaAsset(
         lesson_id=lesson_id,
+        module_id=module_id,
         asset_type=type_info["category"],
         cloudinary_url=url,
         cloudinary_public_id=cloud_public_id,
@@ -131,6 +182,12 @@ async def upload_file(
         mime_type=content_type,
         file_size_bytes=len(file_data),
         alt_text="",
+        duration_seconds=duration,
+        width=width,
+        height=height,
+        poster_url=poster_url,
+        streaming_url=streaming_url,
+        is_highlight=is_highlight,
         tags=tags or [],
         uploaded_by=uploaded_by,
     )

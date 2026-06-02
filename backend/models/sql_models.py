@@ -151,6 +151,15 @@ class Module(Base):
     # relationships
     course: Mapped["Course"] = relationship("Course", back_populates="modules")
     lessons: Mapped[List["Lesson"]] = relationship("Lesson", back_populates="module", cascade="all, delete-orphan")
+    # Module-level media (hero infographic video that renders at the top of
+    # the module page). Distinct from lesson-level media — same MediaAsset
+    # table, just attached via module_id instead of lesson_id.
+    media_assets: Mapped[List["MediaAsset"]] = relationship(
+        "MediaAsset",
+        back_populates="module",
+        cascade="all, delete-orphan",
+        primaryjoin="Module.id == MediaAsset.module_id",
+    )
 
     def __repr__(self) -> str:
         return f"<Module(id={self.id}, slug='{self.slug}', title='{self.title}')>"
@@ -364,6 +373,10 @@ class MediaAsset(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     lesson_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("lessons.id", ondelete="CASCADE"), nullable=True)
+    # Either lesson_id OR module_id is set (or neither for shared/library
+    # assets). Application-level rule enforced in /media/register; the DB
+    # allows both nullable so existing rows keep working.
+    module_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("modules.id", ondelete="CASCADE"), nullable=True, index=True)
     asset_type: Mapped[str] = mapped_column(String(50), nullable=False)
     cloudinary_url: Mapped[str] = mapped_column(String(500), nullable=False)
     cloudinary_public_id: Mapped[str] = mapped_column(String(500), nullable=False)
@@ -390,7 +403,16 @@ class MediaAsset(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     # relationships
-    lesson: Mapped[Optional["Lesson"]] = relationship("Lesson", back_populates="media_assets")
+    lesson: Mapped[Optional["Lesson"]] = relationship(
+        "Lesson",
+        back_populates="media_assets",
+        primaryjoin="Lesson.id == MediaAsset.lesson_id",
+    )
+    module: Mapped[Optional["Module"]] = relationship(
+        "Module",
+        back_populates="media_assets",
+        primaryjoin="Module.id == MediaAsset.module_id",
+    )
 
     def __repr__(self) -> str:
         return f"<MediaAsset(id={self.id}, type='{self.asset_type}', filename='{self.original_filename}')>"
@@ -399,6 +421,7 @@ class MediaAsset(Base):
         return {
             "id": self.id,
             "lesson_id": self.lesson_id,
+            "module_id": self.module_id,
             "asset_type": self.asset_type,
             "cloudinary_url": self.cloudinary_url,
             "cloudinary_public_id": self.cloudinary_public_id,

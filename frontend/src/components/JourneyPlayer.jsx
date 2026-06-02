@@ -15,6 +15,8 @@ import { Progress } from './ui/progress';
 import { SafetyBanner } from './SafetyBanner';
 import { CoursePreviewVideo } from './CoursePreviewVideo';
 import { MarkdownContent } from './MarkdownContent';
+import { ModuleHeroVideo } from './ModuleHeroVideo';
+import { WatermarkOverlay, WatermarkNotice } from './WatermarkOverlay';
 import { PromptLabPanel } from './PromptLabPanel';
 import { CanvaCreatorPanel } from './CanvaCreatorPanel';
 import { useLearningProgress } from '../hooks/useLearningProgress';
@@ -107,6 +109,30 @@ export const JourneyPlayer = ({
   const activeLessonDbId = numericId(activeModule?.db_id || activeModule?.lesson_id || activeModule?.id);
   const activeModuleDbId = numericId(activeModule?.module_db_id || activeModule?.moduleId || activeModule?.section_db_id || activeModule?.sectionId);
   const activeQuizDbId = numericId(activeModule?.quiz?.id || activeModule?.quiz_id || activeModule?.id);
+
+  // Find the section (module) the active lesson belongs to, and the
+  // module-level hero video (infographic) attached to it. The hero is
+  // rendered at the top of the *first* lesson of each module — entering
+  // the module from any later lesson skips it (the user is mid-way
+  // through and doesn't want the intro to replay).
+  const activeSection = useMemo(() => {
+    if (!activeModuleDbId) return null;
+    return sectionsData.find(
+      (s) => String(s.db_id ?? s.id) === String(activeModuleDbId)
+    ) || null;
+  }, [sectionsData, activeModuleDbId]);
+  const moduleHeroVideo = activeSection?.hero_video || null;
+  const moduleMediaAssets = useMemo(
+    () => (Array.isArray(activeSection?.media_assets) ? activeSection.media_assets : []),
+    [activeSection]
+  );
+  const isFirstLessonOfSection = useMemo(() => {
+    if (!activeSection || !activeLessonDbId) return false;
+    const first = (activeSection.lessons || [])[0];
+    if (!first) return false;
+    const firstId = first.db_id ?? first.lesson_id ?? first.id;
+    return String(firstId) === String(activeLessonDbId);
+  }, [activeSection, activeLessonDbId]);
 
   // Load quiz attempt count when quiz section is shown
   useEffect(() => {
@@ -678,6 +704,7 @@ export const JourneyPlayer = ({
                               <Clock className="w-3 h-3" />
                               {activeModule.minutes} min
                             </span>
+                            {!previewMode && <WatermarkNotice />}
                           </div>
                         </div>
 
@@ -733,8 +760,17 @@ export const JourneyPlayer = ({
                       </div>
                     </div>
 
-                    {/* Content Body */}
-                    <div className="p-4 sm:p-6 lg:p-8 w-full min-w-0 overflow-x-hidden">
+                    {/* Content Body
+                        Wrapped in a positioned container so the
+                        WatermarkOverlay can cover the entire lesson
+                        view. The overlay tags every screenshot with
+                        the viewer's email + timestamp — making any
+                        leak traceable back to the source account.
+                        Skipped in previewMode (admin preview) so
+                        creators reviewing content aren't watermarked
+                        with their own admin email. */}
+                    <div className="relative p-4 sm:p-6 lg:p-8 w-full min-w-0 overflow-x-hidden">
+                      {!previewMode && <WatermarkOverlay />}
                       <AnimatePresence mode="wait">
                         {contentSection === 'learn' && (
                           <motion.div
@@ -744,6 +780,20 @@ export const JourneyPlayer = ({
                             exit={{ opacity: 0 }}
                             className="prose prose-sm sm:prose prose-slate max-w-none overflow-x-hidden"
                           >
+                            {/* Module Hero Video — auto-embeds the module-level
+                                infographic at the top of the *first* lesson of
+                                each module. Hidden on subsequent lessons in the
+                                same module so the intro doesn't replay. */}
+                            {moduleHeroVideo && isFirstLessonOfSection && (
+                              <ModuleHeroVideo
+                                videoUrl={moduleHeroVideo.streaming_url || moduleHeroVideo.cloudinary_url}
+                                posterUrl={moduleHeroVideo.poster_url}
+                                title={`Module: ${activeSection?.title || ''}`}
+                                durationSec={moduleHeroVideo.duration_seconds}
+                                subtitle="Module introduction"
+                              />
+                            )}
+
                             {/* Lesson Highlight Video - show at the top if a media asset is highlighted */}
                             {(() => {
                               const highlightedMedia = Array.isArray(activeModule.media_assets) 
@@ -1023,6 +1073,46 @@ export const JourneyPlayer = ({
                               </div>
                             </div>
 
+                            {/* Module-level media (e.g. hero infographic video).
+                                Shown on every lesson within the module, not just
+                                the first — so a learner mid-way through can still
+                                rewatch the module intro from the Media tab. */}
+                            {moduleMediaAssets.length > 0 && (
+                              <div className="mb-6">
+                                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+                                  From this module
+                                </p>
+                                <div className="space-y-3">
+                                  {moduleMediaAssets.map((asset) => {
+                                    const kind = asset.asset_type || asset.type;
+                                    if (kind !== 'video') {
+                                      return (
+                                        <div
+                                          key={`mod-${asset.id}`}
+                                          className="flex items-center gap-3 bg-white border border-slate-200 rounded-xl px-4 py-3"
+                                        >
+                                          <Paperclip className="w-5 h-5 text-slate-400 flex-shrink-0" />
+                                          <p className="text-sm font-medium text-slate-700 truncate">
+                                            {asset.original_filename || 'Module asset'}
+                                          </p>
+                                        </div>
+                                      );
+                                    }
+                                    return (
+                                      <ModuleHeroVideo
+                                        key={`mod-${asset.id}`}
+                                        videoUrl={asset.streaming_url || asset.cloudinary_url}
+                                        posterUrl={asset.poster_url}
+                                        title={asset.original_filename || 'Module video'}
+                                        durationSec={asset.duration_seconds}
+                                        subtitle="Module video"
+                                      />
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+
                             {/* Attached files — images / videos / documents. This tab used
                                 to render only `content.study_notes` (a markdown blob), so
                                 uploaded media never showed up. Now we render the files
@@ -1145,6 +1235,7 @@ export const JourneyPlayer = ({
                             ) : null}
 
                             {(!Array.isArray(activeModule.media_assets) || activeModule.media_assets.length === 0)
+                              && moduleMediaAssets.length === 0
                               && !activeModule.content?.study_notes && (
                               <div className="text-center text-slate-500 py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
                                 <Paperclip className="w-8 h-8 mx-auto mb-2 text-slate-400" />

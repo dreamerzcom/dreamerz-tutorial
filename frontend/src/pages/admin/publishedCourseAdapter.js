@@ -21,12 +21,18 @@ export const publishedCourseToLearnerTool = (course) => {
     xpReward: 0, // Preview — no XP
   };
 
-  // Pass sections with nested lessons (hierarchical structure)
+  // Pass sections with nested lessons (hierarchical structure). Preserve
+  // module-level media so JourneyPlayer can render the hero infographic
+  // video at the top of the module.
   const sections = (course.sections || []).map((section) => ({
     id: section.id,
+    db_id: section.db_id,
     title: section.title,
+    description: section.description,
     sort_order: section.sort_order,
     lessons: section.lessons || [],
+    media_assets: section.media_assets || [],
+    hero_video: section.hero_video || null,
   }));
 
   // Stubbed progress hooks for admin preview
