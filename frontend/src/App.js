@@ -5,6 +5,7 @@ import { GoogleOAuthProvider } from "@react-oauth/google";
 import { Toaster } from "./components/ui/sonner";
 import { Navbar } from "./components/Navbar";
 import { Footer } from "./components/Footer";
+import { SwapnaChatWidget } from "./components/SwapnaChatWidget";
 import { ErrorBoundary, NotFound } from "./components/ErrorStates";
 
 /** ErrorBoundary that auto-resets when the route changes — so "Go Home"
@@ -207,6 +208,7 @@ function App() {
                 </Routes>
               </main>
               <Footer />
+              <SwapnaChatWidget />
             </RouteAwareErrorBoundary>
             </ThemeProvider>
             <Toaster position="bottom-right" />
