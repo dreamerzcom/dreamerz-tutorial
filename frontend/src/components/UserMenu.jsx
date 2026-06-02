@@ -102,7 +102,7 @@ export const UserMenu = ({ user, onLogout }) => {
               className="flex items-center gap-3 px-4 py-2.5 text-sm text-purple-700 hover:bg-purple-50 transition-colors"
             >
               <Users className="w-4 h-4 text-purple-500" />
-              Parent Dashboard
+              Supervisor Dashboard
             </Link>
           )}
 

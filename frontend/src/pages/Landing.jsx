@@ -156,7 +156,7 @@ export const Landing = () => {
                   ))}
                 </ul>
                 <Link to="/parents" className="inline-flex items-center gap-1 text-primary font-semibold text-sm hover:text-primary/80">
-                  Open the parent dashboard <ChevronRight className="w-4 h-4" />
+                  Open the supervisor dashboard <ChevronRight className="w-4 h-4" />
                 </Link>
               </motion.div>
             </div>
@@ -245,7 +245,7 @@ export const Landing = () => {
               </div>
               <div className="flex items-center gap-4 text-sm text-slate-500">
                 <Link to="/learn" className="hover:text-slate-700 transition-colors">Courses</Link>
-                <Link to="/parents" className="hover:text-slate-700 transition-colors">For Parents</Link>
+                <Link to="/parents" className="hover:text-slate-700 transition-colors">For Supervisor</Link>
                 <Link to="/login" className="hover:text-slate-700 transition-colors">Sign in</Link>
               </div>
             </div>

@@ -78,7 +78,7 @@ export const ParentStudentDetail = () => {
             className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-primary transition-colors mb-4"
           >
             <ArrowLeft className="w-4 h-4" />
-            Back to Parent Dashboard
+            Back to Supervisor Dashboard
           </Link>
           <h1 className="text-3xl font-bold text-slate-900 mb-2">
             {overview?.student?.username || 'Student'} Progress

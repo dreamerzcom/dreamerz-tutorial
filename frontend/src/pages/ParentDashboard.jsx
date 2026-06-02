@@ -160,7 +160,7 @@ export const ParentDashboard = () => {
     return (
       <div className="min-h-screen flex items-center justify-center py-24">
         <div className="text-center">
-          <p className="text-slate-600">Please log in to access the parent dashboard.</p>
+          <p className="text-slate-600">Please log in to access the supervisor dashboard.</p>
           <Link to="/login" className="mt-4 inline-block text-primary hover:underline">
             Go to Login
           </Link>
@@ -183,10 +183,10 @@ export const ParentDashboard = () => {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-slate-900 mb-2">
-            {isSupervisor() ? 'Supervisor Dashboard' : 'Parent Dashboard'}
+            Supervisor Dashboard
           </h1>
           <p className="text-slate-600">
-            {isSupervisor() ? 'Monitor assigned learners\' progress' : 'Monitor your children\'s learning progress'}
+            Monitor assigned learners' progress
           </p>
         </div>
 

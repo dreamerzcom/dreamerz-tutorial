@@ -41,7 +41,7 @@ const TrialBadge = ({ trialDaysRemaining, className = '' }) => {
 
 const baseNavLinks = [
   { path: '/learn', label: 'Learn', icon: BookOpen },
-  { path: '/parents', label: 'For Parents', icon: Users },
+  { path: '/parents', label: 'For Supervisor', icon: Users },
 ];
 
 export const Navbar = () => {
@@ -51,7 +51,7 @@ export const Navbar = () => {
 
   const navLinks = [
     { path: '/learn', label: 'Learn', icon: BookOpen },
-    { path: '/parents', label: 'For Parents', icon: Users },
+    { path: '/parents', label: 'For Supervisor', icon: Users },
   ];
 
   // Add "Admin" for creators and admins

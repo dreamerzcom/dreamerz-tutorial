@@ -140,7 +140,7 @@ export const Parents = () => {
         >
           <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full mb-6">
             <Users className="w-4 h-4" />
-            <span className="text-sm font-semibold">For Parents & Educators</span>
+            <span className="text-sm font-semibold">For Supervisor & Educators</span>
           </div>
 
           <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">
@@ -156,7 +156,7 @@ export const Parents = () => {
               <Link to="/parents/dashboard">
                 <Button className="bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-primary/30">
                   <Shield className="w-4 h-4 mr-2" />
-                  Go to Parent Dashboard
+                  Go to Supervisor Dashboard
                 </Button>
               </Link>
             </div>

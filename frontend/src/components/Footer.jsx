@@ -1,11 +1,13 @@
 import { Link } from 'react-router-dom';
-import { Shield, Heart } from 'lucide-react';
+import { Shield, Heart, Mail } from 'lucide-react';
+
+const SUPPORT_EMAIL = 'dreamerz.support@gmail.com';
 
 export const Footer = () => {
   return (
     <footer className="bg-slate-900 text-slate-400 py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid md:grid-cols-4 gap-8 mb-8">
+        <div className="grid md:grid-cols-5 gap-8 mb-8">
           {/* Brand */}
           <div className="md:col-span-2">
             <Link to="/home" className="flex items-center gap-2 mb-4">
@@ -37,13 +39,13 @@ export const Footer = () => {
             <h3 className="font-semibold text-white mb-4">Safety</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link 
-                  to="/parents" 
+                <Link
+                  to="/parents"
                   className="hover:text-white transition-colors flex items-center gap-2"
                   data-testid="footer-parents-link"
                 >
                   <Shield className="w-4 h-4 text-primary" />
-                  For Parents
+                  For Supervisor
                 </Link>
               </li>
               <li>
@@ -54,6 +56,28 @@ export const Footer = () => {
               <li>
                 <span className="text-slate-500 text-xs">
                   No personal data collected
+                </span>
+              </li>
+            </ul>
+          </div>
+
+          {/* Contact */}
+          <div>
+            <h3 className="font-semibold text-white mb-4">Contact</h3>
+            <ul className="space-y-2 text-sm">
+              <li>
+                <a
+                  href={`mailto:${SUPPORT_EMAIL}?subject=DreamerZ%20support%20request`}
+                  className="hover:text-white transition-colors flex items-center gap-2 break-all"
+                  data-testid="footer-support-email"
+                >
+                  <Mail className="w-4 h-4 text-primary flex-shrink-0" />
+                  {SUPPORT_EMAIL}
+                </a>
+              </li>
+              <li>
+                <span className="text-slate-500 text-xs">
+                  We reply within 24 hours
                 </span>
               </li>
             </ul>
