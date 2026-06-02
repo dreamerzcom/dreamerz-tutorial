@@ -49,6 +49,16 @@ services:
                      # (which doesn't survive a Render redeploy on the free tier).
       - key: PYTHON_VERSION
         value: "3.11.6"
+      # Courses are now authored directly in the DB (admin panel or
+      # content_drafts/ SQL scripts). The legacy seed_data() loop in
+      # backend/database.py used to re-create the demo courses (Claude,
+      # Gemini, ChatGPT, etc.) from data/curriculum.json on every
+      # backend startup — which silently brought deleted courses back
+      # to life after each deploy. Keep this set to "false" in
+      # production. Set to "true" only on a fresh local dev environment
+      # that wants the demo content.
+      - key: SEED_COURSES_FROM_CURRICULUM
+        value: "false"
 
   # ── Frontend (React static) ── Free, served via Render's global CDN ──
   - type: web

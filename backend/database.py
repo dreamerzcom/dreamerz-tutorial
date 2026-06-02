@@ -2,6 +2,7 @@
 
 import json
 import logging
+import os
 from collections import defaultdict
 from copy import deepcopy
 from typing import Optional
@@ -279,80 +280,107 @@ async def seed_data():
                 )
                 cat_map[cat_data["id"]] = cat
 
-            # ── 2. Courses (from curriculum tools) ──
-            tools = CURRICULUM_DATA.get("tools", [])
-            journeys = CURRICULUM_DATA.get("journeys", {})
-            course_map: dict[str, Course] = {}
+            # ── 2. Courses / Modules / Lessons (from curriculum.json) ──
+            #
+            # GATED — this block re-creates the legacy demo courses
+            # (Claude, Gemini, ChatGPT, Conversational English, etc.)
+            # from data/curriculum.json on every backend startup. That
+            # made sense when the platform was bootstrapped from JSON,
+            # but courses are now authored directly in the DB (via the
+            # admin panel or via the SQL injection scripts in
+            # content_drafts/). When a course is deleted in prod, the
+            # next deploy was silently bringing it back — surfaced by
+            # the user in 2026-06.
+            #
+            # Default OFF in production. Set SEED_COURSES_FROM_CURRICULUM=true
+            # only in a fresh local dev environment that wants demo
+            # data. In Render the value is set explicitly to "false" in
+            # render.yaml so the gate is visible in the deploy config.
+            should_seed_courses = (
+                os.environ.get("SEED_COURSES_FROM_CURRICULUM", "false").strip().lower()
+                in {"1", "true", "yes", "on"}
+            )
 
-            for sort_idx, tool in enumerate(tools):
-                tool_slug = tool["id"]
-                category_slug = tool.get("category_id", "ai-learning")
-                # Ensure the category exists (create if referenced but not in CATEGORIES_DATA)
-                if category_slug not in cat_map:
-                    cat_map[category_slug] = await _get_or_create_category(
-                        session, slug=category_slug, name=category_slug, description=""
+            if should_seed_courses:
+                tools = CURRICULUM_DATA.get("tools", [])
+                journeys = CURRICULUM_DATA.get("journeys", {})
+                course_map: dict[str, Course] = {}
+
+                for sort_idx, tool in enumerate(tools):
+                    tool_slug = tool["id"]
+                    category_slug = tool.get("category_id", "ai-learning")
+                    # Ensure the category exists (create if referenced but not in CATEGORIES_DATA)
+                    if category_slug not in cat_map:
+                        cat_map[category_slug] = await _get_or_create_category(
+                            session, slug=category_slug, name=category_slug, description=""
+                        )
+                    cat = cat_map[category_slug]
+
+                    course = await _get_or_create_course(
+                        session,
+                        slug=tool_slug,
+                        category_id=cat.id,
+                        name=tool.get("name", tool_slug),
+                        description=tool.get("description", ""),
+                        tagline=tool.get("tagline", ""),
+                        icon=tool.get("icon", ""),
+                        theme_color=tool.get("theme", {}).get("color", "#10A37F"),
+                        total_xp=tool.get("totalXP", 0),
+                        sort_order=sort_idx,
+                        status="published",
+                        available_languages=["en"],
+                        # /api/content/courses filters on this tag; without it
+                        # the learner-facing site shows zero courses.
+                        tags=["ai-generated"],
+                        created_by="system",
                     )
-                cat = cat_map[category_slug]
+                    course_map[tool_slug] = course
 
-                course = await _get_or_create_course(
-                    session,
-                    slug=tool_slug,
-                    category_id=cat.id,
-                    name=tool.get("name", tool_slug),
-                    description=tool.get("description", ""),
-                    tagline=tool.get("tagline", ""),
-                    icon=tool.get("icon", ""),
-                    theme_color=tool.get("theme", {}).get("color", "#10A37F"),
-                    total_xp=tool.get("totalXP", 0),
-                    sort_order=sort_idx,
-                    status="published",
-                    available_languages=["en"],
-                    # /api/content/courses filters on this tag; without it
-                    # the learner-facing site shows zero courses.
-                    tags=["ai-generated"],
-                    created_by="system",
-                )
-                course_map[tool_slug] = course
+                    # ── 3. Modules (grouped from journey items) ──
+                    items = journeys.get(tool_slug, [])
 
-                # ── 3. Modules (grouped from journey items) ──
-                items = journeys.get(tool_slug, [])
+                    # Determine grouping strategy: week-based or single default module
+                    has_weeks = any(item.get("week") is not None for item in items)
 
-                # Determine grouping strategy: week-based or single default module
-                has_weeks = any(item.get("week") is not None for item in items)
+                    if has_weeks:
+                        # Group items by week number
+                        week_groups: dict[int, list] = defaultdict(list)
+                        for item in items:
+                            week_num = item.get("week", 1)
+                            week_groups[week_num].append(item)
 
-                if has_weeks:
-                    # Group items by week number
-                    week_groups: dict[int, list] = defaultdict(list)
-                    for item in items:
-                        week_num = item.get("week", 1)
-                        week_groups[week_num].append(item)
+                        for mod_idx, week_num in enumerate(sorted(week_groups.keys())):
+                            mod_slug = f"{tool_slug}-week-{week_num}"
+                            mod = await _get_or_create_module(
+                                session,
+                                slug=mod_slug,
+                                course_id=course.id,
+                                title=f"Week {week_num}",
+                                sort_order=mod_idx,
+                            )
 
-                    for mod_idx, week_num in enumerate(sorted(week_groups.keys())):
-                        mod_slug = f"{tool_slug}-week-{week_num}"
+                            # ── 4. Lessons within this module ──
+                            for lesson_idx, item in enumerate(week_groups[week_num]):
+                                await _seed_lesson(session, mod, item, lesson_idx)
+                    else:
+                        # Single default module for tools without week grouping
+                        mod_slug = f"{tool_slug}-core"
                         mod = await _get_or_create_module(
                             session,
                             slug=mod_slug,
                             course_id=course.id,
-                            title=f"Week {week_num}",
-                            sort_order=mod_idx,
+                            title="Core Modules",
+                            sort_order=0,
                         )
 
-                        # ── 4. Lessons within this module ──
-                        for lesson_idx, item in enumerate(week_groups[week_num]):
+                        for lesson_idx, item in enumerate(items):
                             await _seed_lesson(session, mod, item, lesson_idx)
-                else:
-                    # Single default module for tools without week grouping
-                    mod_slug = f"{tool_slug}-core"
-                    mod = await _get_or_create_module(
-                        session,
-                        slug=mod_slug,
-                        course_id=course.id,
-                        title="Core Modules",
-                        sort_order=0,
-                    )
-
-                    for lesson_idx, item in enumerate(items):
-                        await _seed_lesson(session, mod, item, lesson_idx)
+            else:
+                logging.info(
+                    "Skipping course/module/lesson seeding "
+                    "(SEED_COURSES_FROM_CURRICULUM is not 'true'). "
+                    "Categories, pricing plans, and FAQs are still seeded."
+                )
 
             # ── 6. Pricing Plans ──
             for idx, plan_data in enumerate(deepcopy(SITE_CONFIG_SEED.get("pricing_plans", []))):
