@@ -762,6 +762,7 @@ async def admin_list_tools(session: AsyncSession = Depends(get_db)):
 @content_router.get("/tools/{tool_id}")
 async def admin_get_tool(
     tool_id: str,
+    current_user: dict = Depends(get_current_creator),
     session: AsyncSession = Depends(get_db),
 ):
     """Get single course by slug, with its lessons (flattened from modules)."""
@@ -770,6 +771,15 @@ async def admin_get_tool(
     )
     course = result.scalars().first()
     if not course:
+        raise HTTPException(status_code=404, detail="Tool not found")
+
+    # Draft courses are only visible to their creator (or admin).
+    # Without this guard, any creator could browse another's WIP work.
+    if (
+        course.status == "draft"
+        and not has_role(current_user, "admin")
+        and (course.created_by or "") != current_user.get("username", "")
+    ):
         raise HTTPException(status_code=404, detail="Tool not found")
 
     # Fetch lessons through modules
@@ -998,11 +1008,20 @@ async def get_course_learner_preview(
 async def update_course(
     course_id: str,
     update: CourseUpdate,
+    current_user: dict = Depends(get_current_creator),
     session: AsyncSession = Depends(get_db),
 ):
     result = await session.execute(select(Course).where(Course.slug == course_id))
     course = result.scalars().first()
     if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+
+    # Authz: only the original creator or an admin may modify a course.
+    # Without this, any creator can mutate any other creator's content.
+    if (
+        not has_role(current_user, "admin")
+        and (course.created_by or "") != current_user.get("username", "")
+    ):
         raise HTTPException(status_code=404, detail="Course not found")
 
     update_data = {k: v for k, v in update.model_dump().items() if v is not None}
@@ -1229,6 +1248,7 @@ async def create_draft_version(
 @content_router.delete("/courses/{course_id}")
 async def delete_course(
     course_id: str,
+    current_user: dict = Depends(get_current_creator),
     session: AsyncSession = Depends(get_db),
 ):
     """Cascade-delete a course and all its modules, lessons, content, quizzes.
@@ -1240,6 +1260,14 @@ async def delete_course(
     result = await session.execute(select(Course).where(Course.slug == course_id))
     course = result.scalars().first()
     if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+
+    # Authz: only the original creator or an admin may delete a course.
+    # Without this, any creator can wipe another creator's content.
+    if (
+        not has_role(current_user, "admin")
+        and (course.created_by or "") != current_user.get("username", "")
+    ):
         raise HTTPException(status_code=404, detail="Course not found")
 
     # If this is a draft, clear the parent's draft_version_id pointer
@@ -1980,7 +2008,10 @@ async def regenerate_lesson(
         raise HTTPException(status_code=503, detail=str(exc))
     except Exception as exc:  # noqa: BLE001
         logging.exception("Lesson regeneration failed")
-        raise HTTPException(status_code=500, detail=f"Regeneration failed: {exc}")
+        # Generic message — full exception is in server logs (line above).
+        # Leaking exc.__str__ to the client can expose internal paths,
+        # SQL fragments, or third-party API error bodies.
+        raise HTTPException(status_code=500, detail="Regeneration failed. See logs.")
 
 
 @content_router.post("/lessons/{lesson_id}/regenerate-with-docs")
@@ -2037,7 +2068,10 @@ async def regenerate_lesson_with_docs(
         raise HTTPException(status_code=503, detail=str(exc))
     except Exception as exc:  # noqa: BLE001
         logging.exception("Lesson regeneration with docs failed")
-        raise HTTPException(status_code=500, detail=f"Regeneration failed: {exc}")
+        # Generic message — full exception is in server logs (line above).
+        # Leaking exc.__str__ to the client can expose internal paths,
+        # SQL fragments, or third-party API error bodies.
+        raise HTTPException(status_code=500, detail="Regeneration failed. See logs.")
 
 
 # ── Lesson Content (per-language) ────────────────────────

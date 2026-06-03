@@ -11,6 +11,7 @@ export const ChangePassword = () => {
   const { token, isAuthenticated, isLoaded, applyAuthResponse } = useAuth();
   const navigate = useNavigate();
 
+  const [currentPassword, setCurrentPassword] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState('');
@@ -28,12 +29,20 @@ export const ChangePassword = () => {
     event.preventDefault();
     setError('');
 
+    if (!currentPassword) {
+      setError('Enter your current password.');
+      return;
+    }
     if (password.length < 8 || !/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
       setError('Must be at least 8 characters long, with 1 uppercase letter and 1 number.');
       return;
     }
     if (password !== confirm) {
       setError('Passwords do not match.');
+      return;
+    }
+    if (password === currentPassword) {
+      setError('New password must be different from your current password.');
       return;
     }
 
@@ -45,7 +54,11 @@ export const ChangePassword = () => {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ new_password: password, confirm_password: confirm }),
+        body: JSON.stringify({
+          current_password: currentPassword,
+          new_password: password,
+          confirm_password: confirm,
+        }),
       });
       const result = await res.json();
       if (!res.ok) {
@@ -84,6 +97,22 @@ export const ChangePassword = () => {
               </p>
 
               <form className="space-y-6" onSubmit={handleSubmit}>
+                <label className="block text-sm font-medium text-slate-700">
+                  Current password
+                  <div className="mt-2 relative rounded-xl border border-slate-200 bg-slate-50 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="password"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      className="w-full rounded-xl border-0 bg-transparent py-3 pl-12 pr-4 text-slate-900 outline-none"
+                      placeholder="Verify it's really you"
+                      autoComplete="current-password"
+                      required
+                    />
+                  </div>
+                </label>
+
                 <label className="block text-sm font-medium text-slate-700">
                   New password
                   <div className="mt-2 relative rounded-xl border border-slate-200 bg-slate-50 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary">

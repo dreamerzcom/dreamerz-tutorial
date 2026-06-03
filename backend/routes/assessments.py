@@ -3,6 +3,7 @@
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
@@ -10,6 +11,7 @@ from models.progress import (
     AssessmentAttemptCreate,
     AssessmentAttemptUpdate,
 )
+from models.sql_models import User
 from services.assessment_service import (
     start_assessment_attempt,
     submit_assessment_attempt,
@@ -25,6 +27,39 @@ from services.assessment_service import (
 from services.auth_service import get_current_user, has_role
 
 router = APIRouter(prefix="/assessments", tags=["assessments"])
+
+
+# ── Authorisation helper ─────────────────────────────────────
+# Every endpoint that touches an existing attempt by id MUST
+# verify the current user owns it (or is an admin/grader). Without
+# this, any authenticated user can submit fraudulent scores or
+# inject/read answers for ANY attempt by guessing attempt_id.
+async def _require_attempt_owner_or_admin(
+    attempt_id: int,
+    current_user: dict,
+    session: AsyncSession,
+) -> dict:
+    """Return the attempt dict if current_user owns it, else raise 404.
+
+    Returns 404 (not 403) on access denial to avoid leaking which
+    attempt_ids exist for other users.
+    """
+    attempt = await get_assessment_attempt(attempt_id, session)
+    if not attempt:
+        raise HTTPException(status_code=404, detail="Attempt not found")
+
+    # Admins + creators may need to grade attempts they don't own.
+    if has_role(current_user, "admin") or has_role(current_user, "creator"):
+        return attempt
+
+    result = await session.execute(
+        select(User.id).where(User.email == current_user["email"])
+    )
+    user_id = result.scalar()
+    if not user_id or attempt.get("student_user_id") != user_id:
+        raise HTTPException(status_code=404, detail="Attempt not found")
+
+    return attempt
 
 
 # ---------------------------------------------------------------------------
@@ -79,6 +114,12 @@ async def submit_assessment(
 ):
     """Submit and auto-grade an assessment attempt."""
     try:
+        # Authz: only the student who started this attempt (or an
+        # admin/creator) may submit scores for it. Without this any
+        # learner could PATCH another learner's quiz with a perfect
+        # score by guessing attempt_id.
+        await _require_attempt_owner_or_admin(attempt_id, current_user, session)
+
         attempt = await submit_assessment_attempt(
             attempt_id=attempt_id,
             raw_score=raw_score,
@@ -299,6 +340,12 @@ async def create_answer(
 ):
     """Create a question-level answer for an assessment attempt."""
     try:
+        # Authz: only the attempt owner (or admin/creator) may write
+        # answers to it. Prevents anyone from injecting/overwriting
+        # another learner's question-level answers by guessing
+        # attempt_id.
+        await _require_attempt_owner_or_admin(attempt_id, current_user, session)
+
         answer = await create_assessment_answer(
             attempt_id=attempt_id,
             question_id=question_id,
@@ -314,6 +361,8 @@ async def create_answer(
             session=session,
         )
         return answer
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -326,17 +375,14 @@ async def list_answers(
 ):
     """Get all question answers for an assessment attempt."""
     try:
-        from sqlalchemy import select
-        from models.sql_models import User
-
-        result = await session.execute(
-            select(User.id).where(User.email == current_user["email"])
-        )
-        user_id = result.scalar()
-        if not user_id:
-            raise HTTPException(status_code=404, detail="User not found")
+        # Authz: only the attempt owner (or admin/creator) may read
+        # the answers. Without this, any learner could read another's
+        # full quiz attempt — including correct answers and feedback.
+        await _require_attempt_owner_or_admin(attempt_id, current_user, session)
 
         answers = await get_assessment_answers(attempt_id, session)
         return answers
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

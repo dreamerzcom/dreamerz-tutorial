@@ -158,11 +158,12 @@ function App() {
                       <ChangePassword />
                     </RequireAuth>
                   } />
-                  <Route path="/forgot-password" element={
-                    <RequireAuth>
-                      <ForgotPassword />
-                    </RequireAuth>
-                  } />
+                  {/* Forgot-password is intentionally NOT auth-gated —
+                      a user who can't log in must be able to reach it.
+                      The page supports two modes: request-link mode
+                      (no ?token=) and reset-with-token mode (?token=…
+                      from the email). */}
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
                   <Route
                     path="/admin"
                     element={

@@ -721,6 +721,54 @@ async def get_content_tools_by_category(
 # 8. GET /content/media/{asset_id} — redirect to cloudinary URL
 # ---------------------------------------------------------------------------
 
+# Local-file media root. Anything that's not strictly under this
+# directory must be rejected as a path-traversal attempt — the value of
+# asset.cloudinary_url is partially user-influenced (via the upload
+# pipeline) and must never be trusted to construct a filesystem path.
+_UPLOADS_ROOT = (pathlib.Path(__file__).resolve().parent.parent / "uploads").resolve()
+
+
+def _resolve_local_media_path(stored_url: str) -> pathlib.Path:
+    """Resolve a stored relative path under _UPLOADS_ROOT, refusing
+    anything that escapes the root via `..`, absolute paths, or
+    symlinks. Raises 400/404 directly.
+    """
+    if not stored_url:
+        raise HTTPException(status_code=404, detail="Media file not found on disk")
+    # `stored_url` historically begins with "uploads/<filename>" — but
+    # also might be just "<filename>". Strip a leading "uploads/" so
+    # we resolve relative to _UPLOADS_ROOT consistently.
+    rel = stored_url.lstrip("/\\")
+    if rel.startswith("uploads/") or rel.startswith("uploads\\"):
+        rel = rel.split("/", 1)[-1].split("\\", 1)[-1]
+    candidate = (_UPLOADS_ROOT / rel).resolve()
+    try:
+        candidate.relative_to(_UPLOADS_ROOT)
+    except ValueError:
+        # Traversal attempt — refuse without leaking why.
+        raise HTTPException(status_code=404, detail="Media file not found on disk")
+    if not candidate.exists() or not candidate.is_file():
+        raise HTTPException(status_code=404, detail="Media file not found on disk")
+    return candidate
+
+
+def _safe_content_disposition(disposition: str, filename: str | None) -> str:
+    """Build a Content-Disposition header value with a sanitised
+    filename. Prevents CRLF injection (\\n, \\r) and quote-break
+    attacks (`"`) by stripping/escaping problem characters and
+    falling back to a generic name when the input is unusable.
+    """
+    safe = (filename or "file").replace("\n", " ").replace("\r", " ")
+    safe = safe.replace('"', "").replace("\\", "").strip()
+    # Strict allowlist: keep ASCII letters/digits/dot/dash/underscore/space.
+    safe = "".join(c for c in safe if c.isalnum() or c in "._- ")
+    if not safe:
+        safe = "file"
+    # Truncate to a sensible length.
+    safe = safe[:200]
+    return f'{disposition}; filename="{safe}"'
+
+
 @router.get("/media/{asset_id}")
 async def get_media(asset_id: str, session: AsyncSession = Depends(get_db)):
     """Serve the media asset. Redirects to Cloudinary URL or serves local file."""
@@ -742,21 +790,20 @@ async def get_media(asset_id: str, session: AsyncSession = Depends(get_db)):
     if url.startswith("http"):
         return RedirectResponse(url=url)
 
-    # Local file: serve directly from disk
-    uploads_root = pathlib.Path(__file__).resolve().parent.parent
-    local_path = uploads_root / url
-    if not local_path.exists():
-        raise HTTPException(status_code=404, detail="Media file not found on disk")
-    
-    # For PDFs, serve inline for browser viewing
+    # Local file: resolve safely under _UPLOADS_ROOT to prevent path
+    # traversal via a tampered cloudinary_url DB value.
+    local_path = _resolve_local_media_path(url)
+
+    disposition = "inline" if is_pdf else "attachment"
     return FileResponse(
         path=str(local_path),
         media_type="application/pdf" if is_pdf else (asset.mime_type or "application/octet-stream"),
         filename=asset.original_filename,
         headers={
-            "Content-Disposition": f'inline; filename="{asset.original_filename or local_path.name}"'
-        } if is_pdf else {
-            "Content-Disposition": f'attachment; filename="{asset.original_filename or local_path.name}"'
+            "Content-Disposition": _safe_content_disposition(
+                disposition,
+                asset.original_filename or local_path.name,
+            )
         },
     )
 
@@ -787,16 +834,17 @@ async def download_media(asset_id: str, session: AsyncSession = Depends(get_db))
             download_url = url.replace("/upload/", "/upload/fl_attachment/")
         return RedirectResponse(url=download_url)
 
-    uploads_root = pathlib.Path(__file__).resolve().parent.parent
-    local_path = uploads_root / url
-    if not local_path.exists():
-        raise HTTPException(status_code=404, detail="Media file not found on disk")
+    # Resolve safely under _UPLOADS_ROOT to prevent path traversal.
+    local_path = _resolve_local_media_path(url)
 
     return FileResponse(
         path=str(local_path),
         media_type=asset.mime_type or "application/octet-stream",
         filename=asset.original_filename,
         headers={
-            "Content-Disposition": f'attachment; filename="{asset.original_filename or local_path.name}"'
+            "Content-Disposition": _safe_content_disposition(
+                "attachment",
+                asset.original_filename or local_path.name,
+            )
         },
     )

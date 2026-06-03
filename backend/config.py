@@ -64,10 +64,15 @@ SITE_CONFIG_JSON_PATH = ROOT_DIR / "site_config_seed.json"
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
 
 # ── Admin ─────────────────────────────────────────────────
-# Hardcoded admin emails — these accounts automatically get admin privileges.
+# Admin emails — accounts that automatically get admin privileges.
+# Configured ONLY via the ADMIN_EMAILS environment variable
+# (comma-separated). The default is intentionally empty so a misconfigured
+# deploy never accidentally grants admin rights to a real user. Set on
+# Render (or in backend/.env locally) like:
+#   ADMIN_EMAILS=you@example.com,colleague@example.com
 ADMIN_EMAILS = [
     e.strip().lower()
-    for e in os.environ.get("ADMIN_EMAILS", "purnendu.ju01@gmail.com").split(",")
+    for e in os.environ.get("ADMIN_EMAILS", "").split(",")
     if e.strip()
 ]
 

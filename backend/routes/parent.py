@@ -165,20 +165,31 @@ async def update_link(
 ):
     """Update a parent-student link."""
     try:
+        # Authz check FIRST — the previous version mutated the row,
+        # then checked ownership, which let unauthorised callers
+        # commit their changes before the 403 response. Fetch +
+        # verify ownership BEFORE any write.
+        from sqlalchemy import select
+        from models.sql_models import User, ParentStudentLink
+
+        link_row_result = await session.execute(
+            select(ParentStudentLink).where(ParentStudentLink.id == link_id)
+        )
+        link_row = link_row_result.scalars().first()
+        if not link_row:
+            raise HTTPException(status_code=404, detail="Link not found")
+
+        user_id_result = await session.execute(
+            select(User.id).where(User.email == current_user["email"])
+        )
+        user_id = user_id_result.scalar()
+        if link_row.parent_user_id != user_id and not has_role(current_user, "admin"):
+            # Return 404 (not 403) to avoid leaking which link_ids exist.
+            raise HTTPException(status_code=404, detail="Link not found")
+
         link = await update_parent_student_link(link_id, updates, session)
         if not link:
             raise HTTPException(status_code=404, detail="Link not found")
-
-        # Verify user owns this link
-        from sqlalchemy import select
-        from models.sql_models import User
-
-        result = await session.execute(
-            select(User.id).where(User.email == current_user["email"])
-        )
-        user_id = result.scalar()
-        if link["parent_user_id"] != user_id and not has_role(current_user, "admin"):
-            raise HTTPException(status_code=403, detail="Access denied")
 
         return link
     except HTTPException:

@@ -1,6 +1,23 @@
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
+// Accept only http(s) URLs (or protocol-relative). Blocks javascript:,
+// data:, vbscript:, file:, etc. — any of which would let an AI-emitted
+// or admin-authored markdown image/link execute scripts or exfiltrate.
+const isSafeUrl = (url) => {
+  if (typeof url !== 'string' || !url.trim()) return false;
+  const trimmed = url.trim();
+  if (trimmed.startsWith('//')) return true;          // protocol-relative
+  if (trimmed.startsWith('#') || trimmed.startsWith('/')) return true;
+  if (trimmed.startsWith('mailto:') || trimmed.startsWith('tel:')) return true;
+  try {
+    const parsed = new URL(trimmed, window.location.origin);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+};
+
 /**
  * Renders markdown content with themed typography.
  *
@@ -78,9 +95,21 @@ export const MarkdownContent = ({ children, variant = 'light', className = '' })
           h3: ({ node, ...p }) => <h3 className={`text-lg font-semibold mt-5 mb-2 ${s.heading}`} {...p} />,
           h4: ({ node, ...p }) => <h4 className={`text-base font-semibold mt-4 mb-2 ${s.heading}`} {...p} />,
           p: ({ node, ...p }) => <p className="my-3" {...p} />,
-          a: ({ node, ...p }) => (
-            <a className={`underline ${s.link}`} target="_blank" rel="noopener noreferrer" {...p} />
-          ),
+          a: ({ node, href, ...p }) => {
+            // Drop href if it uses a dangerous scheme (javascript:, data:,
+            // vbscript:, file:). The link still renders as text so the
+            // user sees something, but it's no longer a vector.
+            const safeHref = isSafeUrl(href) ? href : undefined;
+            return (
+              <a
+                href={safeHref}
+                className={`underline ${s.link}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                {...p}
+              />
+            );
+          },
           strong: ({ node, ...p }) => <strong className={`font-semibold ${s.heading}`} {...p} />,
           em: ({ node, ...p }) => <em className="italic" {...p} />,
           ul: ({ node, ...p }) => <ul className="list-disc pl-6 my-3 space-y-1.5" {...p} />,
@@ -119,9 +148,22 @@ export const MarkdownContent = ({ children, variant = 'light', className = '' })
           td: ({ node, ...p }) => (
             <td className={`border ${s.tableCell} px-3 py-2 align-top`} {...p} />
           ),
-          img: ({ node, ...p }) => (
-            <img className="rounded-lg my-4 max-w-full" loading="lazy" alt="" {...p} />
-          ),
+          img: ({ node, src, alt, ...p }) => {
+            // Refuse non-http(s) image sources — blocks javascript:
+            // and data: URI XSS via AI-generated or admin-authored
+            // markdown like ![x](javascript:alert(1)) or
+            // ![x](data:text/html,<script>...</script>).
+            if (!isSafeUrl(src)) return null;
+            return (
+              <img
+                src={src}
+                alt={alt || ''}
+                className="rounded-lg my-4 max-w-full"
+                loading="lazy"
+                {...p}
+              />
+            );
+          },
         }}
       >
         {content}

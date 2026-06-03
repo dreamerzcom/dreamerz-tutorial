@@ -216,9 +216,20 @@ async def get_file_data(session: AsyncSession, asset_id: int) -> tuple:
         # Cloudinary-hosted: return None for bytes, caller redirects
         return None, asset.original_filename, asset.mime_type, url
     else:
-        # Local file
-        local_path = UPLOADS_DIR.parent / url
-        if not local_path.exists():
+        # Local file — resolve safely under UPLOADS_DIR.
+        # asset.cloudinary_url is partially user-influenced (via the
+        # upload pipeline); a tampered value like
+        # "../../../etc/passwd" would otherwise read arbitrary disk.
+        uploads_root = UPLOADS_DIR.resolve()
+        rel = url.lstrip("/\\")
+        if rel.startswith("uploads/") or rel.startswith("uploads\\"):
+            rel = rel.split("/", 1)[-1].split("\\", 1)[-1]
+        local_path = (uploads_root / rel).resolve()
+        try:
+            local_path.relative_to(uploads_root)
+        except ValueError:
+            raise ValueError("Local file not found on disk")
+        if not local_path.exists() or not local_path.is_file():
             raise ValueError("Local file not found on disk")
         file_bytes = local_path.read_bytes()
         return file_bytes, asset.original_filename, asset.mime_type, url

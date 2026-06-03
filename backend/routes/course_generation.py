@@ -23,7 +23,26 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
 from pydantic import BaseModel, Field
 
-from services.auth_service import get_current_creator, require_ai_generation_enabled
+from services.auth_service import get_current_creator, has_role, require_ai_generation_enabled
+
+
+# ── Authz helper for draft endpoints ─────────────────────────
+# Drafts are creator-scoped work product. Only the creator who owns
+# the draft (or an admin) may read, mutate, or delete it. Without
+# this check any authenticated creator could browse / overwrite /
+# delete another creator's WIP — including AI-generated content
+# they may have paid token cost to produce.
+async def _require_draft_owner(draft_id: int, current_user: dict) -> dict:
+    draft = await course_generator.get_draft(draft_id)
+    if not draft:
+        raise HTTPException(status_code=404, detail="Draft not found")
+    if (
+        not has_role(current_user, "admin")
+        and (draft.get("admin_user") or "") != current_user.get("username", "")
+    ):
+        # 404 (not 403) — don't leak which draft_ids exist for others.
+        raise HTTPException(status_code=404, detail="Draft not found")
+    return draft
 from services import document_parser, course_generator
 
 router = APIRouter(
@@ -95,9 +114,9 @@ async def parse_upload(
         }
     except document_parser.UnsupportedFormatError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
-    except Exception as exc:  # noqa: BLE001
+    except Exception:  # noqa: BLE001
         logger.exception("Failed to parse uploaded document")
-        raise HTTPException(status_code=500, detail=f"Failed to parse document: {exc}")
+        raise HTTPException(status_code=500, detail="Failed to parse document. See logs.")
 
 
 # ── 2. Generate blueprint ─────────────────────────────────
@@ -122,9 +141,9 @@ async def create_blueprint(
         raise HTTPException(status_code=400, detail=str(exc))
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
-    except Exception as exc:  # noqa: BLE001
+    except Exception:  # noqa: BLE001
         logger.exception("Blueprint generation failed")
-        raise HTTPException(status_code=500, detail=f"Blueprint generation failed: {exc}")
+        raise HTTPException(status_code=500, detail="Blueprint generation failed. See logs.")
 
     try:
         draft = await course_generator.create_draft(
@@ -173,9 +192,9 @@ async def generate_lesson(
         )
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
-    except Exception as exc:  # noqa: BLE001
+    except Exception:  # noqa: BLE001
         logger.exception("Lesson generation failed")
-        raise HTTPException(status_code=500, detail=f"Lesson generation failed: {exc}")
+        raise HTTPException(status_code=500, detail="Lesson generation failed. See logs.")
 
     validation = None
     if payload.run_critique:
@@ -241,7 +260,12 @@ async def generate_all_lessons(
 
 # ── 5. Update draft blueprint (manual edits) ──────────────
 @router.put("/drafts/{draft_id}")
-async def update_draft(draft_id: int, payload: BlueprintUpdate):
+async def update_draft(
+    draft_id: int,
+    payload: BlueprintUpdate,
+    current_user: dict = Depends(get_current_creator),
+):
+    await _require_draft_owner(draft_id, current_user)
     ok = await course_generator.update_draft_blueprint(draft_id, payload.blueprint)
     if not ok:
         raise HTTPException(status_code=404, detail="Draft not found")
@@ -250,8 +274,13 @@ async def update_draft(draft_id: int, payload: BlueprintUpdate):
 
 # ── 5b. Update validation on a single lesson ──────────────
 @router.put("/drafts/{draft_id}/validation")
-async def update_lesson_validation(draft_id: int, payload: ValidationUpdate):
+async def update_lesson_validation(
+    draft_id: int,
+    payload: ValidationUpdate,
+    current_user: dict = Depends(get_current_creator),
+):
     """Overwrite or clear the validation payload for one lesson (no regen)."""
+    await _require_draft_owner(draft_id, current_user)
     ok = await course_generator.update_lesson_validation(
         draft_id=draft_id,
         module_id=payload.module_id,
@@ -282,9 +311,9 @@ async def publish_draft_endpoint(
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
-    except Exception as exc:  # noqa: BLE001
+    except Exception:  # noqa: BLE001
         logger.exception("Publish failed")
-        raise HTTPException(status_code=500, detail=f"Publish failed: {exc}")
+        raise HTTPException(status_code=500, detail="Publish failed. See logs.")
 
     return result
 
@@ -300,16 +329,20 @@ async def get_drafts(current_user: dict = Depends(get_current_creator)):
 
 # ── 8. Get single draft ──────────────────────────────────
 @router.get("/drafts/{draft_id}")
-async def get_draft(draft_id: int):
-    draft = await course_generator.get_draft(draft_id)
-    if not draft:
-        raise HTTPException(status_code=404, detail="Draft not found")
-    return draft
+async def get_draft(
+    draft_id: int,
+    current_user: dict = Depends(get_current_creator),
+):
+    return await _require_draft_owner(draft_id, current_user)
 
 
 # ── 9. Delete draft ──────────────────────────────────────
 @router.delete("/drafts/{draft_id}")
-async def delete_draft(draft_id: int):
+async def delete_draft(
+    draft_id: int,
+    current_user: dict = Depends(get_current_creator),
+):
+    await _require_draft_owner(draft_id, current_user)
     ok = await course_generator.delete_draft(draft_id)
     if not ok:
         raise HTTPException(status_code=404, detail="Draft not found")
