@@ -3,6 +3,11 @@ export const ROLEPLAY_HISTORY_LIMIT = 6;
 export const FALLBACK_PREVIEW_VIDEO = 'https://www.youtube.com/embed/zegMOOKy_6A';
 export const MAX_CHAT_MESSAGES = 100;
 export const PASSWORD_MIN_LENGTH = 8;
+// One source of truth for "how much XP a completed lesson is worth". Used by
+// useProgress (when computing totalXP) and by JourneyPlayer (when showing the
+// per-course "earned / max XP" badge). Keep them in sync — if you ever make
+// XP variable per lesson, replace both call sites at once.
+export const XP_PER_LESSON = 25;
 // The current auth token storage key. Stored as a RAW string (the JWT),
 // NOT as a JSON object — see useAuth.js. Previously this constant pointed
 // to the legacy 'dreamerz_beta_auth_v1' (a JSON blob with .token), but

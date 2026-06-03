@@ -19,6 +19,7 @@ import { ModuleHeroVideo } from './ModuleHeroVideo';
 import { PromptLabPanel } from './PromptLabPanel';
 import { CanvaCreatorPanel } from './CanvaCreatorPanel';
 import { useLearningProgress } from '../hooks/useLearningProgress';
+import { XP_PER_LESSON } from '../config/constants';
 
 const numericId = (value) => {
   const numberValue = Number(value);
@@ -295,6 +296,11 @@ export const JourneyPlayer = ({
     [allLessons, course.id, isModuleCompleted]
   );
   const progressPercent = Math.round((completedCount / allLessons.length) * 100);
+  // Per-course XP — matches the header's % bar (which is also per-course)
+  // and the XP awarded in useProgress (XP_PER_LESSON × completed lessons).
+  // Replaces the legacy static `course.xpReward` label that never moved.
+  const earnedCourseXp = completedCount * XP_PER_LESSON;
+  const maxCourseXp = allLessons.length * XP_PER_LESSON;
 
   // Handle quiz completion
   const handleQuizComplete = useCallback(async (score, passed, _attempts) => {
@@ -387,9 +393,21 @@ export const JourneyPlayer = ({
     }
   }, [activeModuleIndex, allLessons.length, stopSpeech, scrollToLessonTitle]);
 
-  // Navigate to next module
+  // Navigate to next module. Auto-marks the current lesson complete on the
+  // way out — that's the *only* completion signal for lessons that don't
+  // have a quiz (or where the learner skips it), so without this the
+  // header %, sidebar checks, and XP badge stay stuck at zero. Idempotent:
+  // useProgress.completeModule short-circuits the XP bump when the lesson
+  // was already complete, and we skip the backend write in that case too.
   const goToNextModule = useCallback(() => {
     stopSpeech();
+    if (
+      activeModule
+      && !previewMode
+      && !isModuleCompleted(course.id, activeModule.id)
+    ) {
+      completeModule(course.id, activeModule.id, 0);
+    }
     const nextIndex = activeModuleIndex + 1;
     if (nextIndex < allLessons.length) {
       setActiveModuleIndex(nextIndex);
@@ -397,7 +415,17 @@ export const JourneyPlayer = ({
       setContentSection('learn');
       scrollToLessonTitle();
     }
-  }, [activeModuleIndex, allLessons.length, stopSpeech, scrollToLessonTitle]);
+  }, [
+    activeModuleIndex,
+    allLessons.length,
+    stopSpeech,
+    scrollToLessonTitle,
+    activeModule,
+    course.id,
+    isModuleCompleted,
+    completeModule,
+    previewMode,
+  ]);
 
   // Navigate to previous module
   const goToPrevModule = useCallback(() => {
@@ -530,11 +558,24 @@ export const JourneyPlayer = ({
               </div>
             </div>
 
-            {/* XP Badge */}
+            {/* XP Badge — earned / max for this course, so it tracks the
+                progress bar to the left instead of sitting at a fixed
+                course-reward number. The legacy `course.xpReward` label
+                never moved when the learner completed lessons, which made
+                the badge feel decorative rather than informative. */}
             {!previewMode && (
-              <div className="flex items-center gap-2 bg-gradient-to-r from-amber-50 to-orange-50 px-3 py-2 rounded-xl border border-amber-200 flex-shrink-0">
+              <div
+                className="flex items-center gap-2 bg-gradient-to-r from-amber-50 to-orange-50 px-3 py-2 rounded-xl border border-amber-200 flex-shrink-0"
+                title={`${earnedCourseXp} of ${maxCourseXp} XP earned in this course`}
+              >
                 <Award className="w-4 h-4 text-amber-600" />
-                <span className="font-bold text-amber-700 text-sm">{course.xpReward} XP</span>
+                <span className="font-bold text-amber-700 text-sm">
+                  {earnedCourseXp}
+                  <span className="text-amber-500 font-semibold">
+                    {' '}/ {maxCourseXp}
+                  </span>{' '}
+                  XP
+                </span>
               </div>
             )}
           </div>
@@ -1305,15 +1346,47 @@ export const JourneyPlayer = ({
                             <span>Take Quiz</span>
                           </Button>
                         )}
-                        <Button
-                          onClick={goToNextModule}
-                          disabled={activeModuleIndex >= allLessons.length - 1}
-                          className="flex-1 sm:flex-none bg-primary hover:bg-primary/90 text-white px-3 sm:px-4 text-sm sm:text-base"
-                        >
-                          <span className="hidden sm:inline">Next Lesson</span>
-                          <span className="sm:hidden">Next</span>
-                          <ChevronRight className="w-4 h-4 ml-1 sm:ml-2" />
-                        </Button>
+                        {activeModuleIndex >= allLessons.length - 1 ? (
+                          // Last lesson — the "Next" target no longer exists,
+                          // so "Next Lesson" used to sit there permanently
+                          // disabled and the learner could never trigger a
+                          // completion signal for the final lesson. Convert
+                          // it to a "Finish Lesson" CTA that just marks
+                          // complete in place (idempotent — disabled once
+                          // done).
+                          <Button
+                            onClick={() => {
+                              if (
+                                activeModule
+                                && !previewMode
+                                && !isCurrentModuleCompleted
+                              ) {
+                                completeModule(course.id, activeModule.id, 0);
+                              }
+                            }}
+                            disabled={isCurrentModuleCompleted}
+                            className="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white px-3 sm:px-4 text-sm sm:text-base disabled:bg-emerald-100 disabled:text-emerald-700 disabled:opacity-100"
+                          >
+                            <CheckCircle2 className="w-4 h-4 mr-1 sm:mr-2" />
+                            {isCurrentModuleCompleted ? (
+                              <span>Completed</span>
+                            ) : (
+                              <>
+                                <span className="hidden sm:inline">Finish Lesson</span>
+                                <span className="sm:hidden">Finish</span>
+                              </>
+                            )}
+                          </Button>
+                        ) : (
+                          <Button
+                            onClick={goToNextModule}
+                            className="flex-1 sm:flex-none bg-primary hover:bg-primary/90 text-white px-3 sm:px-4 text-sm sm:text-base"
+                          >
+                            <span className="hidden sm:inline">Next Lesson</span>
+                            <span className="sm:hidden">Next</span>
+                            <ChevronRight className="w-4 h-4 ml-1 sm:ml-2" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </div>

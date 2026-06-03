@@ -8,6 +8,7 @@ import {
 } from 'react';
 import { useAuth } from './useAuth';
 import * as progressService from '../services/progressService';
+import { XP_PER_LESSON } from '../config/constants';
 
 // Learning progress used to live in localStorage, which made it per-browser:
 // the same learner saw different completion %, XP and streaks on Chrome vs.
@@ -21,7 +22,6 @@ const API_BASE = (process.env.REACT_APP_BACKEND_URL || '').replace(/\/+$/, '');
 const ProgressContext = createContext(null);
 
 const DEFAULT_SETTINGS = { soundEnabled: true, animationsEnabled: true };
-const XP_PER_LESSON = 25;
 
 const EMPTY_PROGRESS = {
   completedModules: {},
