@@ -3,6 +3,8 @@
 import logging
 import os
 import smtplib
+import socket
+import time
 import uuid
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -18,6 +20,15 @@ SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
 FROM_EMAIL    = os.environ.get("FROM_EMAIL") or SMTP_USERNAME or ""
 SENDER_NAME   = os.environ.get("SENDER_NAME", "DreamerZ")
 
+# Connection budget. Without an explicit timeout smtplib falls back to
+# Python's global default (typically `None` = block forever). On Render
+# we've seen outbound to Gmail hang long enough that the worker dies
+# before the calling request can return; capping at 15s gets us a clean
+# TimeoutError we can actually retry. Override via env if Gmail is being
+# unusually slow.
+SMTP_TIMEOUT_SECONDS = int(os.environ.get("SMTP_TIMEOUT_SECONDS", "15"))
+SMTP_MAX_ATTEMPTS    = int(os.environ.get("SMTP_MAX_ATTEMPTS", "2"))
+
 # Public frontend URL — used to build absolute links inside HTML emails.
 FRONTEND_URL  = os.environ.get("FRONTEND_URL", "https://dreamerz.com").rstrip("/")
 
@@ -25,8 +36,34 @@ FRONTEND_URL  = os.environ.get("FRONTEND_URL", "https://dreamerz.com").rstrip("/
 _from_domain = (FROM_EMAIL.split("@")[-1].strip(">") if "@" in FROM_EMAIL else "dreamerz.com")
 
 
+# Errors worth retrying. Auth failures (SMTPAuthenticationError) and
+# recipient rejections (SMTPRecipientsRefused) are deterministic — the
+# next attempt would fail the same way, so we don't retry those.
+_RETRYABLE_EXCEPTIONS = (
+    smtplib.SMTPServerDisconnected,
+    smtplib.SMTPConnectError,
+    smtplib.SMTPHeloError,
+    TimeoutError,
+    ConnectionResetError,
+    ConnectionRefusedError,
+    socket.gaierror,    # DNS resolution failure — usually transient
+    socket.timeout,
+    OSError,            # catch-all for network-unreachable, etc.
+)
+
+
 def _is_configured() -> bool:
     return bool(SMTP_USERNAME and SMTP_PASSWORD)
+
+
+def _attempt_send(msg: MIMEMultipart) -> None:
+    """One SMTP attempt. Raises on any failure; caller decides whether to retry."""
+    with smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=SMTP_TIMEOUT_SECONDS) as server:
+        server.ehlo()
+        server.starttls()
+        server.ehlo()
+        server.login(SMTP_USERNAME, SMTP_PASSWORD)
+        server.send_message(msg)
 
 
 def send_email(to_email: str, subject: str, html_body: str, text_body: str = "") -> bool:
@@ -35,6 +72,12 @@ def send_email(to_email: str, subject: str, html_body: str, text_body: str = "")
     Always includes a plain-text part alongside HTML — this is the single
     biggest factor in avoiding spam/phishing classification by Gmail.
     Returns True on success, False on failure.
+
+    Retries on transient network errors (connection timeout, DNS failure,
+    server disconnect) up to SMTP_MAX_ATTEMPTS times with exponential
+    backoff. Deterministic failures (bad credentials, rejected recipient)
+    are NOT retried — they'd just fail the same way and burn the request
+    budget.
     """
     if not _is_configured():
         logger.warning(
@@ -57,19 +100,59 @@ def send_email(to_email: str, subject: str, html_body: str, text_body: str = "")
         plain = text_body or _strip_html(html_body)
         msg.attach(MIMEText(plain, "plain", "utf-8"))
         msg.attach(MIMEText(html_body, "html", "utf-8"))
-
-        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
-            server.ehlo()
-            server.starttls()
-            server.ehlo()
-            server.login(SMTP_USERNAME, SMTP_PASSWORD)
-            server.send_message(msg)
-
-        logger.info("Email sent to %s — subject: %s", to_email, subject)
-        return True
-    except Exception:
-        logger.exception("Failed to send email to %s", to_email)
+    except Exception as build_err:
+        logger.exception(
+            "Failed to build MIME message for %s (subject: %s): %r",
+            to_email, subject, build_err,
+        )
         return False
+
+    last_exc: Exception | None = None
+    for attempt in range(1, SMTP_MAX_ATTEMPTS + 1):
+        try:
+            _attempt_send(msg)
+            if attempt > 1:
+                logger.info(
+                    "Email sent to %s on attempt %d/%d — subject: %s",
+                    to_email, attempt, SMTP_MAX_ATTEMPTS, subject,
+                )
+            else:
+                logger.info("Email sent to %s — subject: %s", to_email, subject)
+            return True
+        except _RETRYABLE_EXCEPTIONS as e:
+            last_exc = e
+            if attempt < SMTP_MAX_ATTEMPTS:
+                # Exponential backoff: 1s, 2s, 4s, ... Capped at the timeout
+                # so a slow network doesn't make us wait longer to retry than
+                # to give up.
+                backoff = min(2 ** (attempt - 1), SMTP_TIMEOUT_SECONDS)
+                logger.warning(
+                    "SMTP attempt %d/%d failed for %s (%s: %s); retrying in %ds",
+                    attempt, SMTP_MAX_ATTEMPTS, to_email,
+                    type(e).__name__, e, backoff,
+                )
+                time.sleep(backoff)
+                continue
+            break
+        except Exception as e:
+            # Non-retryable (e.g. SMTPAuthenticationError, SMTPRecipientsRefused).
+            # Log with the exception class name so the cause is visible even
+            # when the traceback gets truncated in log viewers.
+            logger.exception(
+                "Failed to send email to %s (non-retryable %s): %r",
+                to_email, type(e).__name__, e,
+            )
+            return False
+
+    # Exhausted retries on a transient error — log the final attempt's
+    # exception with the class name front and centre.
+    logger.error(
+        "Failed to send email to %s after %d attempts. Last error: %s: %s",
+        to_email, SMTP_MAX_ATTEMPTS,
+        type(last_exc).__name__ if last_exc else "Unknown",
+        last_exc,
+    )
+    return False
 
 
 def _strip_html(html: str) -> str:
