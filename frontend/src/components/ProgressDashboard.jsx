@@ -179,21 +179,30 @@ export const ProgressDashboard = ({
                     </div>
                   </Link>
 
-                  {/* Unenroll Button */}
-                  {onUnenroll && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        onUnenroll(tool);
-                      }}
-                      className="flex-shrink-0 px-3 py-2 rounded-lg bg-rose-100 text-rose-700 hover:bg-rose-200 hover:text-rose-800 transition-colors text-sm font-semibold"
-                      title="Unenroll from course"
+                  {/* Continue + Unenroll Buttons */}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <Link
+                      to={`/learn/${tool.category_id || 'uncategorized'}/${tool.id}`}
+                      className="px-3 py-2 rounded-lg bg-primary text-white hover:bg-primary/90 transition-colors text-sm font-semibold"
+                      title="Continue learning"
                     >
-                      Unenroll
-                    </button>
-                  )}
+                      Continue
+                    </Link>
+                    {onUnenroll && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          onUnenroll(tool);
+                        }}
+                        className="px-3 py-2 rounded-lg bg-rose-100 text-rose-700 hover:bg-rose-200 hover:text-rose-800 transition-colors text-sm font-semibold"
+                        title="Unenroll from course"
+                      >
+                        Unenroll
+                      </button>
+                    )}
+                  </div>
                 </div>
               </motion.div>
             );
