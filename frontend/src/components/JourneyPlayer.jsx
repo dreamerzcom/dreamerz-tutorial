@@ -16,7 +16,6 @@ import { SafetyBanner } from './SafetyBanner';
 import { CoursePreviewVideo } from './CoursePreviewVideo';
 import { MarkdownContent } from './MarkdownContent';
 import { ModuleHeroVideo } from './ModuleHeroVideo';
-import { WatermarkOverlay, WatermarkNotice } from './WatermarkOverlay';
 import { PromptLabPanel } from './PromptLabPanel';
 import { CanvaCreatorPanel } from './CanvaCreatorPanel';
 import { useLearningProgress } from '../hooks/useLearningProgress';
@@ -704,7 +703,6 @@ export const JourneyPlayer = ({
                               <Clock className="w-3 h-3" />
                               {activeModule.minutes} min
                             </span>
-                            {!previewMode && <WatermarkNotice />}
                           </div>
                         </div>
 
@@ -760,17 +758,8 @@ export const JourneyPlayer = ({
                       </div>
                     </div>
 
-                    {/* Content Body
-                        Wrapped in a positioned container so the
-                        WatermarkOverlay can cover the entire lesson
-                        view. The overlay tags every screenshot with
-                        the viewer's email + timestamp — making any
-                        leak traceable back to the source account.
-                        Skipped in previewMode (admin preview) so
-                        creators reviewing content aren't watermarked
-                        with their own admin email. */}
-                    <div className="relative p-4 sm:p-6 lg:p-8 w-full min-w-0 overflow-x-hidden">
-                      {!previewMode && <WatermarkOverlay />}
+                    {/* Content Body */}
+                    <div className="p-4 sm:p-6 lg:p-8 w-full min-w-0 overflow-x-hidden">
                       <AnimatePresence mode="wait">
                         {contentSection === 'learn' && (
                           <motion.div
