@@ -121,9 +121,17 @@ export const Footer = () => {
             <h3 className="font-semibold text-white mb-4">Contact</h3>
             <ul className="space-y-2 text-sm">
               <li>
+                {/* mailto: opens the user's default mail client (Outlook,
+                    Gmail web on Chrome with the handler set, Apple Mail,
+                    Thunderbird, etc.) with To: + Subject: pre-filled.
+                    The previous `break-all` class let the address wrap
+                    mid-word ("gmail.co" / "m") inside the narrow Contact
+                    column. Switched to `whitespace-nowrap` + `text-xs`
+                    so the full 26-char address renders on one line and
+                    still fits the column at every breakpoint. */}
                 <a
                   href={`mailto:${SUPPORT_EMAIL}?subject=DreamerZ%20support%20request`}
-                  className="hover:text-white transition-colors flex items-center gap-2 break-all"
+                  className="hover:text-white transition-colors flex items-center gap-2 whitespace-nowrap text-xs"
                   data-testid="footer-support-email"
                 >
                   <Mail className="w-4 h-4 text-primary flex-shrink-0" />
