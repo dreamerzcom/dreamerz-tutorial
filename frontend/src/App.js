@@ -18,6 +18,7 @@ import { RequireAuth, RequireRole, RequireTrialActive } from "./components/Requi
 import { Landing } from "./pages/Landing";
 import { LearnHub } from "./pages/LearnHub";
 import { ToolJourney } from "./pages/ToolJourney";
+import { SampleLesson } from "./pages/SampleLesson";
 import { Parents } from "./pages/Parents";
 import { Account } from "./pages/Account";
 import { Login } from "./pages/Login";
@@ -132,6 +133,11 @@ function App() {
                   {/* Primary routes */}
                   <Route path="/home" element={<Landing />} />
                   <Route path="/" element={<Navigate to="/home" replace />} />
+                  {/* Public sample-lesson preview — intentionally NOT gated.
+                      The landing CTA "See a sample lesson" funnels prospects
+                      here so they can watch the intro video and read the
+                      first lesson before being asked to sign up. */}
+                  <Route path="/sample-lesson" element={<SampleLesson />} />
                   <Route path="/learn" element={<LearnHub />} />
                   <Route path="/learn/:categoryName" element={<LearnHub />} />
                   <Route path="/learn/:categoryName/:toolId" element={

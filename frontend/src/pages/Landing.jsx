@@ -123,7 +123,11 @@ export const Landing = () => {
                     </li>
                   ))}
                 </ul>
-                <Link to="/learn/ai-learning/chatgpt" className="inline-flex items-center gap-1 text-primary font-semibold text-sm hover:text-primary/80">
+                {/* Public preview route — no auth gate, lands on the
+                    Startup Studio intro video. /learn/* is wrapped in
+                    RequireTrialActive and bounces anonymous prospects to
+                    /login, which defeats the "try it first" intent. */}
+                <Link to="/sample-lesson" className="inline-flex items-center gap-1 text-primary font-semibold text-sm hover:text-primary/80">
                   See a sample lesson <ChevronRight className="w-4 h-4" />
                 </Link>
               </motion.div>
