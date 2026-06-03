@@ -3,16 +3,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, MessageCircle, Mic, User, Bot, ChevronDown } from 'lucide-react';
 import { Button } from './ui/button';
 import API_BASE from '../config/api';
-import { MAX_CHAT_MESSAGES, ROLEPLAY_HISTORY_LIMIT, AUTH_STORAGE_KEY } from '../config/constants';
+import { MAX_CHAT_MESSAGES, ROLEPLAY_HISTORY_LIMIT, getStoredAuthToken } from '../config/constants';
 
 const getAuthHeaders = () => {
-  try {
-    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
-    const token = raw ? JSON.parse(raw)?.token : null;
-    return token ? { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } : { 'Content-Type': 'application/json' };
-  } catch {
-    return { 'Content-Type': 'application/json' };
-  }
+  const token = getStoredAuthToken();
+  return token
+    ? { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
+    : { 'Content-Type': 'application/json' };
 };
 
 const ROLES = [

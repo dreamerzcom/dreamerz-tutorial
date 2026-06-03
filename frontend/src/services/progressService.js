@@ -1,33 +1,13 @@
+import { getStoredAuthToken } from '../config/constants';
+
 const API_BASE = (process.env.REACT_APP_BACKEND_URL || '').replace(/\/+$/, '');
 
+// Single source of truth for the auth header — see config/constants.js.
 const getAuthHeaders = () => {
-  const TOKEN_KEY = 'dreamerz_beta_token_v1';
-  try {
-    // Try new TOKEN_KEY first
-    let token = localStorage.getItem(TOKEN_KEY);
-    if (!token) {
-      // Fallback to old STORAGE_KEY for migration
-      const oldAuth = localStorage.getItem('dreamerz_beta_auth_v1');
-      if (oldAuth) {
-        try {
-          const parsed = JSON.parse(oldAuth);
-          if (parsed?.token) {
-            token = parsed.token;
-          }
-        } catch (e) {
-          console.error('Failed to parse old auth data', e);
-        }
-      }
-    }
-    if (!token) return { 'Content-Type': 'application/json' };
-    return {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    };
-  } catch (error) {
-    console.error('Failed to get auth headers', error);
-    return { 'Content-Type': 'application/json' };
-  }
+  const token = getStoredAuthToken();
+  return token
+    ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+    : { 'Content-Type': 'application/json' };
 };
 
 // ---------------------------------------------------------------------------

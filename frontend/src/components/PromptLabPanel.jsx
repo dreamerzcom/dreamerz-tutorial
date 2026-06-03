@@ -28,23 +28,14 @@ const TOOL_THEMES = {
 const getToolTheme = (toolId) =>
   TOOL_THEMES[(toolId || '').toLowerCase()] || null;
 
-// Same key as useAuth — read once per request so a stale-on-mount token
-// after a refresh still authenticates correctly.
-const AUTH_STORAGE_KEY = 'dreamerz_beta_auth_v1';
-const TOKEN_KEY = 'dreamerz_beta_token_v1';
+// Use the shared token reader so auth-storage changes only need updates
+// in config/constants.js. The old local helper duplicated the storage-key
+// migration logic and silently fell out of sync.
+import { getStoredAuthToken } from '../config/constants';
+
 const getAuthHeaders = () => {
-  try {
-    // Try new TOKEN_KEY first
-    let token = localStorage.getItem(TOKEN_KEY);
-    if (!token) {
-      // Fallback to old STORAGE_KEY for migration
-      const raw = localStorage.getItem(AUTH_STORAGE_KEY);
-      token = raw ? JSON.parse(raw)?.token : null;
-    }
-    return token ? { Authorization: `Bearer ${token}` } : {};
-  } catch {
-    return {};
-  }
+  const token = getStoredAuthToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
 // Preset templates

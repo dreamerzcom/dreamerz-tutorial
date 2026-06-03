@@ -24,27 +24,17 @@ import {
   Loader2,
 } from 'lucide-react';
 
-const API_BASE = (process.env.REACT_APP_BACKEND_URL || '').replace(/\/+$/, '');
-// Same key as useAuth (constants.AUTH_STORAGE_KEY) — kept inline to avoid
-// pulling in an extra import for a single value.
-const AUTH_STORAGE_KEY = 'dreamerz_beta_auth_v1';
-const TOKEN_KEY = 'dreamerz_beta_token_v1';
+import { getStoredAuthToken } from '../config/constants';
 
+const API_BASE = (process.env.REACT_APP_BACKEND_URL || '').replace(/\/+$/, '');
+
+// Use the shared token reader so any future storage-key change only
+// needs updates in config/constants.js.
 const getAuthHeaders = () => {
-  try {
-    // Try new TOKEN_KEY first
-    let token = localStorage.getItem(TOKEN_KEY);
-    if (!token) {
-      // Fallback to old STORAGE_KEY for migration
-      const raw = localStorage.getItem(AUTH_STORAGE_KEY);
-      token = raw ? JSON.parse(raw)?.token : null;
-    }
-    return token
-      ? { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
-      : { 'Content-Type': 'application/json' };
-  } catch {
-    return { 'Content-Type': 'application/json' };
-  }
+  const token = getStoredAuthToken();
+  return token
+    ? { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
+    : { 'Content-Type': 'application/json' };
 };
 
 // Canva's own Magic Studio entry points. These pages prompt the user for

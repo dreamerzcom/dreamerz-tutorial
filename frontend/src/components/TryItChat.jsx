@@ -4,27 +4,14 @@ import {
   Send, ExternalLink, Copy, Check, Sparkles, RotateCcw, Info,
 } from 'lucide-react';
 
+import { getStoredAuthToken } from '../config/constants';
+
 const API_BASE = (process.env.REACT_APP_BACKEND_URL || '').replace(/\/+$/, '');
 
-// Same key the rest of the app uses for the auth blob (see useAuth.js).
-const AUTH_STORAGE_KEY = 'dreamerz_beta_auth_v1';
-const TOKEN_KEY = 'dreamerz_beta_token_v1';
-
-const getAuthToken = () => {
-  try {
-    // Try new TOKEN_KEY first
-    let token = localStorage.getItem(TOKEN_KEY);
-    if (!token) {
-      // Fallback to old STORAGE_KEY for migration
-      const raw = localStorage.getItem(AUTH_STORAGE_KEY);
-      if (!raw) return null;
-      token = JSON.parse(raw)?.token;
-    }
-    return token;
-  } catch {
-    return null;
-  }
-};
+// Shared auth-token reader so any future storage-key change only needs
+// updates in config/constants.js. Previously this file duplicated the
+// migration logic and silently fell out of sync with useAuth.js.
+const getAuthToken = () => getStoredAuthToken();
 
 // Per-tool theming + external links. `chat: false` tools (Canva, Syllaby)
 // aren't conversational, so we show a link-out + copy-prompt panel instead
