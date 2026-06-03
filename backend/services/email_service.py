@@ -356,7 +356,7 @@ def build_welcome_email(username: str) -> str:
                 <a href="{FRONTEND_URL}/account" style="color:#818cf8; text-decoration:none; font-weight:600;">My Account</a>
               </p>
               <p style="color:#64748b; font-size:12px; margin:0;">
-                &copy; 2026 DreamerZ. Made with &#x2764;&#xFE0F; for AI &amp; English learners.
+                &copy; 2026 DreamerZ. Made with &#x2764;&#xFE0F; to dream, learn and LIVE Next Gen Education Process
               </p>
             </td>
           </tr>

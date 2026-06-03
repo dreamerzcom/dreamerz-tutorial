@@ -462,9 +462,11 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     last_login: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
-    # 45-day free trial expiry. NULL means "no trial" — exempt accounts
-    # (admin / creator / supervisor) are never gated; learners get a value
-    # populated at registration. See services/auth_service.py:is_trial_active.
+    # Free-trial expiry (currently 30 days from registration — see
+    # services/auth_service.py:TRIAL_DURATION_DAYS for the canonical value).
+    # NULL means "no trial" — exempt accounts (admin / creator / supervisor)
+    # are never gated; learners get a value populated at registration. See
+    # services/auth_service.py:is_trial_active.
     trial_expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     # Profile fields
     phone: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)

@@ -80,7 +80,7 @@ export const Landing = () => {
                 <Link to={isAuthenticated ? '/learn' : '/register'}>
                   <Button className="bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900 font-bold px-8 py-3.5 rounded-full shadow-lg shadow-amber-500/25 hover:shadow-xl hover:shadow-amber-500/30 transition-all w-full sm:w-auto">
                     <Play className="w-4 h-4 mr-2" />
-                    {isAuthenticated ? 'Go to Learning' : 'Free trial for 45 days'}
+                    {isAuthenticated ? 'Go to Learning' : 'Free trial for 30 days'}
                   </Button>
                 </Link>
                 <Link to="/supervisors">
@@ -218,14 +218,14 @@ export const Landing = () => {
             >
               <Award className="w-10 h-10 text-amber-400 mx-auto mb-5" />
               <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3">
-                Start your 45-day free trial
+                Start your 30-day free trial
               </h2>
               <p className="text-slate-400 mb-7 max-w-md mx-auto">
                 Start your learning journey today. You can delete your data anytime.
               </p>
               <Link to={isAuthenticated ? '/learn' : '/register'}>
                 <Button className="bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900 font-bold px-8 py-3.5 rounded-full shadow-lg hover:shadow-xl transition-all">
-                  {isAuthenticated ? 'Go to Learning' : 'Free trial for 45 days →'}
+                  {isAuthenticated ? 'Go to Learning' : 'Free trial for 30 days →'}
                 </Button>
               </Link>
 
@@ -271,7 +271,7 @@ export const Landing = () => {
             <Link to="/register" className="flex-1">
               <Button className="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900 font-bold rounded-full">
                 <Play className="w-4 h-4 mr-2" />
-                Free trial for 45 days
+                Free trial for 30 days
               </Button>
             </Link>
             <button

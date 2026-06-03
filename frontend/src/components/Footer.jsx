@@ -151,7 +151,7 @@ export const Footer = () => {
         <div className="border-t border-slate-800 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-sm text-slate-500">
             © {new Date().getFullYear()} DreamerZ. Made with{' '}
-            <Heart className="w-3 h-3 inline text-rose-500" /> for AI & Conversational-English learners.
+            <Heart className="w-3 h-3 inline text-rose-500" /> to dream, learn and LIVE Next Gen Education Process
           </p>
           
           <div className="flex items-center gap-4 text-sm">

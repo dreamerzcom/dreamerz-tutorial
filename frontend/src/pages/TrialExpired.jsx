@@ -23,7 +23,7 @@ export const TrialExpired = () => {
 
   return (
     <>
-      <SEO title="Free trial ended" description="Your 45-day DreamerZ free trial has ended." />
+      <SEO title="Free trial ended" description="Your 30-day DreamerZ free trial has ended." />
       <div className="min-h-screen bg-slate-50 pt-24 pb-16">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
@@ -37,7 +37,7 @@ export const TrialExpired = () => {
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-3">
-              Your 45-day free trial has ended
+              Your 30-day free trial has ended
             </h1>
 
             <p className="text-slate-600 leading-relaxed mb-8 max-w-lg mx-auto">

@@ -20,10 +20,12 @@ from utils.sanitizers import sanitize_str
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # ── Free trial ────────────────────────────────────────────
-# Learner accounts get a 45-day window from registration. Once it lapses
+# Learner accounts get a 30-day window from registration. Once it lapses
 # they are routed to the trial-expired page and blocked from progress /
 # AI endpoints. Roles in TRIAL_EXEMPT_ROLES are never gated.
-TRIAL_DURATION_DAYS = 45
+# Note: existing users keep their original trial_expires_at — only new
+# registrations from this point on are bound to the 30-day window.
+TRIAL_DURATION_DAYS = 30
 TRIAL_EXEMPT_ROLES = {"admin", "creator", "supervisor"}
 
 # Dummy hash for constant-time comparison when user is not found

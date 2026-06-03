@@ -305,7 +305,7 @@ export const SampleLesson = () => {
                 <p className="text-xs text-slate-500 mt-0.5">
                   {isAuthenticated
                     ? "Open the full course to track progress and earn XP."
-                    : "Create a free account — 45-day trial, no card needed."}
+                    : "Create a free account — 30-day trial, no card needed."}
                 </p>
               </div>
               {isAuthenticated ? (
@@ -382,7 +382,7 @@ export const SampleLesson = () => {
             </div>
             <div className="mt-4 flex items-center justify-center gap-2 text-xs text-slate-500">
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-              45-day free trial · No credit card · Cancel anytime
+              30-day free trial · No credit card · Cancel anytime
             </div>
           </div>
         )}

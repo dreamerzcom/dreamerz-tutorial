@@ -30,7 +30,7 @@ const TrialBadge = ({ trialDaysRemaining, className = '' }) => {
     <Link
       to={expired ? '/trial-expired' : '/learn'}
       className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-semibold ${tone} ${className}`}
-      title={expired ? 'Free trial ended — tap for details' : '45-day free trial'}
+      title={expired ? 'Free trial ended — tap for details' : '30-day free trial'}
       data-testid="nav-trial-badge"
     >
       <Clock className="w-3 h-3" />
