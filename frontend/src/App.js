@@ -92,6 +92,19 @@ const CoursePathRedirect = () => {
   return <Navigate to={`/learn/ai-learning/${toolId}`} replace />;
 };
 
+/** Parent → Supervisor rebrand. The role concept was renamed across the UI;
+ *  the old /parents/* URLs stay live as redirects so existing bookmarks,
+ *  share-links, emails and the old testids don't 404. */
+const SupervisorStudentRedirect = () => {
+  const { studentUserId } = useParams();
+  return (
+    <Navigate
+      to={`/supervisors/dashboard/students/${studentUserId}`}
+      replace
+    />
+  );
+};
+
 function App() {
   // Keepalive: ping backend health endpoint every 1 minute to prevent Render from shutting down
   useEffect(() => {
@@ -151,7 +164,7 @@ function App() {
                     </RequireTrialActive>
                   } />
                   <Route path="/trial-expired" element={<TrialExpired />} />
-                  <Route path="/parents" element={<Parents />} />
+                  <Route path="/supervisors" element={<Parents />} />
                   <Route path="/account" element={
                     <RequireAuth>
                       <Account />
@@ -179,9 +192,12 @@ function App() {
                     }
                   />
 
-                  {/* Parent dashboard routes */}
+                  {/* Supervisor dashboard routes (renamed from /parents/*).
+                      The original /parents/* paths still resolve via the
+                      backward-compatible redirect block below — old emails,
+                      bookmarks and external links keep working. */}
                   <Route
-                    path="/parents/dashboard"
+                    path="/supervisors/dashboard"
                     element={
                       <RequireRole roles={["supervisor", "admin", "creator"]}>
                         <ParentDashboard />
@@ -189,7 +205,7 @@ function App() {
                     }
                   />
                   <Route
-                    path="/parents/dashboard/students/:studentUserId"
+                    path="/supervisors/dashboard/students/:studentUserId"
                     element={
                       <RequireRole roles={["supervisor", "admin"]}>
                         <ParentStudentDetail />
@@ -208,8 +224,18 @@ function App() {
                   <Route path="/prompt-lab" element={<Navigate to="/learn" replace />} />
                   <Route path="/profile" element={<Navigate to="/account" replace />} />
                   <Route path="/settings" element={<Navigate to="/account" replace />} />
-                  <Route path="/parent" element={<Navigate to="/parents/dashboard" replace />} />
-                  <Route path="/parentdashboard" element={<Navigate to="/parents/dashboard" replace />} />
+                  {/* /parents/* are kept as redirects so existing bookmarks,
+                      emails and external share-links keep resolving after
+                      the supervisor rebrand. Remove only once analytics
+                      show ~zero hits on these paths. */}
+                  <Route path="/parent" element={<Navigate to="/supervisors/dashboard" replace />} />
+                  <Route path="/parentdashboard" element={<Navigate to="/supervisors/dashboard" replace />} />
+                  <Route path="/parents" element={<Navigate to="/supervisors" replace />} />
+                  <Route path="/parents/dashboard" element={<Navigate to="/supervisors/dashboard" replace />} />
+                  <Route
+                    path="/parents/dashboard/students/:studentUserId"
+                    element={<SupervisorStudentRedirect />}
+                  />
 
                   <Route path="*" element={<NotFound />} />
                 </Routes>

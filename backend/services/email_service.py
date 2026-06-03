@@ -270,7 +270,7 @@ def build_welcome_email(username: str) -> str:
               <p style="color:#94a3b8; font-size:13px; margin:0 0 8px;">
                 <a href="{FRONTEND_URL}/learn" style="color:#818cf8; text-decoration:none; font-weight:600;">Courses</a>
                 &nbsp;&middot;&nbsp;
-                <a href="{FRONTEND_URL}/parents" style="color:#818cf8; text-decoration:none; font-weight:600;">For Supervisor</a>
+                <a href="{FRONTEND_URL}/supervisors" style="color:#818cf8; text-decoration:none; font-weight:600;">For Supervisor</a>
                 &nbsp;&middot;&nbsp;
                 <a href="{FRONTEND_URL}/account" style="color:#818cf8; text-decoration:none; font-weight:600;">My Account</a>
               </p>

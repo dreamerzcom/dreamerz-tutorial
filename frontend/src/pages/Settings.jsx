@@ -274,8 +274,8 @@ export const SettingsPage = () => {
             transition={{ delay: 0.4 }}
             className="mt-6 text-center"
           >
-            <Link 
-              to="/parents" 
+            <Link
+              to="/supervisors"
               className="inline-flex items-center gap-2 text-primary hover:text-primary/80 font-medium"
             >
               <Shield className="w-4 h-4" />

@@ -94,7 +94,7 @@ async def create_link_by_identifier(
         )
         parent = parent_result.scalars().first()
         if not parent:
-            raise HTTPException(status_code=404, detail="Parent user not found")
+            raise HTTPException(status_code=404, detail="Supervisor user not found")
 
         student_result = await session.execute(
             select(User).where(

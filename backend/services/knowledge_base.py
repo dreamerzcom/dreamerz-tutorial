@@ -78,9 +78,9 @@ player. Progress, XP, and completion are tracked automatically.
 
 # Supervisor dashboard (teachers / mentors / guardians)
 
-People who supervise a learner can access /parents/dashboard to monitor
+People who supervise a learner can access /supervisors/dashboard to monitor
 progress. Supervisors are added per-learner. Public landing page for
-supervisors: /parents.
+supervisors: /supervisors.
 
 # Account, password, settings
 
@@ -98,7 +98,7 @@ The platform uses Claude (Anthropic's API) as the LLM provider.
 
 The course content is freely accessible during the trial. Long-term
 access and certain premium features may be paid — the pricing page
-(/parents includes a section, and the trial-expired page details the
+(/supervisors includes a section, and the trial-expired page details the
 upgrade path) has the latest plans. For specific pricing or invoice
 questions, email dreamerz.support@gmail.com.
 
@@ -113,8 +113,8 @@ legitimate learning is unaffected.
 - Catalog:                /learn
 - My progress:            /learn/myprogress
 - Account settings:       /account
-- For supervisors:        /parents
-- Supervisor dashboard:   /parents/dashboard
+- For supervisors:        /supervisors
+- Supervisor dashboard:   /supervisors/dashboard
 - Admin (creators only):  /admin
 
 # Languages

@@ -40,9 +40,9 @@ export const Footer = () => {
             <ul className="space-y-2 text-sm">
               <li>
                 <Link
-                  to="/parents"
+                  to="/supervisors"
                   className="hover:text-white transition-colors flex items-center gap-2"
-                  data-testid="footer-parents-link"
+                  data-testid="footer-supervisors-link"
                 >
                   <Shield className="w-4 h-4 text-primary" />
                   For Supervisor
@@ -92,8 +92,8 @@ export const Footer = () => {
           </p>
           
           <div className="flex items-center gap-4 text-sm">
-            <Link 
-              to="/parents" 
+            <Link
+              to="/supervisors"
               className="text-primary hover:text-primary/80 transition-colors font-medium flex items-center gap-1"
             >
               <Shield className="w-4 h-4" />

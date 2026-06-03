@@ -11,7 +11,10 @@ const getAuthHeaders = () => {
 };
 
 // ---------------------------------------------------------------------------
-// Parent-Student Links
+// Supervisor-Learner Links
+// (Backend route paths kept under /api/parent/* for backward compatibility
+// — the DB table is still parent_student_link. Only the user-visible
+// wording is rebranded; the wire protocol stays.)
 // ---------------------------------------------------------------------------
 
 export const createParentStudentLink = async (studentUserId, relationshipType = null) => {
@@ -22,7 +25,7 @@ export const createParentStudentLink = async (studentUserId, relationshipType = 
   });
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.detail || 'Failed to create parent-student link');
+    throw new Error(error.detail || 'Failed to create supervisor-learner link');
   }
   return response.json();
 };
@@ -54,7 +57,7 @@ export const getParentStudentLinks = async (studentUserId = null, isActive = nul
   });
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.detail || 'Failed to get parent-student links');
+    throw new Error(error.detail || 'Failed to get supervisor-learner links');
   }
   return response.json();
 };
@@ -67,7 +70,7 @@ export const updateParentStudentLink = async (linkId, updates) => {
   });
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.detail || 'Failed to update parent-student link');
+    throw new Error(error.detail || 'Failed to update supervisor-learner link');
   }
   return response.json();
 };
@@ -79,7 +82,7 @@ export const deactivateParentStudentLink = async (linkId) => {
   });
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.detail || 'Failed to deactivate parent-student link');
+    throw new Error(error.detail || 'Failed to deactivate supervisor-learner link');
   }
   return response.json();
 };
@@ -91,13 +94,13 @@ export const getParentStudents = async () => {
   });
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.detail || 'Failed to get parent students');
+    throw new Error(error.detail || 'Failed to get linked learners');
   }
   return response.json();
 };
 
 // ---------------------------------------------------------------------------
-// Parent Reporting
+// Supervisor Reporting
 // ---------------------------------------------------------------------------
 
 export const getStudentOverview = async (studentUserId) => {

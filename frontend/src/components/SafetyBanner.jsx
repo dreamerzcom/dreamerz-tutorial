@@ -35,8 +35,8 @@ export const SafetyBanner = ({ variant = 'default' }) => {
               </div>
               <p className="text-sm text-slate-600">
                 {message}
-                <Link 
-                  to="/parents" 
+                <Link
+                  to="/supervisors"
                   className="ml-2 text-primary hover:text-primary/80 font-medium inline-flex items-center gap-1"
                 >
                   <Info className="w-3 h-3" />

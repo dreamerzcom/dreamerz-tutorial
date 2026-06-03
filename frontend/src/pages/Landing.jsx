@@ -80,7 +80,7 @@ export const Landing = () => {
                     {isAuthenticated ? 'Go to Learning' : 'Free trial for 45 days'}
                   </Button>
                 </Link>
-                <Link to="/parents">
+                <Link to="/supervisors">
                   <Button className="bg-white/10 backdrop-blur text-white border border-white/20 font-medium px-8 py-3.5 rounded-full hover:bg-white/20 transition-all w-full sm:w-auto">
                     <Users className="w-4 h-4 mr-2" />
                     For supervisor
@@ -91,7 +91,7 @@ export const Landing = () => {
           </div>
         </section>
 
-        {/* ━━━ TWO PROOF CARDS — learner + parent ━━━ */}
+        {/* ━━━ TWO PROOF CARDS — learner + supervisor ━━━ */}
         <section className="py-16 bg-slate-50">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid lg:grid-cols-2 gap-6">
@@ -132,7 +132,7 @@ export const Landing = () => {
                 </Link>
               </motion.div>
 
-              {/* Parent proof */}
+              {/* Supervisor proof */}
               <motion.div
                 initial={{ opacity: 0, y: 16 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -159,12 +159,11 @@ export const Landing = () => {
                     </li>
                   ))}
                 </ul>
-                {/* Skip the /parents marketing page and jump straight to
+                {/* Skip the /supervisors marketing page and jump straight to
                     the actual dashboard. Supervisors/admins/creators see it
                     directly; anonymous users are bounced to /login by
-                    RequireRole (returning to /parents/dashboard on sign-in
-                    is handled by the auth flow). */}
-                <Link to="/parents/dashboard" className="inline-flex items-center gap-1 text-primary font-semibold text-sm hover:text-primary/80">
+                    RequireRole. */}
+                <Link to="/supervisors/dashboard" className="inline-flex items-center gap-1 text-primary font-semibold text-sm hover:text-primary/80">
                   Open the supervisor dashboard <ChevronRight className="w-4 h-4" />
                 </Link>
               </motion.div>
@@ -180,7 +179,7 @@ export const Landing = () => {
                 Questions supervisors usually ask
               </h3>
               <p className="text-sm text-slate-500 text-center mb-8">
-                Couldn't find an answer? <Link to="/parents" className="text-primary hover:underline">See the supervisor guide.</Link>
+                Couldn't find an answer? <Link to="/supervisors" className="text-primary hover:underline">See the supervisor guide.</Link>
               </p>
               <div className="space-y-3">
                 {faqs.map((faq, i) => (
@@ -254,7 +253,7 @@ export const Landing = () => {
               </div>
               <div className="flex items-center gap-4 text-sm text-slate-500">
                 <Link to="/learn" className="hover:text-slate-700 transition-colors">Courses</Link>
-                <Link to="/parents" className="hover:text-slate-700 transition-colors">For Supervisor</Link>
+                <Link to="/supervisors" className="hover:text-slate-700 transition-colors">For Supervisor</Link>
                 <Link to="/login" className="hover:text-slate-700 transition-colors">Sign in</Link>
               </div>
             </div>
