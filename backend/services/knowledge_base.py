@@ -117,6 +117,24 @@ legitimate learning is unaffected.
 - Supervisor dashboard:   /supervisors/dashboard
 - Admin (creators only):  /admin
 
+# Social media
+
+DreamerZ posts updates, behind-the-scenes content, and learning tips on
+the channels below. These are the only official handles — anything not
+on this list is not us. (If a learner reports an impersonator, escalate
+to dreamerz.support@gmail.com.)
+
+- Instagram: https://www.instagram.com/dreamerz8314
+- Facebook:  https://www.facebook.com/share/18gki1kfVd/
+- LinkedIn:  https://www.linkedin.com/in/dreamer-z-185669413
+- YouTube:   https://youtube.com/@dreamerz-m1y
+
+When a learner asks "where can I follow you?", "do you have Instagram?",
+"YouTube channel?", etc., share the matching link from the list. If they
+ask for a platform that's not listed (TikTok, X/Twitter, Discord, etc.),
+say we don't have an official account there yet and point them at the
+ones above.
+
 # Languages
 
 English-first. Some lessons include Hindi/Bengali support tips. UI is

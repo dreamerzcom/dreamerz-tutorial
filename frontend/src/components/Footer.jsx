@@ -1,7 +1,42 @@
 import { Link } from 'react-router-dom';
-import { Shield, Heart, Mail } from 'lucide-react';
+import {
+  Shield,
+  Heart,
+  Mail,
+  Instagram,
+  Facebook,
+  Linkedin,
+  Youtube,
+} from 'lucide-react';
 
 const SUPPORT_EMAIL = 'dreamerz.support@gmail.com';
+
+// Public social handles. Mirrored in backend/services/knowledge_base.py so
+// Swapna can answer "where can I follow you?" — if you add/remove or change
+// a URL here, update the knowledge base too (there's no shared config layer
+// between the React app and the Python backend for marketing URLs).
+const SOCIAL_LINKS = [
+  {
+    label: 'Instagram',
+    href: 'https://www.instagram.com/dreamerz8314',
+    Icon: Instagram,
+  },
+  {
+    label: 'Facebook',
+    href: 'https://www.facebook.com/share/18gki1kfVd/',
+    Icon: Facebook,
+  },
+  {
+    label: 'LinkedIn',
+    href: 'https://www.linkedin.com/in/dreamer-z-185669413',
+    Icon: Linkedin,
+  },
+  {
+    label: 'YouTube',
+    href: 'https://youtube.com/@dreamerz-m1y',
+    Icon: Youtube,
+  },
+];
 
 export const Footer = () => {
   return (
@@ -20,6 +55,26 @@ export const Footer = () => {
               Teaching learners to use AI, responsibly & ethically.
               Learn Prompt Engineering, understand AI tools, and build future-ready skills.
             </p>
+
+            {/* Social handles — opens each in a new tab. rel includes
+                noopener+noreferrer so the destination tab can't access
+                window.opener (security) or read our Referer (privacy). */}
+            <div className="mt-5 flex items-center gap-2.5">
+              {SOCIAL_LINKS.map(({ label, href, Icon }) => (
+                <a
+                  key={label}
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`DreamerZ on ${label}`}
+                  title={label}
+                  data-testid={`footer-social-${label.toLowerCase()}`}
+                  className="w-9 h-9 rounded-lg bg-slate-800 hover:bg-primary text-slate-300 hover:text-white transition-colors flex items-center justify-center"
+                >
+                  <Icon className="w-4 h-4" />
+                </a>
+              ))}
+            </div>
           </div>
 
           {/* Quick Links */}
