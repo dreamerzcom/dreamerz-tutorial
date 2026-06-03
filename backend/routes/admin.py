@@ -2725,13 +2725,21 @@ async def add_youtube_link(
     if not any(domain in youtube_url for domain in ["youtube.com", "youtu.be"]):
         raise HTTPException(status_code=400, detail="Invalid YouTube URL")
     
-    # Convert to embed URL if needed
+    # Convert to embed URL if needed. We have to do this — the /shorts/ and
+    # /watch pages set X-Frame-Options that refuse cross-origin <iframe>
+    # embedding; only /embed/<id> is iframe-safe. /shorts/ URLs are the
+    # default share format from the YouTube mobile app, so they show up
+    # often.
     embed_url = youtube_url
     if "watch?v=" in youtube_url:
         video_id = youtube_url.split("watch?v=")[1].split("&")[0]
         embed_url = f"https://www.youtube.com/embed/{video_id}"
     elif "youtu.be/" in youtube_url:
         video_id = youtube_url.split("youtu.be/")[1].split("?")[0]
+        embed_url = f"https://www.youtube.com/embed/{video_id}"
+    elif "/shorts/" in youtube_url:
+        # /shorts/<id> or /shorts/<id>?si=... — strip any querystring/fragment.
+        video_id = youtube_url.split("/shorts/")[1].split("?")[0].split("#")[0].split("/")[0]
         embed_url = f"https://www.youtube.com/embed/{video_id}"
     
     # Create media asset

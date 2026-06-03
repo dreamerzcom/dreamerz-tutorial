@@ -567,7 +567,7 @@ export const LessonEditor = ({ lessonId, token, onLessonUpdated, onLessonDeleted
                 type="url"
                 value={youtubeUrl}
                 onChange={(e) => setYoutubeUrl(e.target.value)}
-                placeholder="https://www.youtube.com/watch?v=..."
+                placeholder="youtube.com/watch?v=… , youtu.be/… or /shorts/…"
                 disabled={addingYoutube}
                 className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/40 disabled:bg-slate-100"
               />

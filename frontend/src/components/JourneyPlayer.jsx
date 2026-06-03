@@ -20,6 +20,7 @@ import { PromptLabPanel } from './PromptLabPanel';
 import { CanvaCreatorPanel } from './CanvaCreatorPanel';
 import { useLearningProgress } from '../hooks/useLearningProgress';
 import { XP_PER_LESSON } from '../config/constants';
+import { toYoutubeEmbed } from '../utils/youtube';
 
 const numericId = (value) => {
   const numberValue = Number(value);
@@ -1200,11 +1201,18 @@ export const JourneyPlayer = ({
                                   const isYoutube = asset.mime_type === 'video/youtube' || asset.cloudinary_url?.includes('youtube');
                                   
                                   if (isYoutube) {
+                                    // toYoutubeEmbed normalises /watch, /shorts and
+                                    // youtu.be forms to /embed/<id> — needed because
+                                    // YouTube refuses iframe embedding on the non-
+                                    // embed pages. Defensive even though the backend
+                                    // /media/youtube endpoint now does the same
+                                    // rewrite on save, since existing rows may
+                                    // already hold a raw /shorts/ URL.
                                     return (
                                       <div key={asset.id} className="rounded-xl overflow-hidden border border-slate-200 bg-white">
                                         <div className="aspect-video bg-slate-900">
                                           <iframe
-                                            src={asset.cloudinary_url}
+                                            src={toYoutubeEmbed(asset.cloudinary_url)}
                                             title={asset.original_filename}
                                             className="w-full h-full"
                                             frameBorder="0"

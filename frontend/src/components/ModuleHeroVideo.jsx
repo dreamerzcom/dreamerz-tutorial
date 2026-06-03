@@ -1,5 +1,7 @@
 import { Play } from 'lucide-react';
 
+import { toYoutubeEmbed } from '../utils/youtube';
+
 /**
  * Renders the hero infographic video for a module/lesson — handles both
  * Cloudinary direct uploads (mp4/webm/HLS) and YouTube/Vimeo embeds.
@@ -31,10 +33,8 @@ const detectKind = (url) => {
   }
 };
 
-const toYoutubeEmbed = (url) =>
-  url.includes('/embed/')
-    ? url
-    : url.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/');
+// toYoutubeEmbed lives in utils/youtube.js so /shorts/ URLs are handled
+// the same way everywhere — used here and by JourneyPlayer's media tab.
 
 const toVimeoEmbed = (url) => {
   if (url.includes('player.vimeo.com')) return url;
