@@ -279,20 +279,16 @@ export const ProgressProvider = ({ children }) => {
     return total > 0 ? Math.round((done / total) * 100) : 0;
   }, [progress.completedModules]);
 
-  const isModuleUnlocked = useCallback(
-    (toolId, moduleId, modules) => {
-      // Prefer the curriculum's lesson order; fall back to the modules array
-      // the caller passed in (used by API tools not in the map yet).
-      const ordered =
-        mapsRef.current.lessonsByCourseSlug[toolId]?.map((l) => l.slug) ||
-        (modules || []).map((m) => m.id);
-      if (!ordered || ordered.length === 0) return true;
-      const idx = ordered.indexOf(moduleId);
-      if (idx <= 0) return true; // first lesson is always unlocked
-      return isModuleCompleted(toolId, ordered[idx - 1]);
-    },
-    [isModuleCompleted],
-  );
+  // Lessons are no longer gated on previous-lesson completion — learners
+  // can jump to any lesson freely so the sidebar shows every entry in its
+  // normal numbered/clickable state instead of greyed-out padlocks. The
+  // function is kept (rather than removed at call sites) so JourneyPlayer
+  // and ToolJourney don't need a coordinated change; every caller now
+  // receives `true` and renders the unlocked variant. Re-enable the old
+  // sequential gate by restoring the `isModuleCompleted` lookup below.
+  // The `toolId` / `moduleId` / `modules` args stay in the signature so
+  // existing call sites continue to type-check unchanged.
+  const isModuleUnlocked = useCallback(() => true, []);
 
   const getLastActiveModule = useCallback(() => null, []);
 
