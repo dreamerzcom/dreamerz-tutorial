@@ -534,7 +534,7 @@ async def change_password(
 
 import jwt as _jwt
 from config import JWT_SECRET, JWT_ALGORITHM
-from services.email_service import FRONTEND_URL, send_email
+from services.email_service import FRONTEND_URL, send_password_reset_email
 
 PASSWORD_RESET_TTL_SECONDS = 900  # 15 min — short enough to limit
                                   # exposure, long enough to act on email.
@@ -630,46 +630,12 @@ async def request_password_reset(
         # send fails we still log success because the user has no
         # actionable signal to act on; admins watch logs.
         token = _create_password_reset_token(user.email, user.hashed_password or "")
-        # /forgot-password renders the reset form when ?token=… is
-        # present; /reset-password is the auth-gated change-password
-        # path for already-logged-in users.
         reset_url = f"{FRONTEND_URL}/forgot-password?token={token}"
-        try:
-            send_email(
-                to_email=user.email,
-                subject="Reset your DreamerZ password",
-                html_body=f"""
-                <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
-                            max-width:520px;margin:0 auto;padding:24px;color:#1e293b;">
-                  <h2 style="color:#4f46e5;margin:0 0 16px;">Reset your password</h2>
-                  <p>We received a request to reset the password for your DreamerZ
-                  account ({user.email}).</p>
-                  <p>Click the button below to set a new password. This link
-                  expires in 15 minutes and can only be used once.</p>
-                  <p style="text-align:center;margin:28px 0;">
-                    <a href="{reset_url}"
-                       style="display:inline-block;background:#4f46e5;color:#fff;
-                              padding:12px 24px;border-radius:10px;
-                              text-decoration:none;font-weight:600;">
-                      Reset password
-                    </a>
-                  </p>
-                  <p style="color:#64748b;font-size:14px;">
-                    If you didn't request this, ignore this email — your
-                    password won't change. If you didn't request this and
-                    keep getting these emails, contact
-                    <a href="mailto:dreamerz.support@gmail.com">support</a>.
-                  </p>
-                  <p style="color:#94a3b8;font-size:12px;margin-top:24px;">
-                    Or paste this URL into your browser:<br>
-                    <span style="word-break:break-all;">{reset_url}</span>
-                  </p>
-                </div>
-                """,
-            )
+        sent = send_password_reset_email(to_email=user.email, reset_url=reset_url)
+        if sent:
             logger.info("Password reset email sent for user %s", user.username)
-        except Exception:
-            logger.exception("Failed to send password reset email for %s", user.email)
+        else:
+            logger.error("Failed to send password reset email for %s", user.email)
     else:
         # No matching user — still wait briefly (timing-safety hint;
         # full timing safety would need a dummy bcrypt op too).
