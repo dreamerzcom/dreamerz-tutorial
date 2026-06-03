@@ -287,11 +287,22 @@ async def _overlay_localized_content(
 # ---------------------------------------------------------------------------
 
 @router.get("/tools")
-async def get_content_tools(session: AsyncSession = Depends(get_db)):
+async def get_content_tools(
+    response: Response,
+    session: AsyncSession = Depends(get_db),
+):
     """Get all tools (courses) with their lessons flattened into 'modules'.
 
     Only published courses are exposed to learners; drafts are hidden.
+
+    Cache: the LearnHub catalog is the heaviest payload on /learn (every
+    published course with all lesson summaries). Admins update courses
+    infrequently — a 2-minute public cache lets repeat navigations to
+    /learn skip the DB hit entirely while still picking up an admin edit
+    within ~2 min. Tune downward if content churn rises.
     """
+    response.headers["Cache-Control"] = "public, max-age=120"
+
     stmt = (
         select(Course)
         .options(*_eager_load_course_options())
@@ -367,8 +378,15 @@ async def get_content_tool(
 # ---------------------------------------------------------------------------
 
 @router.get("/courses")
-async def get_published_courses(session: AsyncSession = Depends(get_db)):
+async def get_published_courses(
+    response: Response,
+    session: AsyncSession = Depends(get_db),
+):
     """Get published courses filtered for AI-generated (tagged 'ai-generated')."""
+    # Same 2-minute browser cache as /tools — both hit the same Course
+    # table and have the same churn profile (admin edits).
+    response.headers["Cache-Control"] = "public, max-age=120"
+
     stmt = (
         select(Course)
         .options(*_eager_load_course_options())
@@ -663,7 +681,14 @@ async def landing_stats(
 
 
 @router.get("/categories")
-async def get_content_categories(session: AsyncSession = Depends(get_db)):
+async def get_content_categories(
+    response: Response,
+    session: AsyncSession = Depends(get_db),
+):
+    # Categories change even less often than courses, so the 2-minute
+    # cache that's safe for /tools is safe here too.
+    response.headers["Cache-Control"] = "public, max-age=120"
+
     result = await session.execute(
         select(Category).where(Category.is_active == True).order_by(Category.sort_order)  # noqa: E712
     )

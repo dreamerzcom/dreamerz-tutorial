@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate, useLocation, useParams } from 'react-router-dom';
 import { useCurriculum } from '../hooks/useCurriculum';
@@ -47,10 +47,15 @@ const getCourseStats = (course) => {
   return { totalModules, totalQuizzes, difficulty };
 };
 
-const CourseCatalogCard = ({ course, index, isEnrolled, isEnrolling, onEnroll }) => {
+// Memoized — re-renders only when one of its props actually changes. The
+// catalog renders dozens of these and the page does a lot of derived
+// recomputation on search/filter; without memo every keystroke re-renders
+// every card, paying the framer-motion `motion.div` cost each time.
+// `stats` is hoisted to LearnHub (computed once per apiTools change) so
+// each card no longer loops over `course.modules` on every paint.
+const CourseCatalogCard = memo(({ course, index, isEnrolled, isEnrolling, onEnroll, stats }) => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
-  const stats = getCourseStats(course);
 
   const handlePrimaryAction = async () => {
     if (isEnrolled) {
@@ -130,7 +135,8 @@ const CourseCatalogCard = ({ course, index, isEnrolled, isEnrolling, onEnroll })
       </button>
     </motion.div>
   );
-};
+});
+CourseCatalogCard.displayName = 'CourseCatalogCard';
 
 export const LearnHub = ({ viewMode: initialViewMode = 'catalog' }) => {
   const navigate = useNavigate();
@@ -178,6 +184,19 @@ export const LearnHub = ({ viewMode: initialViewMode = 'catalog' }) => {
   const enrolledCourseIds = useMemo(() => {
     return new Set(courseEnrollments.map(enrollment => enrollment.course_id));
   }, [courseEnrollments]);
+
+  // Pre-compute per-course catalog stats (modules / quizzes / difficulty)
+  // once per apiTools change instead of inside CourseCatalogCard's render.
+  // Without this, every keystroke in the search box recomputes the loop
+  // for every visible card (×N cards × every render). With it, each card
+  // gets a stable object reference and React.memo can short-circuit.
+  const courseStatsById = useMemo(() => {
+    const map = new Map();
+    apiTools.forEach((course) => {
+      map.set(course.id, getCourseStats(course));
+    });
+    return map;
+  }, [apiTools]);
 
   const categories = useMemo(() => {
     const grouped = new Map();
@@ -291,7 +310,11 @@ export const LearnHub = ({ viewMode: initialViewMode = 'catalog' }) => {
     );
   }, [selectedCategoryData, query]);
 
-  const handleEnroll = async (course) => {
+  // useCallback so the reference stays stable across LearnHub re-renders
+  // (search/filter state changes don't invalidate it). Without this the
+  // memoized CourseCatalogCard would still re-render on every keystroke
+  // because its `onEnroll` prop would be a fresh function each time.
+  const handleEnroll = useCallback(async (course) => {
     const courseDbId = getCourseDbId(course);
     if (!courseDbId) {
       setEnrollError('Course cannot be enrolled because its numeric ID is missing.');
@@ -308,7 +331,7 @@ export const LearnHub = ({ viewMode: initialViewMode = 'catalog' }) => {
     } finally {
       setEnrollingCourseId(null);
     }
-  };
+  }, [startCourse, loadCourseEnrollments]);
 
   const handleUnenroll = async (course) => {
     const courseDbId = getCourseDbId(course);
@@ -579,6 +602,7 @@ export const LearnHub = ({ viewMode: initialViewMode = 'catalog' }) => {
                           isEnrolled={isEnrolled}
                           isEnrolling={courseDbId === enrollingCourseId}
                           onEnroll={handleEnroll}
+                          stats={courseStatsById.get(course.id)}
                         />
                       );
                     })}
@@ -690,6 +714,7 @@ export const LearnHub = ({ viewMode: initialViewMode = 'catalog' }) => {
                         isEnrolled={isEnrolled}
                         isEnrolling={courseDbId === enrollingCourseId}
                         onEnroll={handleEnroll}
+                        stats={courseStatsById.get(course.id)}
                       />
                     );
                   })}
