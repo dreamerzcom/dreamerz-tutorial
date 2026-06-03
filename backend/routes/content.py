@@ -165,6 +165,11 @@ def _serialize_tool(course: Course) -> dict:
         "totalXP": course.total_xp,
         "color": course.theme_color or "#10A37F",
         "category_id": course.category.slug if course.category else None,
+        # category_name carries the human-readable display name so the
+        # learner-facing catalog can show what the admin set in the DB.
+        # Without this the frontend title-cases the slug ("vibe-coding" ->
+        # "Vibe Coding"), which silently masks any DB rename.
+        "category_name": course.category.name if course.category else None,
         "sort_order": course.sort_order,
         "status": course.status,
     }

@@ -181,14 +181,30 @@ export const LearnHub = ({ viewMode: initialViewMode = 'catalog' }) => {
 
   const categories = useMemo(() => {
     const grouped = new Map();
+    // Build a slug -> display name lookup from the courses themselves.
+    // The backend now ships category_name on every tool (see
+    // _serialize_tool in content.py). When the admin renames a category
+    // in the DB, this picks it up automatically. Falls back to the
+    // slug-derived title only when category_name is missing (legacy data).
+    const categoryNameBySlug = new Map();
     apiTools.forEach(course => {
       const categoryId = course.category_id || 'uncategorized';
       grouped.set(categoryId, [...(grouped.get(categoryId) || []), course]);
+      if (course.category_name && !categoryNameBySlug.has(categoryId)) {
+        categoryNameBySlug.set(categoryId, course.category_name);
+      }
     });
 
     return Array.from(grouped.entries()).map(([id, courses], index) => {
+      // Hardcoded CATEGORY_META wins (icon + gradient + curated copy),
+      // then API-provided category_name, then a slug-derived title as
+      // the final fallback.
+      const apiName = categoryNameBySlug.get(id);
+      const fallbackTitle =
+        apiName ||
+        id.split('-').map(word => word[0]?.toUpperCase() + word.slice(1)).join(' ');
       const meta = CATEGORY_META[id] || {
-        title: id.split('-').map(word => word[0]?.toUpperCase() + word.slice(1)).join(' '),
+        title: fallbackTitle,
         description: 'Explore guided learning courses in this category.',
         icon: '📚',
         gradient: index % 2 === 0 ? 'from-cyan-500 to-blue-500' : 'from-amber-500 to-orange-500',
