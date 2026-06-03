@@ -1,7 +1,10 @@
 // Bump this on every meaningful change to the caching strategy — the
 // `activate` handler deletes every cache whose name doesn't match, so a
-// version bump wipes all stale entries from previous deploys.
-const CACHE_NAME = 'dreamerz-pwa-v3';
+// version bump wipes all stale entries from previous deploys. It also
+// double-serves as a deploy marker for the client: when the new worker
+// activates, index.js detects the controller change and reloads the
+// open tab so it picks up the latest bundle/SPA shell.
+const CACHE_NAME = 'dreamerz-pwa-v4';
 const OFFLINE_URL = '/index.html';
 
 self.addEventListener('install', (event) => {
