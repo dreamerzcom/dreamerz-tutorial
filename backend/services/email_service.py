@@ -56,14 +56,97 @@ def _is_configured() -> bool:
     return bool(SMTP_USERNAME and SMTP_PASSWORD)
 
 
+class _IPv4SMTP(smtplib.SMTP):
+    """smtplib.SMTP that forces IPv4 connections.
+
+    Render's container network resolves smtp.gmail.com to an AAAA record
+    first; the kernel then tries the IPv6 address and the egress fails
+    with `OSError: [Errno 101] Network is unreachable` because the
+    container has no working IPv6 route. socket.create_connection raises
+    the *first* attempt's exception, so even though IPv4 would have
+    worked we never get there. Overriding `_get_socket` to filter
+    getaddrinfo to AF_INET sidesteps the bad path entirely.
+    """
+
+    def _get_socket(self, host, port, timeout):
+        last_err: OSError | None = None
+        for af, socktype, proto, _canon, sa in socket.getaddrinfo(
+            host, port, socket.AF_INET, socket.SOCK_STREAM
+        ):
+            sock = None
+            try:
+                sock = socket.socket(af, socktype, proto)
+                if timeout is not None and timeout is not socket._GLOBAL_DEFAULT_TIMEOUT:  # type: ignore[attr-defined]
+                    sock.settimeout(timeout)
+                if self.source_address is not None:
+                    sock.bind(self.source_address)
+                sock.connect(sa)
+                return sock
+            except OSError as e:
+                last_err = e
+                if sock is not None:
+                    sock.close()
+                continue
+        # No IPv4 address worked. Re-raise so the caller's retry/log
+        # logic kicks in with the actual ENETUNREACH / refused / etc.
+        if last_err is not None:
+            raise last_err
+        raise OSError(f"No IPv4 addresses resolved for {host}")
+
+
+class _IPv4SMTP_SSL(smtplib.SMTP_SSL):
+    """SMTP_SSL counterpart of _IPv4SMTP. Used when SMTP_PORT == 465
+    (implicit TLS) instead of 587 (STARTTLS)."""
+
+    def _get_socket(self, host, port, timeout):
+        # Delegate to the same v4-only resolver, then let SMTP_SSL wrap
+        # the returned socket with TLS in its normal flow.
+        last_err: OSError | None = None
+        for af, socktype, proto, _canon, sa in socket.getaddrinfo(
+            host, port, socket.AF_INET, socket.SOCK_STREAM
+        ):
+            sock = None
+            try:
+                sock = socket.socket(af, socktype, proto)
+                if timeout is not None and timeout is not socket._GLOBAL_DEFAULT_TIMEOUT:  # type: ignore[attr-defined]
+                    sock.settimeout(timeout)
+                if self.source_address is not None:
+                    sock.bind(self.source_address)
+                sock.connect(sa)
+                # SMTP_SSL wraps the socket in TLS using self.context and
+                # server_hostname=self._host, so cert verification keeps
+                # working against the original DNS name (smtp.gmail.com),
+                # not the resolved IP.
+                return self.context.wrap_socket(sock, server_hostname=self._host)
+            except OSError as e:
+                last_err = e
+                if sock is not None:
+                    sock.close()
+                continue
+        if last_err is not None:
+            raise last_err
+        raise OSError(f"No IPv4 addresses resolved for {host}")
+
+
 def _attempt_send(msg: MIMEMultipart) -> None:
-    """One SMTP attempt. Raises on any failure; caller decides whether to retry."""
-    with smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=SMTP_TIMEOUT_SECONDS) as server:
-        server.ehlo()
-        server.starttls()
-        server.ehlo()
-        server.login(SMTP_USERNAME, SMTP_PASSWORD)
-        server.send_message(msg)
+    """One SMTP attempt. Raises on any failure; caller decides whether to retry.
+
+    Picks implicit-TLS (SMTP_SSL on 465) or STARTTLS (SMTP on 587)
+    based on SMTP_PORT, so switching providers/ports is just an env
+    change. Both paths force IPv4 — see _IPv4SMTP for the reasoning.
+    """
+    if SMTP_PORT == 465:
+        with _IPv4SMTP_SSL(SMTP_SERVER, SMTP_PORT, timeout=SMTP_TIMEOUT_SECONDS) as server:
+            server.ehlo()
+            server.login(SMTP_USERNAME, SMTP_PASSWORD)
+            server.send_message(msg)
+    else:
+        with _IPv4SMTP(SMTP_SERVER, SMTP_PORT, timeout=SMTP_TIMEOUT_SECONDS) as server:
+            server.ehlo()
+            server.starttls()
+            server.ehlo()
+            server.login(SMTP_USERNAME, SMTP_PASSWORD)
+            server.send_message(msg)
 
 
 def send_email(to_email: str, subject: str, html_body: str, text_body: str = "") -> bool:
