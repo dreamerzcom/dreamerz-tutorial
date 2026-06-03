@@ -39,7 +39,7 @@ export const Landing = () => {
   return (
     <>
       <SEO
-        title="Learn AI & Conversational English skills — DreamerZ"
+        title="Dream It. Learn It. Live It — DreamerZ"
         description="Hands-on AI and Conversational English courses with real lessons and progress tracking. Suitable for learners 11 years and above."
       />
       <div className="min-h-screen bg-white">
@@ -61,10 +61,13 @@ export const Landing = () => {
                 High-quality Curated Courses
               </div>
 
+              {/* Tagline kept in two parts so the gradient run picks up the
+                  punchy verb in the middle of the phrase; "Live It" is the
+                  outcome we want the eye to land on after the lead-in. */}
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white leading-[1.05] mb-5 max-w-3xl mx-auto">
-                Learn AI &{' '}
+                Dream It. Learn It.{' '}
                 <span className="bg-gradient-to-r from-amber-300 to-orange-400 bg-clip-text text-transparent">
-                  Conversational English skills
+                  Live It
                 </span>
               </h1>
 
