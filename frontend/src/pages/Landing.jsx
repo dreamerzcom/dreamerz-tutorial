@@ -159,7 +159,12 @@ export const Landing = () => {
                     </li>
                   ))}
                 </ul>
-                <Link to="/parents" className="inline-flex items-center gap-1 text-primary font-semibold text-sm hover:text-primary/80">
+                {/* Skip the /parents marketing page and jump straight to
+                    the actual dashboard. Supervisors/admins/creators see it
+                    directly; anonymous users are bounced to /login by
+                    RequireRole (returning to /parents/dashboard on sign-in
+                    is handled by the auth flow). */}
+                <Link to="/parents/dashboard" className="inline-flex items-center gap-1 text-primary font-semibold text-sm hover:text-primary/80">
                   Open the supervisor dashboard <ChevronRight className="w-4 h-4" />
                 </Link>
               </motion.div>
