@@ -580,7 +580,7 @@ export const JourneyPlayer = ({
                             ) : (
                               <ChevronDown className="w-4 h-4 text-slate-500 flex-shrink-0" />
                             )}
-                            <span className="text-xs font-bold uppercase tracking-wide text-slate-700 flex-grow truncate">
+                            <span className="text-xs font-bold uppercase tracking-wide text-slate-700 flex-grow break-words leading-snug min-w-0">
                               {section.title}
                             </span>
                             <span className="text-[10px] font-semibold text-slate-400 flex-shrink-0">
@@ -633,7 +633,7 @@ export const JourneyPlayer = ({
                                   </div>
 
                                   <div className="flex-grow min-w-0">
-                                    <div className={`font-medium text-sm truncate ${
+                                    <div className={`font-medium text-sm break-words leading-snug ${
                                       isActive ? 'text-white' : 'text-slate-700'
                                     }`}>
                                       {lesson.title}
@@ -646,7 +646,7 @@ export const JourneyPlayer = ({
                                   </div>
 
                                   {lesson.level === 'advanced' && (
-                                    <Sparkles className={`w-3 h-3 ${isActive ? 'text-amber-300' : 'text-amber-500'}`} />
+                                    <Sparkles className={`w-3 h-3 ${isActive ? 'text-amber-300' : 'text-amber-500'} flex-shrink-0`} />
                                   )}
                                 </motion.button>
                               );
@@ -1416,7 +1416,7 @@ export const JourneyPlayer = ({
                         ) : (
                           <ChevronDown className="w-4 h-4 text-slate-500 flex-shrink-0" />
                         )}
-                        <span className="text-xs font-bold uppercase tracking-wide text-slate-700 flex-grow truncate">
+                        <span className="text-xs font-bold uppercase tracking-wide text-slate-700 flex-grow break-words leading-snug min-w-0">
                           {section.title}
                         </span>
                         <span className="text-[10px] font-semibold text-slate-400 flex-shrink-0">
@@ -1469,7 +1469,7 @@ export const JourneyPlayer = ({
                               </div>
 
                               <div className="flex-grow min-w-0">
-                                <div className={`font-medium text-sm truncate ${
+                                <div className={`font-medium text-sm break-words leading-snug ${
                                   isActive ? 'text-white' : 'text-slate-700'
                                 }`}>
                                   {lesson.title}
