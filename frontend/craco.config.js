@@ -146,40 +146,61 @@ webpackConfig.devServer = (devServerConfig) => {
     devServerConfig = setupDevServer(devServerConfig);
   }
 
-  devServerConfig.proxy = {
-    ...devServerConfig.proxy,
-    bypass: function(req, res, proxyOptions) {
-      // Don't proxy hot-update files
-      if (req.url && req.url.includes('hot-update')) {
-        return req.url;
-      }
-      // Don't proxy static assets
-      if (req.url && (req.url.match(/\.(js|css|png|jpg|jpeg|svg|ico|json|woff|woff2|ttf|eot|map)$/))) {
-        return req.url;
-      }
-      // Don't proxy requests containing %PUBLIC_URL%
-      if (req.url && req.url.includes('%PUBLIC_URL%')) {
-        return req.url;
-      }
-    },
+  // SPA history fallback. Every client-side route (/home, /learn,
+  // /login, …) needs to resolve to index.html so React Router can pick
+  // it up; otherwise webpack-dev-server's Express layer returns a raw
+  // 404. The declarative `historyApiFallback` option silently fails on
+  // some webpack-dev-server v4 / Node combinations (notably Node 22+),
+  // so we inject the rewrite as a middleware to guarantee it runs.
+  //
+  // Note: previously this file had a `proxy.bypass` block here that
+  // silently broke SPA routing in webpack-dev-server v4 because setting
+  // `proxy` without a `target` is treated as a routed proxy with
+  // nowhere to go. Removed — the frontend talks to the backend via
+  // REACT_APP_BACKEND_URL with the absolute URL, so we never needed a
+  // dev-server proxy in the first place. The `proxy` field in
+  // package.json was removed for the same reason.
+  devServerConfig.historyApiFallback = {
+    disableDotRule: true,
+    index: '/index.html',
   };
 
-  // Add health check endpoints if enabled
-  if (config.enableHealthCheck && setupHealthEndpoints && healthPluginInstance) {
-    const originalSetupMiddlewares = devServerConfig.setupMiddlewares;
+  const originalSetupMiddlewares = devServerConfig.setupMiddlewares;
 
-    devServerConfig.setupMiddlewares = (middlewares, devServer) => {
-      // Call original setup if exists
-      if (originalSetupMiddlewares) {
-        middlewares = originalSetupMiddlewares(middlewares, devServer);
-      }
+  devServerConfig.setupMiddlewares = (middlewares, devServer) => {
+    if (originalSetupMiddlewares) {
+      middlewares = originalSetupMiddlewares(middlewares, devServer);
+    }
 
-      // Setup health endpoints
+    // Front-of-chain SPA-fallback middleware. Rewrites any HTML-accepting
+    // GET that doesn't look like a static asset or an API call to
+    // /index.html so webpack's static layer serves the React shell.
+    // Runs before webpack-dev-middleware so the request still resolves
+    // to the live in-memory bundle, not a stale disk copy.
+    middlewares.unshift({
+      name: 'spa-history-fallback',
+      middleware: (req, res, next) => {
+        if (req.method !== 'GET') return next();
+        const accept = req.headers.accept || '';
+        if (!accept.includes('text/html')) return next();
+        const url = req.url.split('?')[0];
+        // Pass through anything that looks like a real file (has an
+        // extension after the last slash) or an API call.
+        if (/\.[a-zA-Z0-9]+$/.test(url)) return next();
+        if (url.startsWith('/api/') || url.startsWith('/sockjs-node') || url.startsWith('/ws')) {
+          return next();
+        }
+        req.url = '/index.html';
+        return next();
+      },
+    });
+
+    if (config.enableHealthCheck && setupHealthEndpoints && healthPluginInstance) {
       setupHealthEndpoints(devServer, healthPluginInstance);
+    }
 
-      return middlewares;
-    };
-  }
+    return middlewares;
+  };
 
   return devServerConfig;
 };
