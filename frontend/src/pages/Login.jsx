@@ -24,6 +24,37 @@ const sanitizeInput = (input) => {
     .replace(/on\w+=/gi, '');
 };
 
+// useGoogleLogin can't be called conditionally (Rules of Hooks) and it
+// throws when the surrounding GoogleOAuthProvider hasn't been mounted —
+// which is the case in local dev when REACT_APP_GOOGLE_CLIENT_ID is
+// unset. Wrapping the hook + button in this child component keeps the
+// hook call unconditional WITHIN the child, while the parent
+// conditionally mounts the child only when OAuth is actually available.
+const GoogleSignInButton = ({ onSuccess, onError, loading, disabled }) => {
+  const handleGoogleLogin = useGoogleLogin({
+    onSuccess,
+    onError,
+  });
+  return (
+    <button
+      type="button"
+      onClick={() => handleGoogleLogin()}
+      disabled={disabled}
+      className="w-full flex items-center justify-center gap-3 px-4 py-3.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium text-sm transition-colors disabled:opacity-60 shadow-sm"
+    >
+      {loading ? (
+        <svg className="w-5 h-5 animate-spin text-slate-400" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+        </svg>
+      ) : (
+        <GoogleIcon />
+      )}
+      {loading ? 'Signing in with Google…' : 'Continue with Google'}
+    </button>
+  );
+};
+
 const GoogleIcon = () => (
   <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -50,27 +81,30 @@ export const Login = () => {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
+  // Google OAuth is only available when both the client-id env var is set
+  // (we conditionally mount the provider in App.js) and we're in a context
+  // that loaded the SDK. Locally REACT_APP_GOOGLE_CLIENT_ID is typically
+  // unset, in which case we hide the Google button + divider entirely
+  // rather than crash the page with 'Missing required parameter client_id'.
+  const googleEnabled = Boolean(process.env.REACT_APP_GOOGLE_CLIENT_ID);
+
   const switchMode = (next) => {
     setMode(next);
     setError('');
     setNotFound(false);
   };
 
-  // ── Google (unified: JIT creates account if new, logs in if existing) ──
-  const handleGoogleLogin = useGoogleLogin({
-    onSuccess: async (tokenResponse) => {
-      setGoogleLoading(true);
-      try {
-        await socialLogin({ provider: 'google', token: tokenResponse.access_token });
-        navigate('/learn');
-      } catch (err) {
-        setError(sanitizeError(err.message) || 'Google sign-in failed. Please try again.');
-      } finally {
-        setGoogleLoading(false);
-      }
-    },
-    onError: () => setError('Google sign-in was cancelled.'),
-  });
+  const handleGoogleResult = async (tokenResponse) => {
+    setGoogleLoading(true);
+    try {
+      await socialLogin({ provider: 'google', token: tokenResponse.access_token });
+      navigate('/learn');
+    } catch (err) {
+      setError(sanitizeError(err.message) || 'Google sign-in failed. Please try again.');
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
 
   // ── Email submit ──
   const handleSubmit = async (e) => {
@@ -118,34 +152,32 @@ export const Login = () => {
 
         <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-8">
 
-          {/* Google — primary CTA */}
-          <button
-            type="button"
-            onClick={() => handleGoogleLogin()}
-            disabled={googleLoading || loading}
-            className="w-full flex items-center justify-center gap-3 px-4 py-3.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium text-sm transition-colors disabled:opacity-60 shadow-sm"
-          >
-            {googleLoading ? (
-              <svg className="w-5 h-5 animate-spin text-slate-400" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-              </svg>
-            ) : (
-              <GoogleIcon />
-            )}
-            {googleLoading ? 'Signing in with Google…' : 'Continue with Google'}
-          </button>
+          {/* Google — primary CTA. Hidden entirely when OAuth isn't
+              configured (e.g. local dev without REACT_APP_GOOGLE_CLIENT_ID)
+              so the page doesn't crash trying to mount a button whose hook
+              has no GoogleOAuthProvider context. Email/password still works
+              as the fallback. */}
+          {googleEnabled && (
+            <>
+              <GoogleSignInButton
+                onSuccess={handleGoogleResult}
+                onError={() => setError('Google sign-in was cancelled.')}
+                loading={googleLoading}
+                disabled={googleLoading || loading}
+              />
 
-          <p className="text-center text-xs text-slate-400 mt-2 mb-5">
-            New or returning — Google handles it automatically
-          </p>
+              <p className="text-center text-xs text-slate-400 mt-2 mb-5">
+                New or returning — Google handles it automatically
+              </p>
 
-          {/* Divider */}
-          <div className="flex items-center gap-3 mb-5">
-            <div className="flex-1 h-px bg-slate-100" />
-            <span className="text-xs text-slate-400">or continue with email</span>
-            <div className="flex-1 h-px bg-slate-100" />
-          </div>
+              {/* Divider */}
+              <div className="flex items-center gap-3 mb-5">
+                <div className="flex-1 h-px bg-slate-100" />
+                <span className="text-xs text-slate-400">or continue with email</span>
+                <div className="flex-1 h-px bg-slate-100" />
+              </div>
+            </>
+          )}
 
           {/* Mode toggle */}
           <div className="flex rounded-xl border border-slate-200 p-1 mb-5 bg-slate-50">

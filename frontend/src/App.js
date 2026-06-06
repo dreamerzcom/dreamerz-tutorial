@@ -127,8 +127,21 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
-  return (
-    <GoogleOAuthProvider clientId={process.env.REACT_APP_GOOGLE_CLIENT_ID || ""}>
+  // Skip mounting the Google OAuth provider entirely when no client id
+  // is set. The provider initialises the Google Identity SDK eagerly at
+  // mount; passing it an empty string triggers `Missing required
+  // parameter client_id` from inside the SDK, which propagates up
+  // through useGoogleLogin() in Login.jsx and crashes the whole login
+  // page through the error boundary. Local dev typically doesn't have
+  // REACT_APP_GOOGLE_CLIENT_ID set; rather than fail-closed, fall back
+  // to email/password by rendering children without the provider.
+  const googleClientId = process.env.REACT_APP_GOOGLE_CLIENT_ID || '';
+  const withOAuth = (children) =>
+    googleClientId
+      ? <GoogleOAuthProvider clientId={googleClientId}>{children}</GoogleOAuthProvider>
+      : children;
+
+  return withOAuth(
     <HelmetProvider>
       <div className="App flex flex-col min-h-screen">
         <BrowserRouter>
@@ -252,7 +265,6 @@ function App() {
         </BrowserRouter>
       </div>
     </HelmetProvider>
-    </GoogleOAuthProvider>
   );
 }
 
