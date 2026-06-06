@@ -100,3 +100,9 @@ show_db.*
 tmp_*.html
 *.xlsx
 inspect_*.ps1
+
+# Dev-only prod->local content sync. Reads from prod Postgres and writes
+# to the local SQLite dev DB. Stays untracked so it can never be picked
+# up by `git add .` or invoked by a Render build step. The script itself
+# also refuses to run if it detects RENDER=true in its environment.
+backend/scripts/sync_from_remote.py
