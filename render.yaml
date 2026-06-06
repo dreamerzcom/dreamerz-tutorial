@@ -25,7 +25,10 @@ services:
     region: oregon
     plan: free
     rootDir: backend
-    buildCommand: pip install -r requirements.txt && alembic upgrade head
+    # bootstrap_db.py handles both cases: fresh DB (create_all + stamp
+    # head) and existing DB (alembic upgrade head). One recipe works
+    # for prod and for any new test/preview env that comes up later.
+    buildCommand: pip install -r requirements.txt && python scripts/bootstrap_db.py
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     autoDeploy: true
     envVars:
@@ -130,7 +133,10 @@ services:
     plan: free
     rootDir: backend
     branch: develop
-    buildCommand: pip install -r requirements.txt && alembic upgrade head
+    # bootstrap_db.py handles both cases: fresh DB (create_all + stamp
+    # head) and existing DB (alembic upgrade head). One recipe works
+    # for prod and for any new test/preview env that comes up later.
+    buildCommand: pip install -r requirements.txt && python scripts/bootstrap_db.py
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     autoDeploy: true
     envVars:
