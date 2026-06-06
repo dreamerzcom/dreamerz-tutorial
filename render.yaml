@@ -1,10 +1,21 @@
 databases:
-  # ── Postgres ── Free tier ──
+  # ── Postgres (prod) ── Free tier ──
   - name: dreamerz-db
     plan: free
     region: oregon
     databaseName: dreamerz
     user: dreamerz
+
+  # ── Postgres (test) ── Free tier, isolated from prod ──
+  # Bound to the `develop` branch deploys via the test backend below.
+  # Note: free Postgres expires after 30 days — re-seed from prod via the
+  # sync_from_remote pattern, or upgrade this entry to plan: starter ($7/mo)
+  # if you accumulate test state worth keeping for longer.
+  - name: dreamerz-db-test
+    plan: free
+    region: oregon
+    databaseName: dreamerz_test
+    user: dreamerz_test
 
 services:
   # ── Backend (FastAPI) ── Free tier ──
@@ -91,6 +102,104 @@ services:
       # The app shell and the service worker itself must never be cached, or
       # a deploy won't be picked up until the browser cache expires (the
       # "needs multiple manual refreshes after deploy" bug).
+      - path: /index.html
+        name: Cache-Control
+        value: "no-cache, no-store, must-revalidate"
+      - path: /service-worker.js
+        name: Cache-Control
+        value: "no-cache, no-store, must-revalidate"
+      - path: /manifest.json
+        name: Cache-Control
+        value: "no-cache"
+
+  # ═══════════════════════════════════════════════════════════════════
+  # TEST ENVIRONMENT — bound to `develop` branch
+  # ═══════════════════════════════════════════════════════════════════
+  # Mirrors prod's shape (backend + static frontend) but every resource
+  # has a `-test` suffix and is isolated at the data layer (separate DB,
+  # separate JWT secret, separate URLs). Workflow:
+  #   - push to `develop` → these test services auto-deploy
+  #   - PR `develop` → `main`, merge → prod services pick it up
+  # See CONTRIBUTING.md for the canonical flow.
+
+  # ── Test Backend (FastAPI) ── Free tier ── auto-deploys `develop` ──
+  - type: web
+    name: dreamerz-backend-test
+    runtime: python
+    region: oregon
+    plan: free
+    rootDir: backend
+    branch: develop
+    buildCommand: pip install -r requirements.txt && alembic upgrade head
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    autoDeploy: true
+    envVars:
+      # Wired to the TEST Postgres above — never points at prod's DB.
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dreamerz-db-test
+          property: connectionString
+      # Same Anthropic key as prod is fine (billing is one pool). Set a
+      # separate key here in the dashboard if you want strict cost
+      # isolation between envs.
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      # Deliberately separate from prod's secret so a token minted in
+      # test doesn't validate against prod and vice versa.
+      - key: JWT_SECRET
+        generateValue: true
+      # Hard-coded to the test frontend's default Render URL. If you
+      # later add a test.dreamer-z.com custom domain, swap this string.
+      - key: CORS_ORIGINS
+        value: https://dreamerz-frontend-test.onrender.com,http://localhost:3000
+      - key: ADMIN_EMAILS
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      # "(TEST)" suffix so test-sent emails are obviously test in your
+      # inbox — saves the embarrassment of mistaking one for prod.
+      - key: SENDER_EMAIL
+        value: onboarding@resend.dev
+      - key: SENDER_NAME
+        value: DreamerZ (TEST)
+      - key: FRONTEND_URL
+        value: https://dreamerz-frontend-test.onrender.com
+      # Test can share Cloudinary with prod (uploads land in same bucket)
+      # or you can paste a separate test cloud URL here for full isolation.
+      - key: CLOUDINARY_URL
+        sync: false
+      - key: PYTHON_VERSION
+        value: "3.11.6"
+      - key: SEED_COURSES_FROM_CURRICULUM
+        value: "false"
+
+  # ── Test Frontend (React static) ── Free tier ── auto-deploys `develop` ──
+  - type: web
+    runtime: static
+    name: dreamerz-frontend-test
+    rootDir: frontend
+    branch: develop
+    buildCommand: CI=false yarn install --no-frozen-lockfile && yarn build
+    staticPublishPath: build
+    autoDeploy: true
+    envVars:
+      # Point the test SPA at the test backend, never prod.
+      - key: REACT_APP_BACKEND_URL
+        value: https://dreamerz-backend-test.onrender.com
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /static/*
+        name: Cache-Control
+        value: "public, max-age=31536000, immutable"
       - path: /index.html
         name: Cache-Control
         value: "no-cache, no-store, must-revalidate"
