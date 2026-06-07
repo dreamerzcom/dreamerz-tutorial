@@ -106,3 +106,11 @@ inspect_*.ps1
 # up by `git add .` or invoked by a Render build step. The script itself
 # also refuses to run if it detects RENDER=true in its environment.
 backend/scripts/sync_from_remote.py
+
+# Operator-only prod->UAT content sync. Reads from prod Postgres and
+# writes to UAT Postgres. Same convention as sync_from_remote.py: stays
+# untracked so it can never be deployed, and the script's Guard 0
+# refuses to run if any platform env var (RENDER, CI, GITHUB_ACTIONS,
+# KUBERNETES_SERVICE_HOST) is set. Manual developer-laptop invocation
+# is the only intended path.
+backend/scripts/sync_prod_to_uat.py

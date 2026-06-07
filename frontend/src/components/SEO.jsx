@@ -17,7 +17,7 @@ export const SEO = ({
   noIndex = false
 }) => {
   const seo = {
-    title: 'DreamerZ',
+    title: title || defaultMeta.title,
     description: description || defaultMeta.description,
     image: image || defaultMeta.image,
     url: url || defaultMeta.url,

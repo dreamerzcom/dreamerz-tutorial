@@ -7,7 +7,7 @@ import { useProgress } from '../hooks/useProgress';
 import { useAuth } from '../hooks/useAuth';
 import { ProgressDashboard } from '../components/ProgressDashboard';
 import { toast } from 'sonner';
-import { BookOpen, Search, ArrowRight, ArrowLeft, Layers, HelpCircle, Signal, CheckCircle2, Sparkles, GraduationCap, Grid3X3, BarChart3 } from 'lucide-react';
+import { BookOpen, Search, ArrowRight, ArrowLeft, Layers, HelpCircle, Signal, CheckCircle2, Sparkles, GraduationCap, Grid3X3 } from 'lucide-react';
 
 const CATEGORY_META = {
   'ai-learning': {

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Users, BookOpen, Clock, Award, AlertTriangle, Plus, ArrowRight, ChevronDown, ChevronUp, X, Unlink, MoreVertical } from 'lucide-react';
+import { Users, BookOpen, Clock, Award, AlertTriangle, Plus, ArrowRight, ChevronDown, ChevronUp, X } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import * as parentService from '../services/parentService';
 
@@ -25,6 +25,7 @@ export const ParentDashboard = () => {
   useEffect(() => {
     if (!isAuthenticated) return;
     loadStudents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
   // Close dropdown when clicking outside
@@ -330,6 +331,7 @@ const StudentCard = ({ student, onUnlink }) => {
     if (isExpanded) {
       loadOverview();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isExpanded]);
 
   const loadOverview = async () => {

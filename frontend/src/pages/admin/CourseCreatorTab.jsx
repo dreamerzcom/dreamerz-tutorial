@@ -114,7 +114,7 @@ export const CourseCreatorTab = ({ token, onPublishSuccess }) => {
   const aiGenerationEnabled = user?.aiGenerationEnabled || false;
 
   // Multi-file upload
-  const [files, setFiles] = useState([]);
+  const [_files, setFiles] = useState([]);
   const [parsedFiles, setParsedFiles] = useState([]);
   const [parsingFiles, setParsingFiles] = useState(new Set());
 
@@ -140,7 +140,7 @@ export const CourseCreatorTab = ({ token, onPublishSuccess }) => {
   const [expandedModules, setExpandedModules] = useState(() => new Set());
   const [expandedLessons, setExpandedLessons] = useState(() => new Set());
   const [generatingLessonIds, setGeneratingLessonIds] = useState(() => new Set());
-  const [progress, setProgress] = useState({ done: 0, total: 0 });
+  const [_progress, setProgress] = useState({ done: 0, total: 0 });
   const [editingLessonId, setEditingLessonId] = useState(null);
   const [editBuffer, setEditBuffer] = useState({});
   const [bulkRunning, setBulkRunning] = useState(false);
@@ -534,6 +534,7 @@ export const CourseCreatorTab = ({ token, onPublishSuccess }) => {
         }
       })
       .catch(() => setCategories([]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Empty deps - only run once on mount
 
   // ── Publish ──

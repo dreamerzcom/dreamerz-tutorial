@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, MessageCircle, Mic, User, Bot, ChevronDown } from 'lucide-react';
+import { X, Send, User, Bot, ChevronDown } from 'lucide-react';
 import { Button } from './ui/button';
 import API_BASE from '../config/api';
 import { MAX_CHAT_MESSAGES, ROLEPLAY_HISTORY_LIMIT, getStoredAuthToken } from '../config/constants';

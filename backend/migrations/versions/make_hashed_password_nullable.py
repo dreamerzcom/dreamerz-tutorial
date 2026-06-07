@@ -1,7 +1,7 @@
 """make hashed_password nullable for social auth users
 
 Revision ID: make_hashed_password_nullable
-Revises: add_social_login_fields
+Revises: 7f40f876a576
 Create Date: 2026-05-27 00:00:01.000000
 
 """
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 revision: str = 'make_hashed_password_nullable'
-down_revision: Union[str, Sequence[str], None] = 'add_social_login_fields'
+down_revision: Union[str, Sequence[str], None] = '7f40f876a576'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
