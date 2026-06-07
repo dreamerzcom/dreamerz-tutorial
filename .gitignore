@@ -114,3 +114,10 @@ backend/scripts/sync_from_remote.py
 # KUBERNETES_SERVICE_HOST) is set. Manual developer-laptop invocation
 # is the only intended path.
 backend/scripts/sync_prod_to_uat.py
+
+# Operator-only one-shot course-injection SQL for "Exploring GenAI".
+# Pasted manually into prod via DBeaver/pgAdmin/psql — never auto-run.
+# Stays untracked so it can never end up in a build artifact or be
+# invoked by a Render deploy hook. The file's own header re-states the
+# operator-only contract and the idempotency caveats.
+content_drafts/exploring-genai-injection.sql
