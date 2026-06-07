@@ -90,12 +90,12 @@ export const MarkdownContent = ({ children, variant = 'light', className = '' })
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
-          h1: ({ node, ...p }) => <h1 className={`text-2xl font-bold mt-6 mb-3 ${s.heading}`} {...p} />,
-          h2: ({ node, ...p }) => <h2 className={`text-xl font-bold mt-6 mb-3 ${s.heading}`} {...p} />,
-          h3: ({ node, ...p }) => <h3 className={`text-lg font-semibold mt-5 mb-2 ${s.heading}`} {...p} />,
-          h4: ({ node, ...p }) => <h4 className={`text-base font-semibold mt-4 mb-2 ${s.heading}`} {...p} />,
-          p: ({ node, ...p }) => <p className="my-3" {...p} />,
-          a: ({ node, href, ...p }) => {
+          h1: ({ node: _node, ...p }) => <h1 className={`text-2xl font-bold mt-6 mb-3 ${s.heading}`} {...p} />,
+          h2: ({ node: _node, ...p }) => <h2 className={`text-xl font-bold mt-6 mb-3 ${s.heading}`} {...p} />,
+          h3: ({ node: _node, ...p }) => <h3 className={`text-lg font-semibold mt-5 mb-2 ${s.heading}`} {...p} />,
+          h4: ({ node: _node, ...p }) => <h4 className={`text-base font-semibold mt-4 mb-2 ${s.heading}`} {...p} />,
+          p: ({ node: _node, ...p }) => <p className="my-3" {...p} />,
+          a: ({ node: _node, href, ...p }) => {
             // Drop href if it uses a dangerous scheme (javascript:, data:,
             // vbscript:, file:). The link still renders as text so the
             // user sees something, but it's no longer a vector.
@@ -110,16 +110,16 @@ export const MarkdownContent = ({ children, variant = 'light', className = '' })
               />
             );
           },
-          strong: ({ node, ...p }) => <strong className={`font-semibold ${s.heading}`} {...p} />,
-          em: ({ node, ...p }) => <em className="italic" {...p} />,
-          ul: ({ node, ...p }) => <ul className="list-disc pl-6 my-3 space-y-1.5" {...p} />,
-          ol: ({ node, ...p }) => <ol className="list-decimal pl-6 my-3 space-y-1.5" {...p} />,
-          li: ({ node, ...p }) => <li className="leading-relaxed" {...p} />,
-          blockquote: ({ node, ...p }) => (
+          strong: ({ node: _node, ...p }) => <strong className={`font-semibold ${s.heading}`} {...p} />,
+          em: ({ node: _node, ...p }) => <em className="italic" {...p} />,
+          ul: ({ node: _node, ...p }) => <ul className="list-disc pl-6 my-3 space-y-1.5" {...p} />,
+          ol: ({ node: _node, ...p }) => <ol className="list-decimal pl-6 my-3 space-y-1.5" {...p} />,
+          li: ({ node: _node, ...p }) => <li className="leading-relaxed" {...p} />,
+          blockquote: ({ node: _node, ...p }) => (
             <blockquote className={`border-l-4 ${s.blockquote} pl-4 py-2 my-4 rounded-r-lg italic`} {...p} />
           ),
-          hr: ({ node, ...p }) => <hr className={`my-6 border-t ${s.hr}`} {...p} />,
-          code: ({ node, inline, className: cn, children: kids, ...p }) => {
+          hr: ({ node: _node, ...p }) => <hr className={`my-6 border-t ${s.hr}`} {...p} />,
+          code: ({ node: _node, inline, className: cn, children: kids, ...p }) => {
             if (inline) {
               return (
                 <code className={`px-1.5 py-0.5 rounded text-[0.9em] font-mono ${s.code}`} {...p}>
@@ -133,22 +133,22 @@ export const MarkdownContent = ({ children, variant = 'light', className = '' })
               </code>
             );
           },
-          pre: ({ node, ...p }) => (
+          pre: ({ node: _node, ...p }) => (
             <pre className={`rounded-xl p-4 my-4 overflow-x-auto text-sm ${s.codeBlock}`} {...p} />
           ),
-          table: ({ node, ...p }) => (
+          table: ({ node: _node, ...p }) => (
             <div className="overflow-x-auto my-4">
               <table className="w-full text-sm border-collapse" {...p} />
             </div>
           ),
-          thead: ({ node, ...p }) => <thead className={s.tableHeader} {...p} />,
-          th: ({ node, ...p }) => (
+          thead: ({ node: _node, ...p }) => <thead className={s.tableHeader} {...p} />,
+          th: ({ node: _node, ...p }) => (
             <th className={`border ${s.tableCell} px-3 py-2 text-left font-semibold`} {...p} />
           ),
-          td: ({ node, ...p }) => (
+          td: ({ node: _node, ...p }) => (
             <td className={`border ${s.tableCell} px-3 py-2 align-top`} {...p} />
           ),
-          img: ({ node, src, alt, ...p }) => {
+          img: ({ node: _node, src, alt, ...p }) => {
             // Refuse non-http(s) image sources — blocks javascript:
             // and data: URI XSS via AI-generated or admin-authored
             // markdown like ![x](javascript:alert(1)) or

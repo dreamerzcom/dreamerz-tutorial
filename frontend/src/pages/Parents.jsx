@@ -1,14 +1,13 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import {
-  Shield, Heart, Brain, Eye, MessageCircle,
-  Clock, Users, BookOpen, AlertCircle, Check,
+  Shield, Heart, Brain, Eye,
+  Clock, Users, BookOpen, Check,
   ArrowRight, Lock, UserX, Phone, HelpCircle,
   FileWarning, CheckCircle2, XCircle, Sparkles
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { useAuth } from '../hooks/useAuth';
-import { ParentDashboard } from './ParentDashboard';
 
 // What DreamerZ teaches
 const whatWeTeach = [
@@ -258,7 +257,7 @@ export const Parents = () => {
           
           <div className="bg-emerald-50 rounded-2xl border border-emerald-100 p-6">
             <div className="grid sm:grid-cols-2 gap-6">
-              {privacyPromises.map((promise, index) => (
+              {privacyPromises.map((promise) => (
                 <div key={promise.title} className="flex items-start gap-4">
                   <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center flex-shrink-0">
                     <promise.icon className="w-5 h-5 text-emerald-600" />

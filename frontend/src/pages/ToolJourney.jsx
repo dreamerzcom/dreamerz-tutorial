@@ -15,7 +15,7 @@ const numericId = (value) => {
 
 
 export const ToolJourney = () => {
-  const { toolId, categoryName } = useParams();
+  const { toolId } = useParams();
   const navigate = useNavigate();
   const [tool, setTool] = useState(null);
   const [isLoading, setIsLoading] = useState(true);

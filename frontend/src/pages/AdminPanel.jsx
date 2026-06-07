@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Users, BookOpen, BarChart3, Search, Trash2, Shield,
-  ChevronDown, ChevronUp, Edit3, Plus, X, Save, RefreshCw,
+  ChevronDown, ChevronUp, Edit3, X, Save, RefreshCw,
   AlertTriangle, GripVertical, Upload, FileText, Image,
-  Download, Paperclip, File, Globe, Languages, Check, Sparkles,
+  Download, Paperclip, File, Globe, Languages, Sparkles,
   Filter, SortDesc
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
@@ -367,6 +367,7 @@ const UsersTab = ({ token }) => {
 // ══════════════════════════════════════════════════════════
 // CONTENT TAB
 // ══════════════════════════════════════════════════════════
+// eslint-disable-next-line no-unused-vars
 const ContentTab = ({ token }) => {
   const [tools, setTools] = useState([]);
   const [courses, setCourses] = useState([]);
@@ -1238,7 +1239,7 @@ const StatsTab = ({ token }) => {
 // MAIN ADMIN PANEL
 // ══════════════════════════════════════════════════════════
 export const AdminPanel = () => {
-  const { user, token, isAuthenticated, isLoaded, isAdmin, isCreator } = useAuth();
+  const { token, isAuthenticated, isLoaded, isAdmin, isCreator } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('content');
 

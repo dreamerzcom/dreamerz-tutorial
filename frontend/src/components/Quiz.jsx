@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   CheckCircle2, XCircle, RotateCcw, ArrowRight, Trophy, 
@@ -16,7 +16,7 @@ export const Quiz = ({ questions, onComplete, onBackToContent, onContinueToNext,
   const [showExplanation, setShowExplanation] = useState(false);
   const [score, setScore] = useState(0);
   const [quizComplete, setQuizComplete] = useState(false);
-  const [answers, setAnswers] = useState([]);
+  const [_answers, setAnswers] = useState([]);
 
   // Allow the lesson creator to override the pass threshold (1–100). Default 70.
   const passingScore = (() => {
@@ -161,6 +161,7 @@ export const Quiz = ({ questions, onComplete, onBackToContent, onContinueToNext,
     if (isCorrect) {
       setScore(prev => prev + 1);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedAnswer, selectedAnswers, shortAnswer, question, currentQuestion, questionType, checkShortAnswer]);
 
   // Move to next question or finish
@@ -174,7 +175,6 @@ export const Quiz = ({ questions, onComplete, onBackToContent, onContinueToNext,
       setShortAnswer('');
       setShowResult(false);
     } else {
-      const finalScore = Math.round((score / questions.length) * 100);
       const passed = score >= passingQuestions;
       setQuizComplete(true);
       // Don't increment attempt count here - backend handles it

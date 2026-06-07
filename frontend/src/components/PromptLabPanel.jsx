@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Send, Sparkles, Wand2, AlertCircle, Plus, ChevronDown,
-  Target, FileText, Settings2, Layers, Lightbulb, ArrowRight,
+  Target, Settings2, Layers, Lightbulb, ArrowRight,
   CheckCircle2, Zap, BookOpen, RefreshCw
 } from 'lucide-react';
 import { Button } from './ui/button';

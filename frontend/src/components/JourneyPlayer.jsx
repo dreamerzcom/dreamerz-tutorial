@@ -37,7 +37,7 @@ export const JourneyPlayer = ({
   getModuleProgress,
   completeModule,
   initialModuleId,
-  previewVideoUrl,
+  previewVideoUrl: _previewVideoUrl,
   previewMode = false,
 }) => {
   const course = courseProp || tool;
@@ -1154,8 +1154,6 @@ export const JourneyPlayer = ({
                                 {activeModule.media_assets.filter(asset => !asset.is_highlight).map((asset) => {
                                   const kind = asset.asset_type || asset.type;
                                   const mediaEndpoint = `${backendBase}/api/content/media/${asset.id}`;
-                                  const viewUrl = mediaEndpoint;
-                                  const downloadUrl = `${mediaEndpoint}/download`;
                                   const url = asset.cloudinary_url || mediaEndpoint;
                                   if (kind === 'image') {
                                     return (

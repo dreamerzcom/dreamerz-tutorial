@@ -249,7 +249,7 @@ export const LessonEditor = ({ lessonId, token, onLessonUpdated, onLessonDeleted
   const setHighlight = async (assetId, isHighlight) => {
     if (readOnly) return;
     try {
-      const updatedAsset = await adminFetch(`/media/${assetId}/highlight`, token, {
+      await adminFetch(`/media/${assetId}/highlight`, token, {
         method: 'PUT',
         body: JSON.stringify({ is_highlight: isHighlight }),
       });

@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, BookOpen, Clock, Award, AlertTriangle, TrendingUp, CheckCircle2, Circle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import * as parentService from '../services/parentService';
 
 export const ParentStudentDetail = () => {
   const { studentUserId } = useParams();
-  const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const [overview, setOverview] = useState(null);
   const [courses, setCourses] = useState([]);
@@ -18,6 +17,7 @@ export const ParentStudentDetail = () => {
   useEffect(() => {
     if (!isAuthenticated) return;
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, studentUserId]);
 
   const loadData = async () => {

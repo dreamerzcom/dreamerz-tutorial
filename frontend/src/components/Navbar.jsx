@@ -39,15 +39,10 @@ const TrialBadge = ({ trialDaysRemaining, className = '' }) => {
   );
 };
 
-const baseNavLinks = [
-  { path: '/learn', label: 'Learn', icon: BookOpen },
-  { path: '/supervisors', label: 'For Supervisor', icon: Users },
-];
-
 export const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
-  const { user, isAuthenticated, logout, isCreator, isSupervisor, isAdmin, trialDaysRemaining } = useAuth();
+  const { user, isAuthenticated, logout, isCreator, isAdmin, trialDaysRemaining } = useAuth();
 
   const navLinks = [
     { path: '/learn', label: 'Learn', icon: BookOpen },

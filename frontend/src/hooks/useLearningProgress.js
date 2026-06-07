@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { createContext, useContext, useState, useCallback } from 'react';
 import * as progressService from '../services/progressService';
 import * as assessmentService from '../services/assessmentService';
 
