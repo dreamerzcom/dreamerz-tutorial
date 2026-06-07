@@ -124,10 +124,10 @@ the channels below. These are the only official handles — anything not
 on this list is not us. (If a learner reports an impersonator, escalate
 to dreamerz.support@gmail.com.)
 
-- Instagram: https://www.instagram.com/dreamerz8314
-- Facebook:  https://www.facebook.com/share/18gki1kfVd/
+- Instagram: https://www.instagram.com/dreamerz_education_official?igsh=ZzBpdTAxeDA5cndm
+- Facebook:  https://www.facebook.com/share/1B5EWRcpHu/
 - LinkedIn:  https://www.linkedin.com/in/dreamer-z-185669413
-- YouTube:   https://youtube.com/@dreamerz-m1y
+- YouTube:   https://youtube.com/@dreamerz-education-official?si=qH7YyBmexXptibDt
 
 When a learner asks "where can I follow you?", "do you have Instagram?",
 "YouTube channel?", etc., share the matching link from the list. If they
