@@ -74,6 +74,13 @@ const buildUserProfile = ({
   aiGenerationEnabled,
   trialExpiresAt,
   trialDaysRemaining,
+  age,
+  industry,
+  profession,
+  interests,
+  desiredTopics,
+  experienceLevel,
+  learningGoal,
 }) => ({
   username,
   email,
@@ -89,12 +96,15 @@ const buildUserProfile = ({
   theme: theme || 'light',
   lastLoginAt: lastLoginAt || new Date().toISOString(),
   createdAt: createdAt || new Date().toISOString(),
-  // Free-trial bookkeeping. `trialExpiresAt` is an ISO string for learners
-  // and null for exempt roles (admin/creator/supervisor — never gated).
   trialExpiresAt: trialExpiresAt || null,
-  // We cache the server-computed number too, but `useAuth` recomputes from
-  // `trialExpiresAt` on every render so the Navbar countdown stays current.
   trialDaysRemaining: trialDaysRemaining || null,
+  age: age || null,
+  industry: industry || null,
+  profession: profession || null,
+  interests: interests || [],
+  desiredTopics: desiredTopics || [],
+  experienceLevel: experienceLevel || null,
+  learningGoal: learningGoal || null,
 });
 
 // Recompute days remaining locally so the Navbar badge updates as time
@@ -102,17 +112,15 @@ const buildUserProfile = ({
 //   null  → exempt user (no trial)
 //   0     → expired
 //   N>0   → whole days left
+//
+// When the user has a linked subscription plan, the countdown is derived
+// from their personal subscription_start_date + plan duration_days so it
+// reflects exactly when their own trial window closes.
 const computeTrialDaysRemaining = (user) => {
   if (!user) return null;
-  if (!user.trialExpiresAt) {
-    // Exempt accounts (admins etc.) intentionally have a null expiry.
-    // Learners with a null expiry mean a backfill miss → treat as expired.
-    const role = (user.role || 'learner').toLowerCase();
-    if (role === 'admin' || role === 'creator' || role === 'supervisor') {
-      return null;
-    }
-    return 0;
-  }
+  const role = (user.role || 'learner').toLowerCase();
+  if (role === 'admin' || role === 'creator' || role === 'supervisor') return null;
+  if (!user.trialExpiresAt) return 0;
   const expiry = new Date(user.trialExpiresAt).getTime();
   if (Number.isNaN(expiry)) return 0;
   const ms = expiry - Date.now();
@@ -168,6 +176,13 @@ export const AuthProvider = ({ children }) => {
               aiGenerationEnabled: result.ai_generation_enabled,
               trialExpiresAt: result.trial_expires_at,
               trialDaysRemaining: result.trial_days_remaining,
+              age: result.age,
+              industry: result.industry,
+              profession: result.profession,
+              interests: result.interests,
+              desiredTopics: result.desired_topics,
+              experienceLevel: result.experience_level,
+              learningGoal: result.learning_goal,
             }));
           })
           .catch(err => {
@@ -218,6 +233,13 @@ export const AuthProvider = ({ children }) => {
       aiGenerationEnabled: result.ai_generation_enabled,
       trialExpiresAt: result.trial_expires_at,
       trialDaysRemaining: result.trial_days_remaining,
+      age: result.age,
+      industry: result.industry,
+      profession: result.profession,
+      interests: result.interests,
+      desiredTopics: result.desired_topics,
+      experienceLevel: result.experience_level,
+      learningGoal: result.learning_goal,
     });
 
     setUser(user);
@@ -255,6 +277,13 @@ export const AuthProvider = ({ children }) => {
       aiGenerationEnabled: result.ai_generation_enabled,
       trialExpiresAt: result.trial_expires_at,
       trialDaysRemaining: result.trial_days_remaining,
+      age: result.age,
+      industry: result.industry,
+      profession: result.profession,
+      interests: result.interests,
+      desiredTopics: result.desired_topics,
+      experienceLevel: result.experience_level,
+      learningGoal: result.learning_goal,
     });
 
     setUser(user);
@@ -307,6 +336,13 @@ export const AuthProvider = ({ children }) => {
       aiGenerationEnabled: response.ai_generation_enabled,
       trialExpiresAt: response.trial_expires_at,
       trialDaysRemaining: response.trial_days_remaining,
+      age: response.age,
+      industry: response.industry,
+      profession: response.profession,
+      interests: response.interests,
+      desiredTopics: response.desired_topics,
+      experienceLevel: response.experience_level,
+      learningGoal: response.learning_goal,
     });
 
     setUser(user);
@@ -348,6 +384,13 @@ export const AuthProvider = ({ children }) => {
           aiGenerationEnabled: result.ai_generation_enabled,
           trialExpiresAt: result.trial_expires_at,
           trialDaysRemaining: result.trial_days_remaining,
+          age: result.age,
+          industry: result.industry,
+          profession: result.profession,
+          interests: result.interests,
+          desiredTopics: result.desired_topics,
+          experienceLevel: result.experience_level,
+          learningGoal: result.learning_goal,
         });
         setUser(updatedUser);
       }

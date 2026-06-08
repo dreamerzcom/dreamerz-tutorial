@@ -77,6 +77,13 @@ def _user_to_dict(user: User) -> dict:
         "phone": user.phone,
         "country_code": user.country_code,
         "theme": user.theme,
+        "age": user.age,
+        "industry": user.industry,
+        "profession": user.profession,
+        "interests": user.interests or [],
+        "desired_topics": user.desired_topics or [],
+        "experience_level": user.experience_level,
+        "learning_goal": user.learning_goal,
     }
 
 

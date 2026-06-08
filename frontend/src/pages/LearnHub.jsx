@@ -6,8 +6,9 @@ import { useLearningProgress } from '../hooks/useLearningProgress';
 import { useProgress } from '../hooks/useProgress';
 import { useAuth } from '../hooks/useAuth';
 import { ProgressDashboard } from '../components/ProgressDashboard';
+import { computeProfileCompletion } from './Account';
 import { toast } from 'sonner';
-import { BookOpen, Search, ArrowRight, ArrowLeft, Layers, HelpCircle, Signal, CheckCircle2, Sparkles, GraduationCap, Grid3X3 } from 'lucide-react';
+import { BookOpen, Search, ArrowRight, ArrowLeft, Layers, HelpCircle, Signal, CheckCircle2, Sparkles, GraduationCap, Grid3X3, User, Lightbulb } from 'lucide-react';
 
 const CATEGORY_META = {
   'ai-learning': {
@@ -149,7 +150,7 @@ export const LearnHub = ({ viewMode: initialViewMode = 'catalog' }) => {
     resetProgress,
     clearCourseProgress
   } = useProgress();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const location = useLocation();
   const [viewMode, setViewMode] = useState(location.pathname === '/learn/myprogress' ? 'progress' : initialViewMode); // 'catalog' or 'progress'
   const [selectedCategory, setSelectedCategory] = useState(categoryName || null);
@@ -310,6 +311,51 @@ export const LearnHub = ({ viewMode: initialViewMode = 'catalog' }) => {
     );
   }, [selectedCategoryData, query]);
 
+  // Recommendation scoring: weighted keyword matching against user profile
+  const recommendedCourses = useMemo(() => {
+    if (!user || !apiTools?.length) return [];
+    const interests = (user.interests || []).map((s) => s.toLowerCase());
+    const desiredTopics = (user.desiredTopics || []).map((s) => s.toLowerCase());
+    const industry = (user.industry || '').toLowerCase();
+    const profession = (user.profession || '').toLowerCase();
+    const experienceLevel = (user.experienceLevel || '').toLowerCase();
+    const hasProfile = interests.length > 0 || desiredTopics.length > 0 || industry || profession;
+    if (!hasProfile) return [];
+
+    const scored = apiTools.map((course) => {
+      const nameLower = (course.name || '').toLowerCase();
+      const taglineLower = (course.tagline || '').toLowerCase();
+      const categoryLower = (course.category_id || '').toLowerCase();
+      let score = 0;
+
+      interests.forEach((interest) => {
+        const tokens = interest.split(/\s+/);
+        if (tokens.some((t) => nameLower.includes(t) || taglineLower.includes(t) || categoryLower.includes(t))) score += 3;
+      });
+      desiredTopics.forEach((topic) => {
+        const tokens = topic.split(/\s+/);
+        if (tokens.some((t) => nameLower.includes(t) || taglineLower.includes(t))) score += 3;
+      });
+      if (industry) {
+        const tokens = industry.split(/\s+/);
+        if (tokens.some((t) => nameLower.includes(t) || categoryLower.includes(t))) score += 2;
+      }
+      if (profession) {
+        const tokens = profession.split(/\s+/);
+        if (tokens.some((t) => nameLower.includes(t) || taglineLower.includes(t))) score += 2;
+      }
+      if (experienceLevel && taglineLower.includes(experienceLevel)) score += 1;
+
+      return { course, score };
+    });
+
+    return scored
+      .filter(({ score }) => score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 6)
+      .map(({ course }) => course);
+  }, [user, apiTools]);
+
   // useCallback so the reference stays stable across LearnHub re-renders
   // (search/filter state changes don't invalidate it). Without this the
   // memoized CourseCatalogCard would still re-render on every keystroke
@@ -437,6 +483,46 @@ export const LearnHub = ({ viewMode: initialViewMode = 'catalog' }) => {
           )}
         </motion.div>
 
+        {/* Profile Completion Card */}
+        {viewMode === 'catalog' && isAuthenticated && !selectedCategory && (() => {
+          const pct = computeProfileCompletion(user);
+          if (pct >= 100) return null;
+          return (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.05 }}
+              className="mb-6"
+            >
+              <Link
+                to="/account"
+                className="flex items-center gap-4 bg-white rounded-2xl border border-violet-200 shadow-sm px-5 py-4 hover:shadow-md hover:-translate-y-0.5 transition-all group"
+              >
+                <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center flex-shrink-0">
+                  <User className="w-5 h-5 text-violet-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-sm font-semibold text-slate-900">
+                      Your profile is {pct}% complete
+                    </p>
+                    <span className="text-xs text-violet-600 font-medium group-hover:underline">Complete profile →</span>
+                  </div>
+                  <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-violet-500 rounded-full transition-all duration-700"
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Complete your learning profile to unlock personalised course recommendations.
+                  </p>
+                </div>
+              </Link>
+            </motion.div>
+          );
+        })()}
+
         {/* Colorful Progress Tracker Banner */}
         {viewMode === 'catalog' && isAuthenticated && !selectedCategory && (
           <motion.div
@@ -511,6 +597,38 @@ export const LearnHub = ({ viewMode: initialViewMode = 'catalog' }) => {
                 placeholder="Search courses or categories..."
                 className="w-full pl-12 pr-4 py-4 rounded-2xl border border-slate-200 bg-white shadow-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-base"
               />
+            </div>
+          </motion.div>
+        )}
+
+        {/* Recommended Courses */}
+        {viewMode === 'catalog' && !selectedCategory && !globalSearchQuery && isAuthenticated && recommendedCourses.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="mb-10"
+          >
+            <div className="flex items-center gap-2 mb-4">
+              <Lightbulb className="w-5 h-5 text-amber-500" />
+              <h2 className="text-xl font-bold text-slate-900">Recommended for You</h2>
+            </div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {recommendedCourses.map((course, index) => {
+                const courseDbId = getCourseDbId(course);
+                const isEnrolled = courseDbId ? enrolledCourseIds.has(courseDbId) : false;
+                return (
+                  <CourseCatalogCard
+                    key={course.id}
+                    course={course}
+                    index={index}
+                    isEnrolled={isEnrolled}
+                    isEnrolling={courseDbId === enrollingCourseId}
+                    onEnroll={handleEnroll}
+                    stats={courseStatsById.get(course.id)}
+                  />
+                );
+              })}
             </div>
           </motion.div>
         )}

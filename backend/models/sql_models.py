@@ -475,6 +475,14 @@ class User(Base):
     # Social login fields (nullable — only set for OAuth users)
     social_provider: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
     social_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    # Learning profile — used for course recommendations
+    age: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    industry: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    profession: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    interests: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
+    desired_topics: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
+    experience_level: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    learning_goal: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
 
     def __repr__(self) -> str:
         return f"<User(id={self.id}, username='{self.username}', email='{self.email}')>"
@@ -493,6 +501,13 @@ class User(Base):
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "last_login": self.last_login.isoformat() if self.last_login else None,
             "trial_expires_at": self.trial_expires_at.isoformat() if self.trial_expires_at else None,
+            "age": self.age,
+            "industry": self.industry,
+            "profession": self.profession,
+            "interests": self.interests or [],
+            "desired_topics": self.desired_topics or [],
+            "experience_level": self.experience_level,
+            "learning_goal": self.learning_goal,
         }
 
 

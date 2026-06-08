@@ -1,7 +1,7 @@
 """User-related Pydantic models."""
 
 from pydantic import BaseModel, Field, field_validator
-from typing import Optional, Literal
+from typing import Optional, Literal, Any, List
 
 
 class UserCreate(BaseModel):
@@ -48,9 +48,6 @@ class TokenResponse(BaseModel):
     phone: Optional[str] = None
     country_code: Optional[str] = None
     theme: str = "light"
-    # Free-trial bookkeeping. `trial_expires_at` is ISO-8601 (or null for
-    # exempt roles); `trial_days_remaining` is null for exempt roles and a
-    # non-negative int for learners (0 = already expired).
     trial_expires_at: Optional[str] = None
     trial_days_remaining: Optional[int] = None
 
@@ -67,6 +64,13 @@ class UserInfoResponse(BaseModel):
     phone: Optional[str] = None
     country_code: Optional[str] = None
     theme: str = "light"
+    age: Optional[int] = None
+    industry: Optional[str] = None
+    profession: Optional[str] = None
+    interests: List[str] = []
+    desired_topics: List[str] = []
+    experience_level: Optional[str] = None
+    learning_goal: Optional[str] = None
 
 
 class AdminUserResponse(BaseModel):
