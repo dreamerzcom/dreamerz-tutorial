@@ -27,20 +27,16 @@ from services.auth_service import (
 
 
 def _trial_payload(user_like) -> dict:
-    """Extract (trial_expires_at_iso, trial_days_remaining) for response bodies.
+    """Build trial fields for response bodies.
 
     Accepts either a User ORM row or the dict shape `authenticate_user`
-    returns. Hides the column for exempt roles by returning None on both
-    fields — the frontend reads None as "no trial, never expires".
+    returns. Exempt roles get None on trial fields.
     """
     if isinstance(user_like, dict):
         role = user_like.get("role")
         email = user_like.get("email", "")
         raw_expiry = user_like.get("trial_expires_at")
-        if isinstance(raw_expiry, datetime):
-            expiry_iso = raw_expiry.isoformat()
-        else:
-            expiry_iso = raw_expiry  # already a string or None
+        expiry_iso = raw_expiry.isoformat() if isinstance(raw_expiry, datetime) else raw_expiry
         user_dict = user_like
     else:
         role = user_like.role
@@ -55,6 +51,7 @@ def _trial_payload(user_like) -> dict:
         "trial_expires_at": expiry_iso,
         "trial_days_remaining": trial_days_remaining(user_dict),
     }
+
 from services.email_service import send_welcome_email
 from middleware.rate_limit import check_auth_rate_limit
 
@@ -150,7 +147,11 @@ async def social_login(body: SocialLoginRequest, session: AsyncSession = Depends
 
         is_admin_email = email in ADMIN_EMAILS
         final_role = "admin" if is_admin_email else "learner"
-        trial_expires = None if final_role in TRIAL_EXEMPT_ROLES or is_admin_email else now + timedelta(days=TRIAL_DURATION_DAYS)
+
+        if final_role in TRIAL_EXEMPT_ROLES or is_admin_email:
+            trial_expires = None
+        else:
+            trial_expires = now + timedelta(days=TRIAL_DURATION_DAYS)
 
         db_user = User(
             username=username,
@@ -249,12 +250,10 @@ async def register_user(user: UserCreate, session: AsyncSession = Depends(get_db
     is_admin_email = email in ADMIN_EMAILS
     final_role = "admin" if is_admin_email else requested_role
 
-    # Exempt roles never have an expiry; learners get the standard window.
-    trial_expires = (
-        None
-        if final_role in TRIAL_EXEMPT_ROLES or is_admin_email
-        else now + timedelta(days=TRIAL_DURATION_DAYS)
-    )
+    if final_role in TRIAL_EXEMPT_ROLES or is_admin_email:
+        trial_expires = None
+    else:
+        trial_expires = now + timedelta(days=TRIAL_DURATION_DAYS)
 
     new_user = User(
         username=username,
@@ -318,7 +317,7 @@ async def login_user(credentials: UserLogin, request: Request, session: AsyncSes
         {"sub": user["email"], "email": user["email"], "lang": user_lang, "role": user.get("role", "learner")}
     )
 
-    # Update last_login via SQLAlchemy
+    # Update last_login.
     result = await session.execute(
         select(User).where(User.username == user["username"])
     )
@@ -343,7 +342,9 @@ async def login_user(credentials: UserLogin, request: Request, session: AsyncSes
 
 
 @router.get("/me", response_model=UserInfoResponse)
-async def get_profile(current_user: dict = Depends(get_current_user)):
+async def get_profile(
+    current_user: dict = Depends(get_current_user),
+):
     return {
         "username": current_user["username"],
         "email": current_user["email"],
@@ -354,6 +355,13 @@ async def get_profile(current_user: dict = Depends(get_current_user)):
         "phone": current_user.get("phone"),
         "country_code": current_user.get("country_code"),
         "theme": current_user.get("theme", "light"),
+        "age": current_user.get("age"),
+        "industry": current_user.get("industry"),
+        "profession": current_user.get("profession"),
+        "interests": current_user.get("interests") or [],
+        "desired_topics": current_user.get("desired_topics") or [],
+        "experience_level": current_user.get("experience_level"),
+        "learning_goal": current_user.get("learning_goal"),
         **_trial_payload(current_user),
     }
 
@@ -389,6 +397,13 @@ class ProfileUpdate(BaseModel):
     phone: Optional[str] = None
     country_code: Optional[str] = None
     theme: Optional[str] = None
+    age: Optional[int] = None
+    industry: Optional[str] = None
+    profession: Optional[str] = None
+    interests: Optional[list] = None
+    desired_topics: Optional[list] = None
+    experience_level: Optional[str] = None
+    learning_goal: Optional[str] = None
 
 
 @router.put("/profile")
@@ -405,7 +420,6 @@ async def update_profile(
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # Update fields only if they have values (not None and not empty string)
     if body.username is not None and body.username != "":
         db_user.username = body.username
     if body.phone is not None and body.phone != "":
@@ -414,6 +428,20 @@ async def update_profile(
         db_user.country_code = body.country_code
     if body.theme is not None and body.theme in ["light", "dark"]:
         db_user.theme = body.theme
+    if body.age is not None:
+        db_user.age = body.age
+    if body.industry is not None:
+        db_user.industry = body.industry or None
+    if body.profession is not None:
+        db_user.profession = body.profession or None
+    if body.interests is not None:
+        db_user.interests = body.interests
+    if body.desired_topics is not None:
+        db_user.desired_topics = body.desired_topics
+    if body.experience_level is not None:
+        db_user.experience_level = body.experience_level or None
+    if body.learning_goal is not None:
+        db_user.learning_goal = body.learning_goal or None
 
     db_user.updated_at = datetime.now(timezone.utc)
     await session.commit()
@@ -424,6 +452,13 @@ async def update_profile(
         "phone": db_user.phone,
         "country_code": db_user.country_code,
         "theme": db_user.theme,
+        "age": db_user.age,
+        "industry": db_user.industry,
+        "profession": db_user.profession,
+        "interests": db_user.interests or [],
+        "desired_topics": db_user.desired_topics or [],
+        "experience_level": db_user.experience_level,
+        "learning_goal": db_user.learning_goal,
     }
 
 

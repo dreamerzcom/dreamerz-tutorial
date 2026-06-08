@@ -18,12 +18,12 @@ const SUPPORT_EMAIL = 'dreamerz.support@gmail.com';
 const SOCIAL_LINKS = [
   {
     label: 'Instagram',
-    href: 'https://www.instagram.com/dreamerz8314',
+    href: 'https://www.instagram.com/dreamerz_education_official?igsh=ZzBpdTAxeDA5cndm',
     Icon: Instagram,
   },
   {
     label: 'Facebook',
-    href: 'https://www.facebook.com/share/18gki1kfVd/',
+    href: 'https://www.facebook.com/share/1B5EWRcpHu/',
     Icon: Facebook,
   },
   {
@@ -33,7 +33,7 @@ const SOCIAL_LINKS = [
   },
   {
     label: 'YouTube',
-    href: 'https://youtube.com/@dreamerz-m1y',
+    href: 'https://youtube.com/@dreamerz-education-official?si=qH7YyBmexXptibDt',
     Icon: Youtube,
   },
 ];
