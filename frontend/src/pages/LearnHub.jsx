@@ -356,6 +356,11 @@ export const LearnHub = ({ viewMode: initialViewMode = 'catalog' }) => {
       .map(({ course }) => course);
   }, [user, apiTools]);
 
+  const recommendedCourseIds = useMemo(
+    () => new Set(recommendedCourses.map((c) => c.id)),
+    [recommendedCourses],
+  );
+
   // useCallback so the reference stays stable across LearnHub re-renders
   // (search/filter state changes don't invalidate it). Without this the
   // memoized CourseCatalogCard would still re-render on every keystroke
@@ -601,38 +606,6 @@ export const LearnHub = ({ viewMode: initialViewMode = 'catalog' }) => {
           </motion.div>
         )}
 
-        {/* Recommended Courses */}
-        {viewMode === 'catalog' && !selectedCategory && !globalSearchQuery && isAuthenticated && recommendedCourses.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="mb-10"
-          >
-            <div className="flex items-center gap-2 mb-4">
-              <Lightbulb className="w-5 h-5 text-amber-500" />
-              <h2 className="text-xl font-bold text-slate-900">Recommended for You</h2>
-            </div>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {recommendedCourses.map((course, index) => {
-                const courseDbId = getCourseDbId(course);
-                const isEnrolled = courseDbId ? enrolledCourseIds.has(courseDbId) : false;
-                return (
-                  <CourseCatalogCard
-                    key={course.id}
-                    course={course}
-                    index={index}
-                    isEnrolled={isEnrolled}
-                    isEnrolling={courseDbId === enrollingCourseId}
-                    onEnroll={handleEnroll}
-                    stats={courseStatsById.get(course.id)}
-                  />
-                );
-              })}
-            </div>
-          </motion.div>
-        )}
-
         <AnimatePresence mode="wait">
           {viewMode === 'progress' ? (
             <motion.div
@@ -739,49 +712,87 @@ export const LearnHub = ({ viewMode: initialViewMode = 'catalog' }) => {
             </motion.div>
           ) : !selectedCategory ? (
             <motion.div
-              key="categories"
+              key="all-courses"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="grid sm:grid-cols-2 xl:grid-cols-3 gap-6"
             >
-              {categories.map((category, index) => (
-                <motion.button
-                  key={category.id}
-                  type="button"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  onClick={() => {
-                    navigate(`/learn/${category.id}`);
-                    setGlobalSearchQuery('');
-                  }}
-                  className={`text-left rounded-3xl p-6 bg-gradient-to-br ${category.gradient} text-white shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all overflow-hidden relative`}
-                >
-                  <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full bg-white/10" />
-                  <div className="relative z-10">
-                    <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center text-3xl mb-6">
-                      {category.icon}
+              {/* ── Recommended for You ── */}
+              {isAuthenticated && recommendedCourses.length > 0 && (
+                <div className="mb-12">
+                  <div className="flex items-center gap-3 mb-5">
+                    <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+                      <Lightbulb className="w-5 h-5 text-amber-600" />
                     </div>
-                    <h2 className="text-2xl font-bold mb-2">{category.title}</h2>
-                    <p className="text-white/85 text-sm leading-relaxed mb-6 min-h-[44px]">{category.description}</p>
-                    <div className="flex items-center gap-3 mb-6">
-                      <div className="bg-white/20 rounded-2xl px-3 sm:px-4 py-2 sm:py-3 backdrop-blur text-center min-w-[70px] sm:min-w-[80px]">
-                        <div className="text-xl sm:text-2xl font-bold">{category.totalCourses}</div>
-                        <div className="text-[10px] sm:text-xs text-white/80">Courses</div>
-                      </div>
-                      <div className="bg-white/20 rounded-2xl px-3 sm:px-4 py-2 sm:py-3 backdrop-blur text-center min-w-[70px] sm:min-w-[80px]">
-                        <div className="text-xl sm:text-2xl font-bold">{category.totalModules}</div>
-                        <div className="text-[10px] sm:text-xs text-white/80">Modules</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between font-semibold">
-                      <span>View Courses</span>
-                      <ArrowRight className="w-5 h-5" />
+                    <div>
+                      <h2 className="text-xl font-bold text-slate-900">Recommended for You</h2>
+                      <p className="text-sm text-slate-500">Based on your interests and learning goals</p>
                     </div>
                   </div>
-                </motion.button>
-              ))}
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {recommendedCourses.map((course, index) => {
+                      const courseDbId = getCourseDbId(course);
+                      const isEnrolled = courseDbId ? enrolledCourseIds.has(courseDbId) : false;
+                      return (
+                        <CourseCatalogCard
+                          key={course.id}
+                          course={course}
+                          index={index}
+                          isEnrolled={isEnrolled}
+                          isEnrolling={courseDbId === enrollingCourseId}
+                          onEnroll={handleEnroll}
+                          stats={courseStatsById.get(course.id)}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Other Learning Materials ── */}
+              <div>
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0">
+                    <BookOpen className="w-5 h-5 text-slate-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-900">
+                      {recommendedCourses.length > 0 ? 'Other Learning Materials' : 'All Learning Materials'}
+                    </h2>
+                    <p className="text-sm text-slate-500">Explore all available courses</p>
+                  </div>
+                </div>
+                {categories.map((category) => {
+                  const remaining = category.courses.filter((c) => !recommendedCourseIds.has(c.id));
+                  if (!remaining.length) return null;
+                  return (
+                    <div key={category.id} className="mb-10">
+                      <div className="flex items-center gap-2 mb-4">
+                        <span className="text-xl">{category.icon}</span>
+                        <h3 className="text-base font-semibold text-slate-700">{category.title}</h3>
+                        <span className="ml-2 text-xs text-slate-400">{remaining.length} course{remaining.length !== 1 ? 's' : ''}</span>
+                      </div>
+                      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                        {remaining.map((course, index) => {
+                          const courseDbId = getCourseDbId(course);
+                          const isEnrolled = courseDbId ? enrolledCourseIds.has(courseDbId) : false;
+                          return (
+                            <CourseCatalogCard
+                              key={course.id}
+                              course={course}
+                              index={index}
+                              isEnrolled={isEnrolled}
+                              isEnrolling={courseDbId === enrollingCourseId}
+                              onEnroll={handleEnroll}
+                              stats={courseStatsById.get(course.id)}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </motion.div>
           ) : (
             <motion.div
