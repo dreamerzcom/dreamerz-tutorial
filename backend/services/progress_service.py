@@ -16,6 +16,7 @@ from models.sql_models import (
     Module,
     Lesson,
     User,
+    Certificate,
 )
 from models.progress import (
     StudentCourseEnrollmentCreate,
@@ -93,6 +94,10 @@ async def _sync_enrollment_counters(
         if enrollment.status != "completed":
             enrollment.status = "completed"
             enrollment.completed_at = datetime.now(timezone.utc)
+        # Issue a completion certificate if the course opted in. Safe to call
+        # on every sync — it's a no-op when the course has certificates off or
+        # the student already has one.
+        await _issue_certificate_if_eligible(sess, student_user_id, course_id, enrollment)
     elif enrollment.status == "completed":
         # A previously-completed course dropped below 100% (lesson un-completed
         # or new lessons added) — reopen it.
@@ -100,6 +105,77 @@ async def _sync_enrollment_counters(
         enrollment.completed_at = None
 
     return enrollment
+
+
+async def _issue_certificate_if_eligible(
+    sess: AsyncSession,
+    student_user_id: int,
+    course_id: int,
+    enrollment: StudentCourseEnrollment,
+) -> Optional[Certificate]:
+    """Create a completion Certificate for a finished course when enabled.
+
+    Mutates the session in-place (add/flush, no commit) so it composes with
+    the caller's transaction. Idempotent: returns the existing certificate
+    when one was already issued, and does nothing when the course hasn't
+    enabled certificates.
+    """
+    course = (
+        await sess.execute(select(Course).where(Course.id == course_id))
+    ).scalars().first()
+    if not course or not course.certificate_enabled:
+        return None
+
+    existing = (
+        await sess.execute(
+            select(Certificate).where(
+                and_(
+                    Certificate.student_user_id == student_user_id,
+                    Certificate.course_id == course_id,
+                )
+            )
+        )
+    ).scalars().first()
+    if existing:
+        return existing
+
+    student = (
+        await sess.execute(select(User).where(User.id == student_user_id))
+    ).scalars().first()
+
+    import uuid
+
+    cert = Certificate(
+        serial=uuid.uuid4().hex,
+        student_user_id=student_user_id,
+        course_id=course_id,
+        student_name_snapshot=(student.username if student else None),
+        course_name_snapshot=course.name,
+        title=course.certificate_title or f"Certificate of Completion — {course.name}",
+        completion_percent=float(enrollment.completion_percent or 100),
+        average_score=(
+            float(enrollment.average_quiz_score)
+            if enrollment.average_quiz_score is not None
+            else None
+        ),
+    )
+    sess.add(cert)
+    try:
+        await sess.flush()
+    except IntegrityError:
+        # Concurrent issue (unique constraint) — fall back to the existing row.
+        await sess.rollback()
+        return (
+            await sess.execute(
+                select(Certificate).where(
+                    and_(
+                        Certificate.student_user_id == student_user_id,
+                        Certificate.course_id == course_id,
+                    )
+                )
+            )
+        ).scalars().first()
+    return cert
 
 
 # ---------------------------------------------------------------------------

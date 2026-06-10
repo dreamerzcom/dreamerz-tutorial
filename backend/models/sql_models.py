@@ -87,6 +87,9 @@ class Course(Base):
     tags: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     blueprint_json: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     draft_version_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("courses.id", ondelete="SET NULL"), nullable=True)
+    # Completion-certificate config (set by the course creator).
+    certificate_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    certificate_title: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     created_by: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
@@ -124,6 +127,8 @@ class Course(Base):
             "available_languages": self.available_languages,
             "tags": self.tags,
             "draft_version_id": self.draft_version_id,
+            "certificate_enabled": self.certificate_enabled,
+            "certificate_title": self.certificate_title,
             "created_by": self.created_by,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
@@ -884,6 +889,100 @@ class ParentStudentLink(Base):
             "relationship_type": self.relationship_type,
             "is_active": self.is_active,
             "linked_at": self.linked_at.isoformat() if self.linked_at else None,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+# ---------------------------------------------------------------------------
+# 19. Certificate — issued on course completion when the course enables it
+# ---------------------------------------------------------------------------
+
+class Certificate(Base):
+    """A completion certificate issued to a student for a course.
+
+    Snapshots the student name and course name at issue time so the
+    certificate stays valid even if the user later renames themselves or
+    the course is edited/deleted. `serial` is the public, shareable
+    verification token.
+    """
+    __tablename__ = "certificates"
+    __table_args__ = (
+        UniqueConstraint("student_user_id", "course_id", name="uq_certificate_student_course"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    serial: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    student_user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    course_id: Mapped[int] = mapped_column(Integer, ForeignKey("courses.id", ondelete="CASCADE"), nullable=False)
+    student_name_snapshot: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    course_name_snapshot: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    title: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    completion_percent: Mapped[float] = mapped_column(Numeric(5, 2), default=100)
+    average_score: Mapped[Optional[float]] = mapped_column(Numeric(5, 2), nullable=True)
+    revoked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    issued_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    # relationships
+    student: Mapped["User"] = relationship("User", foreign_keys=[student_user_id])
+    course: Mapped["Course"] = relationship("Course", foreign_keys=[course_id])
+
+    def __repr__(self) -> str:
+        return f"<Certificate(id={self.id}, serial='{self.serial}', course_id={self.course_id})>"
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "serial": self.serial,
+            "student_user_id": self.student_user_id,
+            "course_id": self.course_id,
+            "student_name": self.student_name_snapshot,
+            "course_name": self.course_name_snapshot,
+            "title": self.title,
+            "completion_percent": float(self.completion_percent) if self.completion_percent is not None else None,
+            "average_score": float(self.average_score) if self.average_score is not None else None,
+            "revoked": self.revoked,
+            "issued_at": self.issued_at.isoformat() if self.issued_at else None,
+        }
+
+
+# ---------------------------------------------------------------------------
+# 20. Announcement — creator-authored notices shown to enrolled learners
+# ---------------------------------------------------------------------------
+
+class Announcement(Base):
+    """A course announcement authored by a creator and surfaced to learners.
+
+    Drafts (`is_published = False`) are visible only to the creator/admin;
+    published announcements appear in the learner's course feed.
+    """
+    __tablename__ = "announcements"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    course_id: Mapped[int] = mapped_column(Integer, ForeignKey("courses.id", ondelete="CASCADE"), nullable=False)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+    is_published: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    pinned: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    created_by: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    # relationships
+    course: Mapped["Course"] = relationship("Course", foreign_keys=[course_id])
+
+    def __repr__(self) -> str:
+        return f"<Announcement(id={self.id}, course_id={self.course_id}, title='{self.title}')>"
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "course_id": self.course_id,
+            "title": self.title,
+            "body": self.body,
+            "is_published": self.is_published,
+            "pinned": self.pinned,
+            "created_by": self.created_by,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
