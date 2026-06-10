@@ -564,176 +564,111 @@ export const CourseDetail = ({ courseId, token, onBack, onCourseDeleted, onNavig
         </div>
       )}
 
-      {/* Builder tab strip: create-draft banner + Creator/Learner view toggle */}
+      {/* Builder action bar: state chip + contextual actions + view toggle */}
       {mainTab === 'builder' && (
-        <div className="space-y-4">
-          {/* Draft course — status + Publish / Delete Draft actions */}
+        <div className="bg-white rounded-xl border border-slate-200 px-3 py-2 flex items-center gap-x-3 gap-y-2 flex-wrap">
+          {/* State chip */}
           {course.status === 'draft' && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <Info className="w-4 h-4 text-amber-600 flex-shrink-0" />
-                <span className="text-xs text-amber-800 font-medium">
-                  This course is in <span className="font-bold">draft</span> status — not visible to learners until published.
-                </span>
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <button
-                  onClick={publishCourse}
-                  disabled={publishing || totalLessons === 0}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {publishing ? (
-                    <>
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      Publishing...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      Publish
-                    </>
-                  )}
-                </button>
-                {confirmDelete?.type === 'course' ? (
-                  <div className="flex items-center gap-1">
-                    <button onClick={deleteCourse} className="text-xs bg-red-500 text-white px-3 py-2 rounded-lg hover:bg-red-600">
-                      Confirm
-                    </button>
-                    <button onClick={() => setConfirmDelete(null)} className="text-xs bg-slate-100 text-slate-600 px-2 py-2 rounded-lg">
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setConfirmDelete({ type: 'course', id: courseId })}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium bg-white border border-red-300 text-red-600 hover:bg-red-50"
-                    title="Delete draft"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    Delete Draft
-                  </button>
-                )}
-              </div>
-            </div>
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded-full">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" /> Draft · hidden from learners
+            </span>
           )}
-
-          {/* Published course — create draft banner */}
           {course.status === 'published' && !course.draft_version_id && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <Info className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                <div>
-                  <span className="text-xs text-blue-800 font-medium">
-                    This course is <span className="font-bold">published</span> and in read-only mode.
-                  </span>
-                  <span className="text-xs text-blue-700 block mt-0.5">Create a draft version to make edits without affecting learners.</span>
-                </div>
-              </div>
-              <button
-                onClick={createDraftVersion}
-                disabled={creatingDraft}
-                className="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1.5 font-medium"
-              >
-                {creatingDraft ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  <>
-                    <FilePlus className="w-4 h-4" />
-                    Create Draft
-                  </>
-                )}
-              </button>
-            </div>
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-blue-700 bg-blue-50 border border-blue-200 px-2 py-1 rounded-full">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500" /> Published · read-only
+            </span>
           )}
-
-          {/* Published course with a draft — Go to Draft / Delete Draft */}
           {course.status === 'published' && course.draft_version_id && (
-            <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                <div>
-                  <span className="text-xs text-emerald-800 font-medium">
-                    This course is <span className="font-bold">published</span> and in read-only mode.
-                  </span>
-                  <span className="text-xs text-emerald-700 block mt-0.5">Edit the <span className="text-emerald-600 font-semibold">draft version</span> to make changes.</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <button
-                  onClick={() => onNavigateToDraft && onNavigateToDraft(course.draft_slug)}
-                  className="text-sm bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 flex items-center gap-1.5 font-medium"
-                >
-                  <Edit3 className="w-4 h-4" />
-                  Go to Draft
-                </button>
-                {confirmDelete?.type === 'draft' ? (
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={deleteDraftVersion}
-                      disabled={deletingDraft}
-                      className="text-sm bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center gap-1.5 font-medium"
-                    >
-                      {deletingDraft ? (
-                        <>
-                          <RefreshCw className="w-4 h-4 animate-spin" />
-                          Deleting...
-                        </>
-                      ) : (
-                        'Confirm'
-                      )}
-                    </button>
-                    <button
-                      onClick={() => setConfirmDelete(null)}
-                      disabled={deletingDraft}
-                      className="text-sm bg-slate-100 text-slate-600 px-2 py-2 rounded-lg hover:bg-slate-200"
-                      title="Cancel"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setConfirmDelete({ type: 'draft', id: course.draft_slug })}
-                    className="text-sm bg-white border border-red-300 text-red-600 px-4 py-2 rounded-lg hover:bg-red-50 flex items-center gap-1.5 font-medium"
-                    title="Discard the draft version (published course is untouched)"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    Delete Draft
-                  </button>
-                )}
-              </div>
-            </div>
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-full">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Published · draft in progress
+            </span>
           )}
 
-          {/* Creator / Learner view toggle */}
-          <div className="flex justify-end">
-            <div className="flex items-center bg-slate-100 rounded-lg p-1">
+          {/* Contextual actions (next to the chip) */}
+          {course.status === 'draft' && (
+            <>
               <button
-                onClick={() => setPreviewMode('creator')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                  previewMode === 'creator'
-                    ? 'bg-white text-slate-900 shadow-sm'
-                    : 'text-slate-500 hover:text-slate-700'
-                }`}
+                onClick={publishCourse}
+                disabled={publishing || totalLessons === 0}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Eye className="w-3.5 h-3.5" />
-                Creator
+                {publishing ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Publishing...</> : <><CheckCircle2 className="w-3.5 h-3.5" /> Publish</>}
               </button>
+              {confirmDelete?.type === 'course' ? (
+                <div className="flex items-center gap-1">
+                  <button onClick={deleteCourse} className="text-xs bg-red-500 text-white px-3 py-1.5 rounded-lg hover:bg-red-600">Confirm</button>
+                  <button onClick={() => setConfirmDelete(null)} className="text-xs bg-slate-100 text-slate-600 px-2 py-1.5 rounded-lg"><X className="w-3.5 h-3.5" /></button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmDelete({ type: 'course', id: courseId })}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white border border-red-300 text-red-600 hover:bg-red-50"
+                  title="Delete draft"
+                >
+                  <Trash2 className="w-3.5 h-3.5" /> Delete Draft
+                </button>
+              )}
+            </>
+          )}
+          {course.status === 'published' && !course.draft_version_id && (
+            <button
+              onClick={createDraftVersion}
+              disabled={creatingDraft}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+              title="Create a draft version to edit without affecting learners"
+            >
+              {creatingDraft ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Creating...</> : <><FilePlus className="w-3.5 h-3.5" /> Create Draft</>}
+            </button>
+          )}
+          {course.status === 'published' && course.draft_version_id && (
+            <>
               <button
-                onClick={() => setPreviewMode('learner')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                  previewMode === 'learner'
-                    ? 'bg-white text-slate-900 shadow-sm'
-                    : 'text-slate-500 hover:text-slate-700'
-                }`}
+                onClick={() => onNavigateToDraft && onNavigateToDraft(course.draft_slug)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-600 text-white hover:bg-emerald-700"
               >
-                <GraduationCap className="w-3.5 h-3.5" />
-                Learner
+                <Edit3 className="w-3.5 h-3.5" /> Go to Draft
               </button>
-            </div>
+              {confirmDelete?.type === 'draft' ? (
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={deleteDraftVersion}
+                    disabled={deletingDraft}
+                    className="text-xs bg-red-600 text-white px-3 py-1.5 rounded-lg hover:bg-red-700 disabled:opacity-50"
+                  >
+                    {deletingDraft ? 'Deleting...' : 'Confirm'}
+                  </button>
+                  <button onClick={() => setConfirmDelete(null)} disabled={deletingDraft} className="text-xs bg-slate-100 text-slate-600 px-2 py-1.5 rounded-lg"><X className="w-3.5 h-3.5" /></button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmDelete({ type: 'draft', id: course.draft_slug })}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white border border-red-300 text-red-600 hover:bg-red-50"
+                  title="Discard the draft version (published course is untouched)"
+                >
+                  <Trash2 className="w-3.5 h-3.5" /> Delete Draft
+                </button>
+              )}
+            </>
+          )}
+
+          {/* Creator / Learner view toggle (pushed right) */}
+          <div className="ml-auto flex items-center bg-slate-100 rounded-lg p-1">
+            <button
+              onClick={() => setPreviewMode('creator')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                previewMode === 'creator' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              <Eye className="w-3.5 h-3.5" /> Creator
+            </button>
+            <button
+              onClick={() => setPreviewMode('learner')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                previewMode === 'learner' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              <GraduationCap className="w-3.5 h-3.5" /> Learner
+            </button>
           </div>
         </div>
       )}
