@@ -2,11 +2,16 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   ArrowLeft, ChevronDown, ChevronRight, Trash2, Edit3, Save, X,
   BookOpen, Eye, GraduationCap, RefreshCw, AlertTriangle, CheckCircle2,
-  FolderPlus, FilePlus, Info,
+  FolderPlus, FilePlus, Info, BarChart3, Megaphone, Award, ClipboardCheck,
+  Copy, GripVertical, Wrench,
 } from 'lucide-react';
 import { LessonEditor } from './LessonEditor';
 import { JourneyPlayer } from '../../components/JourneyPlayer';
 import { publishedCourseToLearnerTool } from './publishedCourseAdapter';
+import { CourseAnalytics } from './CourseAnalytics';
+import { CourseAnnouncements } from './CourseAnnouncements';
+import { CertificateSettings } from './CertificateSettings';
+import { GradingQueue } from './GradingQueue';
 import { formatErrorDetail } from '../../lib/utils';
 
 const API_BASE = (process.env.REACT_APP_BACKEND_URL || '').replace(/\/+$/, '');
@@ -51,6 +56,14 @@ export const CourseDetail = ({ courseId, token, onBack, onCourseDeleted, onNavig
 
   // Draft version creation state
   const [creatingDraft, setCreatingDraft] = useState(false);
+  const [cloning, setCloning] = useState(false);
+
+  // Top-level tab: builder | analytics | announcements | certificate | grading
+  const [mainTab, setMainTab] = useState('builder');
+
+  // Drag-and-drop reorder state
+  const [dragModuleId, setDragModuleId] = useState(null);
+  const [dragLesson, setDragLesson] = useState(null); // { lessonId, fromSectionId }
 
   // Preview mode: creator | learner
   const [previewMode, setPreviewMode] = useState('creator');
@@ -312,6 +325,96 @@ export const CourseDetail = ({ courseId, token, onBack, onCourseDeleted, onNavig
     }
   };
 
+  // ── Clone course (deep copy into a new independent draft) ──
+  const cloneCourse = async () => {
+    setCloning(true);
+    setError('');
+    try {
+      const result = await adminFetch(`/courses/${courseId}/clone`, token, { method: 'POST' });
+      if (onNavigateToDraft) {
+        onNavigateToDraft(result.clone_slug);
+      }
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setCloning(false);
+    }
+  };
+
+  // ── Drag-and-drop reordering ──
+  const persistModuleOrder = async (orderedIds) => {
+    try {
+      await adminFetch(`/courses/${courseId}/sections/reorder`, token, {
+        method: 'PUT',
+        body: JSON.stringify({ ordered_ids: orderedIds }),
+      });
+    } catch (e) {
+      setError(e.message);
+      loadCourseData(); // resync on failure
+    }
+  };
+
+  const handleModuleDrop = (targetId) => {
+    if (!dragModuleId || dragModuleId === targetId) { setDragModuleId(null); return; }
+    setSections((prev) => {
+      const ids = prev.map((s) => s.id);
+      const from = ids.indexOf(dragModuleId);
+      const to = ids.indexOf(targetId);
+      if (from === -1 || to === -1) return prev;
+      const next = [...prev];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      persistModuleOrder(next.map((s) => s.id));
+      return next;
+    });
+    setDragModuleId(null);
+  };
+
+  const persistLessonOrder = async (sectionsPayload) => {
+    try {
+      await adminFetch(`/courses/${courseId}/lessons/reorder`, token, {
+        method: 'PUT',
+        body: JSON.stringify({ sections: sectionsPayload }),
+      });
+    } catch (e) {
+      setError(e.message);
+      loadCourseData();
+    }
+  };
+
+  // Drop a lesson onto a target lesson (reorder within/across sections) or
+  // onto a section header (append to that section).
+  const handleLessonDrop = (targetSectionId, targetLessonId = null) => {
+    if (!dragLesson) return;
+    const { lessonId, fromSectionId } = dragLesson;
+    setLessonsBySection((prev) => {
+      const next = { ...prev };
+      const fromList = [...(next[fromSectionId] || [])];
+      const idx = fromList.findIndex((l) => l.id === lessonId);
+      if (idx === -1) { return prev; }
+      const [moved] = fromList.splice(idx, 1);
+      next[fromSectionId] = fromList;
+
+      const toList = fromSectionId === targetSectionId ? fromList : [...(next[targetSectionId] || [])];
+      if (targetLessonId) {
+        const tIdx = toList.findIndex((l) => l.id === targetLessonId);
+        toList.splice(tIdx === -1 ? toList.length : tIdx, 0, moved);
+      } else {
+        toList.push(moved);
+      }
+      next[targetSectionId] = toList;
+
+      // Persist both affected sections.
+      const affected = new Set([fromSectionId, targetSectionId]);
+      persistLessonOrder([...affected].map((sid) => ({
+        section_id: sid,
+        lesson_ids: (next[sid] || []).map((l) => l.id),
+      })));
+      return next;
+    });
+    setDragLesson(null);
+  };
+
   // ── Learner preview data ──
   // Drafts are not surfaced by the public `/api/content/courses/{slug}`
   // endpoint (it filters to status=published). For the admin in-editor
@@ -497,7 +600,7 @@ export const CourseDetail = ({ courseId, token, onBack, onCourseDeleted, onNavig
 
         <div className="flex items-center gap-2 flex-shrink-0">
           {/* Preview mode toggle */}
-          <div className="flex items-center bg-slate-100 rounded-lg p-1">
+          <div className={`items-center bg-slate-100 rounded-lg p-1 ${mainTab === 'builder' ? 'flex' : 'hidden'}`}>
             <button
               onClick={() => setPreviewMode('creator')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
@@ -523,7 +626,7 @@ export const CourseDetail = ({ courseId, token, onBack, onCourseDeleted, onNavig
           </div>
 
           {/* Publish button for draft courses */}
-          {course.status === 'draft' && (
+          {mainTab === 'builder' && course.status === 'draft' && (
             <button
               onClick={publishCourse}
               disabled={publishing || totalLessons === 0}
@@ -542,6 +645,17 @@ export const CourseDetail = ({ courseId, token, onBack, onCourseDeleted, onNavig
               )}
             </button>
           )}
+
+          {/* Clone course — deep-copies into a new independent draft */}
+          <button
+            onClick={cloneCourse}
+            disabled={cloning}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            title="Duplicate this course into a new draft"
+          >
+            {cloning ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Copy className="w-3.5 h-3.5" />}
+            Clone
+          </button>
 
           {/* Delete course */}
           {isEditable && (
@@ -570,6 +684,28 @@ export const CourseDetail = ({ courseId, token, onBack, onCourseDeleted, onNavig
         </div>
       </div>
 
+      {/* Top-level tabs */}
+      <div className="flex items-center gap-1 bg-white rounded-xl border border-slate-200 p-1 overflow-x-auto">
+        {[
+          { id: 'builder', label: 'Builder', icon: Wrench },
+          { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+          { id: 'announcements', label: 'Announcements', icon: Megaphone },
+          { id: 'grading', label: 'Grading', icon: ClipboardCheck },
+          { id: 'certificate', label: 'Certificate', icon: Award },
+        ].map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            onClick={() => setMainTab(id)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+              mainTab === id ? 'bg-primary/10 text-primary' : 'text-slate-500 hover:bg-slate-50'
+            }`}
+          >
+            <Icon className="w-3.5 h-3.5" />
+            {label}
+          </button>
+        ))}
+      </div>
+
       {/* Alerts */}
       {error && (
         <div className="bg-red-50 text-red-700 text-sm px-4 py-2 rounded-lg flex items-center gap-2">
@@ -577,6 +713,12 @@ export const CourseDetail = ({ courseId, token, onBack, onCourseDeleted, onNavig
           <button onClick={() => setError('')} className="ml-auto"><X className="w-4 h-4" /></button>
         </div>
       )}
+
+      {/* Non-builder tabs */}
+      {mainTab === 'analytics' && <CourseAnalytics courseId={courseId} token={token} />}
+      {mainTab === 'announcements' && <CourseAnnouncements courseId={courseId} token={token} />}
+      {mainTab === 'grading' && <GradingQueue courseId={courseId} token={token} />}
+      {mainTab === 'certificate' && <CertificateSettings courseId={courseId} token={token} />}
       {success && (
         <div className="bg-emerald-50 text-emerald-700 text-sm px-4 py-2 rounded-lg flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4" /> {success}
@@ -584,7 +726,7 @@ export const CourseDetail = ({ courseId, token, onBack, onCourseDeleted, onNavig
       )}
 
       {/* Learner preview mode */}
-      {previewMode === 'learner' && (
+      {mainTab === 'builder' && previewMode === 'learner' && (
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
           <div className="bg-amber-50 border-b border-amber-200 px-4 py-3 flex items-center gap-3">
             <Info className="w-4 h-4 text-amber-600 flex-shrink-0" />
@@ -616,7 +758,7 @@ export const CourseDetail = ({ courseId, token, onBack, onCourseDeleted, onNavig
       )}
 
       {/* Creator mode: sidebar + main editor */}
-      {previewMode === 'creator' && (
+      {mainTab === 'builder' && previewMode === 'creator' && (
         <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4">
           {/* Sidebar: Modules tree */}
           <div className="bg-white rounded-xl border border-slate-200 p-3 space-y-1 max-h-[calc(100vh-240px)] overflow-y-auto">
@@ -638,7 +780,23 @@ export const CourseDetail = ({ courseId, token, onBack, onCourseDeleted, onNavig
               const lessons = lessonsBySection[section.id] || [];
               return (
                 <div key={section.id} className="rounded-lg overflow-hidden">
-                  <div className="flex items-center gap-1 hover:bg-slate-50 rounded-lg px-1">
+                  <div
+                    className={`flex items-center gap-1 hover:bg-slate-50 rounded-lg px-1 ${
+                      dragModuleId === section.id ? 'opacity-40' : ''
+                    }`}
+                    draggable={isEditable && editingSectionId !== section.id}
+                    onDragStart={() => setDragModuleId(section.id)}
+                    onDragEnd={() => setDragModuleId(null)}
+                    onDragOver={(e) => { if (dragModuleId) e.preventDefault(); }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      if (dragModuleId) handleModuleDrop(section.id);
+                      else if (dragLesson) handleLessonDrop(section.id);
+                    }}
+                  >
+                    {isEditable && (
+                      <GripVertical className="w-3 h-3 text-slate-300 flex-shrink-0 cursor-grab" />
+                    )}
                     <button
                       onClick={() => toggleSection(section.id)}
                       className="p-1 flex-shrink-0"
@@ -716,13 +874,25 @@ export const CourseDetail = ({ courseId, token, onBack, onCourseDeleted, onNavig
                         <button
                           key={lesson.id}
                           onClick={() => setSelectedLessonId(lesson.id)}
+                          draggable={isEditable}
+                          onDragStart={(e) => { e.stopPropagation(); setDragLesson({ lessonId: lesson.id, fromSectionId: section.id }); }}
+                          onDragEnd={() => setDragLesson(null)}
+                          onDragOver={(e) => { if (dragLesson) { e.preventDefault(); e.stopPropagation(); } }}
+                          onDrop={(e) => {
+                            if (!dragLesson) return;
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleLessonDrop(section.id, lesson.id);
+                          }}
                           className={`w-full text-left px-2 py-1.5 rounded-lg text-xs flex items-center gap-2 transition-colors ${
                             selectedLessonId === lesson.id
                               ? 'bg-primary/10 text-primary font-medium'
                               : 'text-slate-600 hover:bg-slate-50'
-                          }`}
+                          } ${dragLesson?.lessonId === lesson.id ? 'opacity-40' : ''}`}
                         >
-                          <BookOpen className="w-3 h-3 flex-shrink-0" />
+                          {isEditable
+                            ? <GripVertical className="w-3 h-3 flex-shrink-0 text-slate-300 cursor-grab" />
+                            : <BookOpen className="w-3 h-3 flex-shrink-0" />}
                           <span className="flex-1 truncate">{lesson.title}</span>
                           {lesson.status === 'draft' && (
                             <span className="text-[9px] bg-amber-100 text-amber-700 px-1 rounded">draft</span>

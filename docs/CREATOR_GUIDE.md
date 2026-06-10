@@ -19,7 +19,13 @@
 11. [Learner Preview](#11-learner-preview)
 12. [Publishing Workflow](#12-publishing-workflow)
 13. [Ownership & Access Control](#13-ownership--access-control)
-14. [Data Fields Reference](#14-data-fields-reference)
+14. [Course Analytics](#14-course-analytics)
+15. [Cloning a Course](#15-cloning-a-course)
+16. [Reordering with Drag & Drop](#16-reordering-with-drag--drop)
+17. [Manual Grading Queue](#17-manual-grading-queue)
+18. [Completion Certificates](#18-completion-certificates)
+19. [Announcements](#19-announcements)
+20. [Data Fields Reference](#20-data-fields-reference)
 
 ---
 
@@ -33,6 +39,8 @@
 | AI course generation | ✅ (if `ai_generation_enabled` flag is on) | ✅ always |
 | View Users tab | ✗ | ✅ |
 | View Platform Stats tab | ✗ | ✅ |
+| View **per-course** analytics (own courses) | ✅ | ✅ (any course) |
+| Grade short-answer responses, issue certificates, post announcements | ✅ (own courses) | ✅ (any course) |
 | Exempt from 30-day learner trial | ✅ | ✅ |
 
 **Important:** The `ai_generation_enabled` flag is a separate toggle set by an admin in User Management. Creators without this flag can still build courses manually but cannot use AI generation.
@@ -108,7 +116,9 @@ Inside the course editor, click **Add Section**. Each module has:
 
 ### Reordering Modules
 
-Change the `sort_order` field on each module. Lower numbers appear first.
+Drag a module by its ⋮⋮ handle in the Builder tab to reorder it (see
+[§16](#16-reordering-with-drag--drop)). The `sort_order` field is updated
+automatically; lower numbers appear first.
 
 ### Deleting a Module
 
@@ -362,7 +372,121 @@ Create Course (draft)
 
 ---
 
-## 14. Data Fields Reference
+## 14. Course Analytics
+
+Every course now has an **Analytics** tab in the course editor (top of the
+course detail view). It is read-only and reflects live learner activity drawn
+from enrolment and assessment records — nothing you do here changes content.
+
+| Section | What it shows |
+|---|---|
+| **KPI cards** | Total enrolments, completion rate, average progress, total learning time, weekly active learners, average quiz score |
+| **Lesson completion (drop-off)** | Per-lesson completion rate — quickly spot where learners stall |
+| **Enrolments (last 30 days)** | Daily new-enrolment trend line |
+| **Quiz performance** | Total attempts, pass rate, count awaiting manual grading, and the **hardest questions** (lowest correct-answer rate, min. 3 answers) |
+
+Endpoint: `GET /admin/courses/{course_id}/analytics`. Visible to the course
+owner and admins.
+
+---
+
+## 15. Cloning a Course
+
+The **Clone** button (course header) deep-copies an entire course — modules,
+lessons, every language's content, quizzes/questions, and media attachments —
+into a **brand-new independent draft** owned by you.
+
+- Differs from **Create Draft**: a clone is *not* linked to a published parent
+  and re-publishing it never overwrites another course. Use it to spin up a new
+  course from an existing template, or to experiment safely.
+- The new course is named `"<original> (Copy)"` and starts in **Draft** status.
+- Media assets reference the same Cloudinary files (no re-upload).
+
+Endpoint: `POST /admin/courses/{course_id}/clone`.
+
+---
+
+## 16. Reordering with Drag & Drop
+
+In the **Builder** tab, modules and lessons can be reordered by dragging
+(grab the ⋮⋮ handle). On a draft course you can:
+
+- Drag a **module** up or down to change its position.
+- Drag a **lesson** within its module, or onto another module to **move it**.
+
+Order is saved automatically. (Published courses are read-only — create a draft
+version first.) The manual `sort_order` fields still exist and stay in sync.
+
+Endpoints: `PUT /admin/courses/{course_id}/sections/reorder`,
+`PUT /admin/courses/{course_id}/lessons/reorder`.
+
+---
+
+## 17. Manual Grading Queue
+
+Short-answer quiz responses can't be auto-graded. The **Grading** tab lists
+every attempt with a short-answer response awaiting a human grade:
+
+1. Read the learner's answer next to the question prompt.
+2. Enter a **score** (out of the question's max) and optional per-answer feedback.
+3. Add an optional overall feedback note and click **Submit grade**.
+
+Submitting recomputes the attempt's total/percentage, marks it
+**teacher-graded**, and sets pass/fail from the quiz's passing score. The graded
+attempt then drops off the queue. The Analytics tab's *awaiting grading* count
+reflects this queue.
+
+Endpoints: `GET /admin/courses/{course_id}/grading-queue`,
+`POST /admin/attempts/{attempt_id}/grade`.
+
+---
+
+## 18. Completion Certificates
+
+Open the **Certificate** tab to enable automatic completion certificates:
+
+- Toggle **Issue a certificate automatically when a learner completes this course**.
+- Optionally set a **certificate title** (defaults to “Certificate of Completion — <course>”).
+
+When an enrolled learner finishes every published lesson, a certificate is
+issued automatically with a unique **serial**. The tab lists all issued
+certificates and lets you **revoke / restore** any of them. Certificates
+snapshot the learner name and course name at issue time, so they remain valid
+even if the course is later edited.
+
+| Surface | Endpoint |
+|---|---|
+| Configure | `PUT /admin/courses/{course_id}/certificate` |
+| List issued | `GET /admin/courses/{course_id}/certificates` |
+| Revoke / restore | `POST /admin/certificates/{serial}/revoke` |
+| Learner's own certificates | `GET /certificates/me` |
+| Public verification | `GET /certificates/verify/{serial}` (no auth) |
+
+---
+
+## 19. Announcements
+
+The **Announcements** tab lets you post notices to learners enrolled in a
+course. Each announcement has a title and body, and can be:
+
+- **Pinned** to the top of the feed.
+- Saved as a **draft** (unpublished) or published immediately; drafts are only
+  visible to you and admins.
+
+Published announcements appear in the learner's course feed (pinned first, then
+newest first). Edit, pin/unpin, publish/unpublish, or delete at any time.
+
+| Surface | Endpoint |
+|---|---|
+| List (incl. drafts) | `GET /admin/courses/{course_id}/announcements` |
+| Create | `POST /admin/courses/{course_id}/announcements` |
+| Edit | `PUT /admin/announcements/{announcement_id}` |
+| Delete | `DELETE /admin/announcements/{announcement_id}` |
+| Learner feed (published only) | `GET /courses/{course_id}/announcements` |
+
+---
+
+## 20. Data Fields Reference
 
 ### Course
 
@@ -380,6 +504,8 @@ Create Course (draft)
 | `status` | enum | `draft` / `published` |
 | `available_languages` | JSON array | e.g. `["en", "bn"]` |
 | `tags` | JSON array | e.g. `["ai-generated"]` |
+| `certificate_enabled` | boolean | Auto-issue completion certificates |
+| `certificate_title` | string | Optional certificate title |
 | `created_by` | string | Auto-set to creator username |
 
 ### Module
@@ -460,3 +586,29 @@ Create Course (draft)
 | `sort_order` | integer | Order in lesson |
 | `is_highlight` | boolean | Hero media flag |
 | `tags` | JSON array | e.g. `["quiz-question"]` |
+
+### Certificate
+
+| Field | Type | Notes |
+|---|---|---|
+| `serial` | string | Unique, shareable verification token |
+| `student_user_id` | integer | Recipient |
+| `course_id` | integer | Course completed |
+| `student_name_snapshot` | string | Recipient name at issue time |
+| `course_name_snapshot` | string | Course name at issue time |
+| `title` | string | Certificate title |
+| `completion_percent` | numeric | Completion at issue time |
+| `average_score` | numeric | Average quiz score (nullable) |
+| `revoked` | boolean | Revoked flag |
+| `issued_at` | datetime | Issue timestamp |
+
+### Announcement
+
+| Field | Type | Notes |
+|---|---|---|
+| `course_id` | integer | Owning course |
+| `title` | string | Required |
+| `body` | text | Required |
+| `is_published` | boolean | Drafts hidden from learners |
+| `pinned` | boolean | Pin to top of feed |
+| `created_by` | string | Author username |
