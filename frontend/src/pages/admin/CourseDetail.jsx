@@ -649,16 +649,19 @@ export const CourseDetail = ({ courseId, token, onBack, onCourseDeleted, onNavig
             </button>
           )}
 
-          {/* Clone course — deep-copies into a new independent draft */}
-          <button
-            onClick={cloneCourse}
-            disabled={cloning}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-            title="Duplicate this course into a new draft"
-          >
-            {cloning ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Copy className="w-3.5 h-3.5" />}
-            Clone
-          </button>
+          {/* Clone course — deep-copies into a new independent draft.
+              UI hidden for now (cloneCourse handler retained for re-enable). */}
+          {false && (
+            <button
+              onClick={cloneCourse}
+              disabled={cloning}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              title="Duplicate this course into a new draft"
+            >
+              {cloning ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Copy className="w-3.5 h-3.5" />}
+              Clone
+            </button>
+          )}
 
           {/* Delete course */}
           {isEditable && (
