@@ -12,6 +12,10 @@ from routes.creator_tools import (
     content_router as creator_tools_router,
     learner_router as creator_tools_learner_router,
 )
+from routes.creator_commerce import (
+    content_router as creator_commerce_router,
+    learner_router as creator_commerce_learner_router,
+)
 from routes.course_generation import router as course_gen_router
 from routes.progress import router as progress_router
 from routes.assessments import router as assessments_router
@@ -30,6 +34,8 @@ api_router.include_router(admin_content_router)
 api_router.include_router(supervisor_router)
 api_router.include_router(creator_tools_router)
 api_router.include_router(creator_tools_learner_router)
+api_router.include_router(creator_commerce_router)
+api_router.include_router(creator_commerce_learner_router)
 api_router.include_router(course_gen_router)
 api_router.include_router(progress_router)
 api_router.include_router(assessments_router)

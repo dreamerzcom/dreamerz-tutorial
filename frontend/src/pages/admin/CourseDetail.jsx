@@ -3,7 +3,7 @@ import {
   ArrowLeft, ChevronDown, ChevronRight, Trash2, Edit3, Save, X,
   BookOpen, Eye, GraduationCap, RefreshCw, AlertTriangle, CheckCircle2,
   FolderPlus, FilePlus, Info, BarChart3, Megaphone, Award, ClipboardCheck,
-  Copy, GripVertical, Wrench,
+  Copy, GripVertical, Wrench, DollarSign, Users, CalendarClock,
 } from 'lucide-react';
 import { LessonEditor } from './LessonEditor';
 import { JourneyPlayer } from '../../components/JourneyPlayer';
@@ -12,6 +12,9 @@ import { CourseAnalytics } from './CourseAnalytics';
 import { CourseAnnouncements } from './CourseAnnouncements';
 import { CertificateSettings } from './CertificateSettings';
 import { GradingQueue } from './GradingQueue';
+import { CoursePricing } from './CoursePricing';
+import { CourseLearners } from './CourseLearners';
+import { CourseDelivery } from './CourseDelivery';
 import { formatErrorDetail } from '../../lib/utils';
 
 const API_BASE = (process.env.REACT_APP_BACKEND_URL || '').replace(/\/+$/, '');
@@ -688,6 +691,9 @@ export const CourseDetail = ({ courseId, token, onBack, onCourseDeleted, onNavig
       <div className="flex items-center gap-1 bg-white rounded-xl border border-slate-200 p-1 overflow-x-auto">
         {[
           { id: 'builder', label: 'Builder', icon: Wrench },
+          { id: 'pricing', label: 'Pricing & Sales', icon: DollarSign },
+          { id: 'delivery', label: 'Delivery', icon: CalendarClock },
+          { id: 'learners', label: 'Learners', icon: Users },
           { id: 'analytics', label: 'Analytics', icon: BarChart3 },
           { id: 'announcements', label: 'Announcements', icon: Megaphone },
           { id: 'grading', label: 'Grading', icon: ClipboardCheck },
@@ -715,6 +721,9 @@ export const CourseDetail = ({ courseId, token, onBack, onCourseDeleted, onNavig
       )}
 
       {/* Non-builder tabs */}
+      {mainTab === 'pricing' && <CoursePricing courseId={courseId} token={token} />}
+      {mainTab === 'delivery' && <CourseDelivery courseId={courseId} token={token} readOnly={!isEditable} />}
+      {mainTab === 'learners' && <CourseLearners courseId={courseId} token={token} />}
       {mainTab === 'analytics' && <CourseAnalytics courseId={courseId} token={token} />}
       {mainTab === 'announcements' && <CourseAnnouncements courseId={courseId} token={token} />}
       {mainTab === 'grading' && <GradingQueue courseId={courseId} token={token} />}

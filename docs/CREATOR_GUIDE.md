@@ -25,7 +25,13 @@
 17. [Manual Grading Queue](#17-manual-grading-queue)
 18. [Completion Certificates](#18-completion-certificates)
 19. [Announcements](#19-announcements)
-20. [Data Fields Reference](#20-data-fields-reference)
+20. [Creator Dashboard (Aggregate)](#20-creator-dashboard-aggregate)
+21. [Pricing, Coupons & Sales Pages](#21-pricing-coupons--sales-pages)
+22. [Checkout & Enrollment](#22-checkout--enrollment)
+23. [Delivery: Drip & Free Preview](#23-delivery-drip--free-preview)
+24. [Completion Criteria](#24-completion-criteria)
+25. [Learner Roster](#25-learner-roster)
+26. [Data Fields Reference](#26-data-fields-reference)
 
 ---
 
@@ -41,6 +47,8 @@
 | View Platform Stats tab | ✗ | ✅ |
 | View **per-course** analytics (own courses) | ✅ | ✅ (any course) |
 | Grade short-answer responses, issue certificates, post announcements | ✅ (own courses) | ✅ (any course) |
+| Set pricing/coupons/sales pages, configure drip + completion, view learner roster | ✅ (own courses) | ✅ (any course) |
+| Aggregate creator dashboard | ✅ (own courses) | ✅ (all courses) |
 | Exempt from 30-day learner trial | ✅ | ✅ |
 
 **Important:** The `ai_generation_enabled` flag is a separate toggle set by an admin in User Management. Creators without this flag can still build courses manually but cannot use AI generation.
@@ -486,7 +494,131 @@ newest first). Edit, pin/unpin, publish/unpublish, or delete at any time.
 
 ---
 
-## 20. Data Fields Reference
+## 20. Creator Dashboard (Aggregate)
+
+When you open **Content Management** you now land on the **Creator Dashboard** —
+an aggregate view across *all* your courses (admins see every course). Use the
+**Dashboard / Courses** toggle at the top to switch to the course list.
+
+It shows KPI cards (total learners, active learners in 30 days, completions,
+revenue, average progress, certificates issued, items awaiting grading, course
+count) and a per-course table (status, price, learners, completion rate,
+revenue) with an **Open** action for each course.
+
+Endpoint: `GET /admin/creator/dashboard`.
+
+---
+
+## 21. Pricing, Coupons & Sales Pages
+
+The **Pricing & Sales** tab inside a course covers monetization:
+
+### Pricing
+- Mark a course **free**, or set a **list price** + **currency** (USD, INR, EUR, …).
+
+### Coupons
+- Create per-course discount codes: **percent** or **fixed** amount, optional
+  **max redemptions** and **expiry date**. Redemption counts are tracked.
+- Coupons apply only to paid courses.
+
+### Sales page
+- Edit a learner-facing landing page: **headline**, **subheadline**, **learning
+  outcomes** (one per line), **instructor bio**, **CTA label**, **FAQs**, and
+  **testimonials**. Saved as structured content the public sales page renders.
+
+| Surface | Endpoint |
+|---|---|
+| Set pricing | `PUT /admin/courses/{course_id}/pricing` |
+| Save sales page | `PUT /admin/courses/{course_id}/sales-page` |
+| List / create coupons | `GET` / `POST /admin/courses/{course_id}/coupons` |
+| Delete coupon | `DELETE /admin/coupons/{coupon_id}` |
+| Public sales page | `GET /courses/{course_id}/sales-page` (no auth) |
+
+---
+
+## 22. Checkout & Enrollment
+
+DreamerZ ships a **gateway-agnostic checkout**. Today it runs on a **mock
+provider** so the full flow is testable; swapping in Stripe or Razorpay later
+only means creating the provider order in `create_checkout` and confirming from
+the provider's webhook.
+
+- **Free courses** (or coupons that bring the total to 0) enrol the learner
+  immediately.
+- **Paid courses** create a `pending` order; confirming it (the mock gateway
+  success) marks it `paid` and enrols the learner. Orders are recorded for the
+  dashboard revenue figure.
+
+| Surface | Endpoint |
+|---|---|
+| Validate coupon (price quote) | `POST /courses/{course_id}/coupon/validate` |
+| Start checkout | `POST /courses/{course_id}/checkout` |
+| Confirm (mock gateway) | `POST /orders/{order_id}/confirm` |
+
+> **Wiring a real gateway:** provide the provider keys, create the provider
+> order inside `create_checkout` (in `services/commerce_service.py`), and call
+> `confirm_order` from the provider's verified webhook instead of the mock
+> confirm endpoint.
+
+---
+
+## 23. Delivery: Drip & Free Preview
+
+The **Delivery** tab controls *when* lessons unlock and *which* lessons
+unenrolled learners can sample.
+
+### Drip rules (course-level)
+Enable drip and pick a rule:
+
+| Rule | Behaviour |
+|---|---|
+| `none` | All lessons unlocked |
+| `sequential` | A lesson unlocks once the previous one is completed |
+| `days_after_enrollment` | Each lesson unlocks N days after the learner enrols (set per lesson) |
+| `date` | Each lesson unlocks on a fixed calendar date (set per lesson) |
+
+### Free preview (per lesson)
+Mark any lesson **Free preview** to let unenrolled learners view it on the
+sales page even when the course is paid.
+
+The learner's unlock state is computed by `GET /courses/{course_id}/access`,
+which returns, per lesson, whether it's `unlocked` and (if not) the reason
+(`purchase_required`, `scheduled`, `complete_previous`).
+
+| Surface | Endpoint |
+|---|---|
+| Course drip config | `PUT /admin/courses/{course_id}/delivery` |
+| Per-lesson preview / drip | `PUT /admin/lessons/{lesson_id}/delivery` |
+| Learner access map | `GET /courses/{course_id}/access` |
+
+---
+
+## 24. Completion Criteria
+
+Also on the **Delivery** tab, choose what counts as completing the course:
+
+| Rule | Requirement |
+|---|---|
+| `all_lessons` (default) | Every published lesson completed |
+| `all_lessons_and_quizzes` | Every lesson completed **and** every quiz passed |
+
+Completion drives status, the dashboard completion rate, and certificate
+issuance. Endpoint: `PUT /admin/courses/{course_id}/delivery`.
+
+---
+
+## 25. Learner Roster
+
+The **Learners** tab is a creator-scoped roster of everyone enrolled in a
+course: username/email, enrolment status, progress bar (lessons completed /
+total), average quiz score, and last-active date — with client-side search.
+Admins see rosters for any course; creators only their own.
+
+Endpoint: `GET /admin/courses/{course_id}/learners`.
+
+---
+
+## 26. Data Fields Reference
 
 ### Course
 
@@ -506,6 +638,13 @@ newest first). Edit, pin/unpin, publish/unpublish, or delete at any time.
 | `tags` | JSON array | e.g. `["ai-generated"]` |
 | `certificate_enabled` | boolean | Auto-issue completion certificates |
 | `certificate_title` | string | Optional certificate title |
+| `is_free` | boolean | Free vs paid |
+| `price` | numeric | List price (when not free) |
+| `currency` | string | ISO currency code |
+| `sales_page` | JSON | Landing-page content |
+| `completion_rule` | enum | `all_lessons` / `all_lessons_and_quizzes` |
+| `drip_enabled` | boolean | Drip scheduling on/off |
+| `drip_type` | enum | `none` / `sequential` / `days_after_enrollment` / `date` |
 | `created_by` | string | Auto-set to creator username |
 
 ### Module
@@ -530,6 +669,9 @@ newest first). Edit, pin/unpin, publish/unpublish, or delete at any time.
 | `week` | integer | Optional scheduling |
 | `day` | integer | Optional scheduling |
 | `is_weekly_test` | boolean | Assessment lesson flag |
+| `is_free_preview` | boolean | Viewable by unenrolled learners |
+| `drip_days` | integer | Unlock N days after enrolment (drip) |
+| `drip_date` | datetime | Unlock on a fixed date (drip) |
 | `sort_order` | integer | Order within module |
 | `status` | enum | `draft` / `published` |
 
@@ -612,3 +754,31 @@ newest first). Edit, pin/unpin, publish/unpublish, or delete at any time.
 | `is_published` | boolean | Drafts hidden from learners |
 | `pinned` | boolean | Pin to top of feed |
 | `created_by` | string | Author username |
+
+### Coupon
+
+| Field | Type | Notes |
+|---|---|---|
+| `course_id` | integer | Scoped to one course |
+| `code` | string | Unique per course |
+| `discount_type` | enum | `percent` / `fixed` |
+| `discount_value` | numeric | Percent (0–100) or fixed amount |
+| `max_redemptions` | integer | Null = unlimited |
+| `times_redeemed` | integer | Redemption counter |
+| `is_active` | boolean | Toggle without deleting |
+| `expires_at` | datetime | Null = no expiry |
+
+### Order
+
+| Field | Type | Notes |
+|---|---|---|
+| `student_user_id` | integer | Buyer |
+| `course_id` | integer | Purchased course |
+| `coupon_id` | integer | Applied coupon (nullable) |
+| `list_price` | numeric | Price before discount |
+| `amount` | numeric | Charged amount |
+| `currency` | string | ISO currency code |
+| `status` | enum | `pending` / `paid` / `free` / `failed` / `refunded` |
+| `payment_provider` | string | `mock` (swap for Stripe/Razorpay) |
+| `provider_ref` | string | Gateway reference |
+| `paid_at` | datetime | Settlement timestamp |

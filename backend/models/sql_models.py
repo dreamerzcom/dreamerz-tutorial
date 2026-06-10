@@ -90,6 +90,17 @@ class Course(Base):
     # Completion-certificate config (set by the course creator).
     certificate_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     certificate_title: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    # Monetization (Phase 1). `is_free` short-circuits checkout; price is in
+    # the smallest sensible major unit of `currency` (e.g. 9.99 USD).
+    is_free: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    price: Mapped[float] = mapped_column(Numeric(10, 2), default=0, nullable=False)
+    currency: Mapped[str] = mapped_column(String(3), default="USD", nullable=False)
+    # Sales/landing page content (headline, outcomes, testimonials, faqs, …).
+    sales_page: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    # Completion + drip delivery config (Phase 2).
+    completion_rule: Mapped[str] = mapped_column(String(40), default="all_lessons", nullable=False)
+    drip_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    drip_type: Mapped[str] = mapped_column(String(40), default="none", nullable=False)
     created_by: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
@@ -129,6 +140,13 @@ class Course(Base):
             "draft_version_id": self.draft_version_id,
             "certificate_enabled": self.certificate_enabled,
             "certificate_title": self.certificate_title,
+            "is_free": self.is_free,
+            "price": float(self.price) if self.price is not None else 0,
+            "currency": self.currency,
+            "sales_page": self.sales_page,
+            "completion_rule": self.completion_rule,
+            "drip_enabled": self.drip_enabled,
+            "drip_type": self.drip_type,
             "created_by": self.created_by,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
@@ -204,6 +222,12 @@ class Lesson(Base):
     day: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     is_weekly_test: Mapped[bool] = mapped_column(Boolean, default=False)
     status: Mapped[str] = mapped_column(String(50), default="published")
+    # Free-preview + drip delivery (Phases 1 & 2). `is_free_preview` lets
+    # unenrolled learners view this lesson; drip_days/drip_date gate it for
+    # enrolled learners depending on the course's drip_type.
+    is_free_preview: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    drip_days: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    drip_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
@@ -231,6 +255,9 @@ class Lesson(Base):
             "day": self.day,
             "is_weekly_test": self.is_weekly_test,
             "status": self.status,
+            "is_free_preview": self.is_free_preview,
+            "drip_days": self.drip_days,
+            "drip_date": self.drip_date.isoformat() if self.drip_date else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
@@ -985,5 +1012,107 @@ class Announcement(Base):
             "created_by": self.created_by,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+# ---------------------------------------------------------------------------
+# 21. Coupon — discount codes applied at checkout
+# ---------------------------------------------------------------------------
+
+class Coupon(Base):
+    """A discount code scoped to a single course.
+
+    `discount_type` is `percent` (0–100) or `fixed` (absolute amount in the
+    course currency). Redemption is capped by `max_redemptions` (null = no
+    cap) and `expires_at` (null = no expiry).
+    """
+    __tablename__ = "coupons"
+    __table_args__ = (
+        UniqueConstraint("course_id", "code", name="uq_coupon_course_code"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    course_id: Mapped[int] = mapped_column(Integer, ForeignKey("courses.id", ondelete="CASCADE"), nullable=False)
+    code: Mapped[str] = mapped_column(String(64), nullable=False)
+    discount_type: Mapped[str] = mapped_column(String(20), default="percent", nullable=False)
+    discount_value: Mapped[float] = mapped_column(Numeric(10, 2), default=0, nullable=False)
+    max_redemptions: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    times_redeemed: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_by: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    # relationships
+    course: Mapped["Course"] = relationship("Course", foreign_keys=[course_id])
+
+    def __repr__(self) -> str:
+        return f"<Coupon(id={self.id}, code='{self.code}', course_id={self.course_id})>"
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "course_id": self.course_id,
+            "code": self.code,
+            "discount_type": self.discount_type,
+            "discount_value": float(self.discount_value) if self.discount_value is not None else 0,
+            "max_redemptions": self.max_redemptions,
+            "times_redeemed": self.times_redeemed,
+            "is_active": self.is_active,
+            "expires_at": self.expires_at.isoformat() if self.expires_at else None,
+            "created_by": self.created_by,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+# ---------------------------------------------------------------------------
+# 22. Order — a course purchase (mock checkout; gateway-pluggable)
+# ---------------------------------------------------------------------------
+
+class Order(Base):
+    """A purchase of a course by a learner.
+
+    `status`: `pending` → `paid` (or `free` for zero-cost enrolments, or
+    `failed`/`refunded`). `payment_provider` is `mock` today; a real gateway
+    (Stripe/Razorpay) drops in by setting `provider_ref` and flipping status
+    from its webhook instead of the mock confirm endpoint.
+    """
+    __tablename__ = "orders"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    student_user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    course_id: Mapped[int] = mapped_column(Integer, ForeignKey("courses.id", ondelete="CASCADE"), nullable=False)
+    coupon_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("coupons.id", ondelete="SET NULL"), nullable=True)
+    list_price: Mapped[float] = mapped_column(Numeric(10, 2), default=0, nullable=False)
+    amount: Mapped[float] = mapped_column(Numeric(10, 2), default=0, nullable=False)
+    currency: Mapped[str] = mapped_column(String(3), default="USD", nullable=False)
+    status: Mapped[str] = mapped_column(String(20), default="pending", nullable=False)
+    payment_provider: Mapped[str] = mapped_column(String(40), default="mock", nullable=False)
+    provider_ref: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    paid_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    # relationships
+    student: Mapped["User"] = relationship("User", foreign_keys=[student_user_id])
+    course: Mapped["Course"] = relationship("Course", foreign_keys=[course_id])
+    coupon: Mapped[Optional["Coupon"]] = relationship("Coupon", foreign_keys=[coupon_id])
+
+    def __repr__(self) -> str:
+        return f"<Order(id={self.id}, course_id={self.course_id}, status='{self.status}')>"
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "student_user_id": self.student_user_id,
+            "course_id": self.course_id,
+            "coupon_id": self.coupon_id,
+            "list_price": float(self.list_price) if self.list_price is not None else 0,
+            "amount": float(self.amount) if self.amount is not None else 0,
+            "currency": self.currency,
+            "status": self.status,
+            "payment_provider": self.payment_provider,
+            "provider_ref": self.provider_ref,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "paid_at": self.paid_at.isoformat() if self.paid_at else None,
         }
 
