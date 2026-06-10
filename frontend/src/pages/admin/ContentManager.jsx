@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Sparkles, Pencil } from 'lucide-react';
+import { ArrowLeft, Sparkles, Pencil, LayoutDashboard, BookOpen } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { CourseList } from './CourseList';
 import { CourseDetail } from './CourseDetail';
 import { CourseCreatorTab } from './CourseCreatorTab';
 import { ManualCourseConfig } from './ManualCourseConfig';
+import { CreatorDashboard } from './CreatorDashboard';
 
 /**
  * ContentManager orchestrates five sub-views for admin course management:
@@ -19,7 +20,7 @@ export const ContentManager = ({ token }) => {
   // Admins always have AI generation access (backend enforces same rule)
   const canUseAI = !!user?.aiGenerationEnabled || isAdmin();
 
-  const [view, setView] = useState('list'); // 'list' | 'detail' | 'choose' | 'creator' | 'manual-config'
+  const [view, setView] = useState('dashboard'); // 'dashboard' | 'list' | 'detail' | 'choose' | 'creator' | 'manual-config'
   const [selectedCourseId, setSelectedCourseId] = useState(null);
   // Used to force-remount CourseList (refresh) after publish/delete
   const [listRefreshKey, setListRefreshKey] = useState(0);
@@ -128,6 +129,37 @@ export const ContentManager = ({ token }) => {
     );
   }
 
+  // Sub-nav shown on the dashboard + course-list views
+  const SectionNav = () => (
+    <div className="flex items-center gap-1 bg-white rounded-xl border border-slate-200 p-1 w-fit">
+      <button
+        onClick={() => setView('dashboard')}
+        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium ${
+          view === 'dashboard' ? 'bg-primary/10 text-primary' : 'text-slate-500 hover:bg-slate-50'
+        }`}
+      >
+        <LayoutDashboard className="w-3.5 h-3.5" /> Dashboard
+      </button>
+      <button
+        onClick={() => setView('list')}
+        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium ${
+          view === 'list' ? 'bg-primary/10 text-primary' : 'text-slate-500 hover:bg-slate-50'
+        }`}
+      >
+        <BookOpen className="w-3.5 h-3.5" /> Courses
+      </button>
+    </div>
+  );
+
+  if (view === 'dashboard') {
+    return (
+      <div className="space-y-4">
+        <SectionNav />
+        <CreatorDashboard token={token} onOpenCourse={goToDetail} />
+      </div>
+    );
+  }
+
   if (view === 'creator') {
     return (
       <div className="space-y-3">
@@ -164,11 +196,14 @@ export const ContentManager = ({ token }) => {
 
   // Default: list view
   return (
-    <CourseList
-      key={listRefreshKey}
-      token={token}
-      onSelectCourse={goToDetail}
-      onNewCourse={goToCreator}
-    />
+    <div className="space-y-4">
+      <SectionNav />
+      <CourseList
+        key={listRefreshKey}
+        token={token}
+        onSelectCourse={goToDetail}
+        onNewCourse={goToCreator}
+      />
+    </div>
   );
 };

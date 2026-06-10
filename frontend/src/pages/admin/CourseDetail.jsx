@@ -2,11 +2,19 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   ArrowLeft, ChevronDown, ChevronRight, Trash2, Edit3, Save, X,
   BookOpen, Eye, GraduationCap, RefreshCw, AlertTriangle, CheckCircle2,
-  FolderPlus, FilePlus, Info,
+  FolderPlus, FilePlus, Info, BarChart3, Megaphone, Award, ClipboardCheck,
+  Copy, GripVertical, Wrench, DollarSign, Users, CalendarClock,
 } from 'lucide-react';
 import { LessonEditor } from './LessonEditor';
 import { JourneyPlayer } from '../../components/JourneyPlayer';
 import { publishedCourseToLearnerTool } from './publishedCourseAdapter';
+import { CourseAnalytics } from './CourseAnalytics';
+import { CourseAnnouncements } from './CourseAnnouncements';
+import { CertificateSettings } from './CertificateSettings';
+import { GradingQueue } from './GradingQueue';
+import { CoursePricing } from './CoursePricing';
+import { CourseLearners } from './CourseLearners';
+import { CourseDelivery } from './CourseDelivery';
 import { formatErrorDetail } from '../../lib/utils';
 
 const API_BASE = (process.env.REACT_APP_BACKEND_URL || '').replace(/\/+$/, '');
@@ -51,6 +59,14 @@ export const CourseDetail = ({ courseId, token, onBack, onCourseDeleted, onNavig
 
   // Draft version creation state
   const [creatingDraft, setCreatingDraft] = useState(false);
+  const [cloning, setCloning] = useState(false);
+
+  // Top-level tab: builder | analytics | announcements | certificate | grading
+  const [mainTab, setMainTab] = useState('builder');
+
+  // Drag-and-drop reorder state
+  const [dragModuleId, setDragModuleId] = useState(null);
+  const [dragLesson, setDragLesson] = useState(null); // { lessonId, fromSectionId }
 
   // Preview mode: creator | learner
   const [previewMode, setPreviewMode] = useState('creator');
@@ -312,6 +328,96 @@ export const CourseDetail = ({ courseId, token, onBack, onCourseDeleted, onNavig
     }
   };
 
+  // ── Clone course (deep copy into a new independent draft) ──
+  const cloneCourse = async () => {
+    setCloning(true);
+    setError('');
+    try {
+      const result = await adminFetch(`/courses/${courseId}/clone`, token, { method: 'POST' });
+      if (onNavigateToDraft) {
+        onNavigateToDraft(result.clone_slug);
+      }
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setCloning(false);
+    }
+  };
+
+  // ── Drag-and-drop reordering ──
+  const persistModuleOrder = async (orderedIds) => {
+    try {
+      await adminFetch(`/courses/${courseId}/sections/reorder`, token, {
+        method: 'PUT',
+        body: JSON.stringify({ ordered_ids: orderedIds }),
+      });
+    } catch (e) {
+      setError(e.message);
+      loadCourseData(); // resync on failure
+    }
+  };
+
+  const handleModuleDrop = (targetId) => {
+    if (!dragModuleId || dragModuleId === targetId) { setDragModuleId(null); return; }
+    setSections((prev) => {
+      const ids = prev.map((s) => s.id);
+      const from = ids.indexOf(dragModuleId);
+      const to = ids.indexOf(targetId);
+      if (from === -1 || to === -1) return prev;
+      const next = [...prev];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      persistModuleOrder(next.map((s) => s.id));
+      return next;
+    });
+    setDragModuleId(null);
+  };
+
+  const persistLessonOrder = async (sectionsPayload) => {
+    try {
+      await adminFetch(`/courses/${courseId}/lessons/reorder`, token, {
+        method: 'PUT',
+        body: JSON.stringify({ sections: sectionsPayload }),
+      });
+    } catch (e) {
+      setError(e.message);
+      loadCourseData();
+    }
+  };
+
+  // Drop a lesson onto a target lesson (reorder within/across sections) or
+  // onto a section header (append to that section).
+  const handleLessonDrop = (targetSectionId, targetLessonId = null) => {
+    if (!dragLesson) return;
+    const { lessonId, fromSectionId } = dragLesson;
+    setLessonsBySection((prev) => {
+      const next = { ...prev };
+      const fromList = [...(next[fromSectionId] || [])];
+      const idx = fromList.findIndex((l) => l.id === lessonId);
+      if (idx === -1) { return prev; }
+      const [moved] = fromList.splice(idx, 1);
+      next[fromSectionId] = fromList;
+
+      const toList = fromSectionId === targetSectionId ? fromList : [...(next[targetSectionId] || [])];
+      if (targetLessonId) {
+        const tIdx = toList.findIndex((l) => l.id === targetLessonId);
+        toList.splice(tIdx === -1 ? toList.length : tIdx, 0, moved);
+      } else {
+        toList.push(moved);
+      }
+      next[targetSectionId] = toList;
+
+      // Persist both affected sections.
+      const affected = new Set([fromSectionId, targetSectionId]);
+      persistLessonOrder([...affected].map((sid) => ({
+        section_id: sid,
+        lesson_ids: (next[sid] || []).map((l) => l.id),
+      })));
+      return next;
+    });
+    setDragLesson(null);
+  };
+
   // ── Learner preview data ──
   // Drafts are not surfaced by the public `/api/content/courses/{slug}`
   // endpoint (it filters to status=published). For the admin in-editor
@@ -375,107 +481,6 @@ export const CourseDetail = ({ courseId, token, onBack, onCourseDeleted, onNavig
         </div>
       )}
 
-      {/* Draft banner */}
-      {course.status === 'draft' && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-2 flex items-center gap-3">
-          <Info className="w-4 h-4 text-amber-600 flex-shrink-0" />
-          <span className="text-xs text-amber-800 font-medium">
-            This course is in <span className="font-bold">draft</span> status. It will not be visible to learners until published.
-          </span>
-        </div>
-      )}
-
-      {/* Published course - create draft banner */}
-      {course.status === 'published' && !course.draft_version_id && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <Info className="w-4 h-4 text-blue-600 flex-shrink-0" />
-            <div>
-              <span className="text-xs text-blue-800 font-medium">
-                This course is <span className="font-bold">published</span> and in read-only mode.
-              </span>
-              <span className="text-xs text-blue-700 block mt-0.5">Create a draft version to make edits without affecting learners.</span>
-            </div>
-          </div>
-          <button
-            onClick={createDraftVersion}
-            disabled={creatingDraft}
-            className="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1.5 font-medium"
-          >
-            {creatingDraft ? (
-              <>
-                <RefreshCw className="w-4 h-4 animate-spin" />
-                Creating...
-              </>
-            ) : (
-              <>
-                <FilePlus className="w-4 h-4" />
-                Create Draft
-              </>
-            )}
-          </button>
-        </div>
-      )}
-
-      {/* Read-only indicator for published courses with draft */}
-      {course.status === 'published' && course.draft_version_id && (
-        <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-            <div>
-              <span className="text-xs text-emerald-800 font-medium">
-                This course is <span className="font-bold">published</span> and in read-only mode.
-              </span>
-              <span className="text-xs text-emerald-700 block mt-0.5">Edit the <span className="text-emerald-600 font-semibold">draft version</span> to make changes.</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <button
-              onClick={() => onNavigateToDraft && onNavigateToDraft(course.draft_slug)}
-              className="text-sm bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 flex items-center gap-1.5 font-medium"
-            >
-              <Edit3 className="w-4 h-4" />
-              Go to Draft
-            </button>
-            {confirmDelete?.type === 'draft' ? (
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={deleteDraftVersion}
-                  disabled={deletingDraft}
-                  className="text-sm bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center gap-1.5 font-medium"
-                >
-                  {deletingDraft ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      Deleting...
-                    </>
-                  ) : (
-                    'Confirm'
-                  )}
-                </button>
-                <button
-                  onClick={() => setConfirmDelete(null)}
-                  disabled={deletingDraft}
-                  className="text-sm bg-slate-100 text-slate-600 px-2 py-2 rounded-lg hover:bg-slate-200"
-                  title="Cancel"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => setConfirmDelete({ type: 'draft', id: course.draft_slug })}
-                className="text-sm bg-white border border-red-300 text-red-600 px-4 py-2 rounded-lg hover:bg-red-50 flex items-center gap-1.5 font-medium"
-                title="Discard the draft version (published course is untouched)"
-              >
-                <Trash2 className="w-4 h-4" />
-                Delete Draft
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* Header */}
       <div className="flex items-start justify-between gap-4 bg-white rounded-xl border border-slate-200 p-4">
         <div className="flex items-start gap-3 flex-1 min-w-0">
@@ -496,78 +501,45 @@ export const CourseDetail = ({ courseId, token, onBack, onCourseDeleted, onNavig
         </div>
 
         <div className="flex items-center gap-2 flex-shrink-0">
-          {/* Preview mode toggle */}
-          <div className="flex items-center bg-slate-100 rounded-lg p-1">
+          {/* Clone course — deep-copies into a new independent draft.
+              UI hidden for now (cloneCourse handler retained for re-enable). */}
+          {false && (
             <button
-              onClick={() => setPreviewMode('creator')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                previewMode === 'creator'
-                  ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-700'
-              }`}
+              onClick={cloneCourse}
+              disabled={cloning}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              title="Duplicate this course into a new draft"
             >
-              <Eye className="w-3.5 h-3.5" />
-              Creator
+              {cloning ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Copy className="w-3.5 h-3.5" />}
+              Clone
             </button>
-            <button
-              onClick={() => setPreviewMode('learner')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                previewMode === 'learner'
-                  ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              <GraduationCap className="w-3.5 h-3.5" />
-              Learner
-            </button>
-          </div>
-
-          {/* Publish button for draft courses */}
-          {course.status === 'draft' && (
-            <button
-              onClick={publishCourse}
-              disabled={publishing || totalLessons === 0}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {publishing ? (
-                <>
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  Publishing...
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  Publish
-                </>
-              )}
-            </button>
-          )}
-
-          {/* Delete course */}
-          {isEditable && (
-            <>
-              {confirmDelete?.type === 'course' ? (
-                <div className="flex items-center gap-1">
-                  <button onClick={deleteCourse} className="text-xs bg-red-500 text-white px-3 py-1.5 rounded-lg hover:bg-red-600">
-                    Confirm
-                  </button>
-                  <button onClick={() => setConfirmDelete(null)} className="text-xs bg-slate-100 text-slate-600 px-2 py-1.5 rounded-lg">
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setConfirmDelete({ type: 'course', id: courseId })}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium bg-white border border-red-300 text-red-600 hover:bg-red-50"
-                  title={course?.status === 'draft' ? 'Delete draft' : 'Delete course'}
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  {course?.status === 'draft' ? 'Delete Draft' : 'Delete Course'}
-                </button>
-              )}
-            </>
           )}
         </div>
+      </div>
+
+      {/* Top-level tabs */}
+      <div className="flex items-center gap-1 bg-white rounded-xl border border-slate-200 p-1 overflow-x-auto">
+        {[
+          { id: 'builder', label: 'Builder', icon: Wrench },
+          { id: 'pricing', label: 'Pricing & Sales', icon: DollarSign },
+          { id: 'delivery', label: 'Delivery', icon: CalendarClock },
+          { id: 'learners', label: 'Learners', icon: Users },
+          { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+          { id: 'announcements', label: 'Announcements', icon: Megaphone },
+          { id: 'grading', label: 'Grading', icon: ClipboardCheck },
+          { id: 'certificate', label: 'Certificate', icon: Award },
+        ].map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            onClick={() => setMainTab(id)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+              mainTab === id ? 'bg-primary/10 text-primary' : 'text-slate-500 hover:bg-slate-50'
+            }`}
+          >
+            <Icon className="w-3.5 h-3.5" />
+            {label}
+          </button>
+        ))}
       </div>
 
       {/* Alerts */}
@@ -577,14 +549,132 @@ export const CourseDetail = ({ courseId, token, onBack, onCourseDeleted, onNavig
           <button onClick={() => setError('')} className="ml-auto"><X className="w-4 h-4" /></button>
         </div>
       )}
+
+      {/* Non-builder tabs */}
+      {mainTab === 'pricing' && <CoursePricing courseId={courseId} token={token} />}
+      {mainTab === 'delivery' && <CourseDelivery courseId={courseId} token={token} readOnly={!isEditable} />}
+      {mainTab === 'learners' && <CourseLearners courseId={courseId} token={token} />}
+      {mainTab === 'analytics' && <CourseAnalytics courseId={courseId} token={token} />}
+      {mainTab === 'announcements' && <CourseAnnouncements courseId={courseId} token={token} />}
+      {mainTab === 'grading' && <GradingQueue courseId={courseId} token={token} />}
+      {mainTab === 'certificate' && <CertificateSettings courseId={courseId} token={token} />}
       {success && (
         <div className="bg-emerald-50 text-emerald-700 text-sm px-4 py-2 rounded-lg flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4" /> {success}
         </div>
       )}
 
+      {/* Builder action bar: state chip + contextual actions + view toggle */}
+      {mainTab === 'builder' && (
+        <div className="bg-white rounded-xl border border-slate-200 px-3 py-2 flex items-center gap-x-3 gap-y-2 flex-wrap">
+          {/* State chip */}
+          {course.status === 'draft' && (
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded-full">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" /> Draft · hidden from learners
+            </span>
+          )}
+          {course.status === 'published' && !course.draft_version_id && (
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-blue-700 bg-blue-50 border border-blue-200 px-2 py-1 rounded-full">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500" /> Published · read-only
+            </span>
+          )}
+          {course.status === 'published' && course.draft_version_id && (
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-full">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Published · draft in progress
+            </span>
+          )}
+
+          {/* Contextual actions (next to the chip) */}
+          {course.status === 'draft' && (
+            <>
+              <button
+                onClick={publishCourse}
+                disabled={publishing || totalLessons === 0}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {publishing ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Publishing...</> : <><CheckCircle2 className="w-3.5 h-3.5" /> Publish</>}
+              </button>
+              {confirmDelete?.type === 'course' ? (
+                <div className="flex items-center gap-1">
+                  <button onClick={deleteCourse} className="text-xs bg-red-500 text-white px-3 py-1.5 rounded-lg hover:bg-red-600">Confirm</button>
+                  <button onClick={() => setConfirmDelete(null)} className="text-xs bg-slate-100 text-slate-600 px-2 py-1.5 rounded-lg"><X className="w-3.5 h-3.5" /></button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmDelete({ type: 'course', id: courseId })}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white border border-red-300 text-red-600 hover:bg-red-50"
+                  title="Delete draft"
+                >
+                  <Trash2 className="w-3.5 h-3.5" /> Delete Draft
+                </button>
+              )}
+            </>
+          )}
+          {course.status === 'published' && !course.draft_version_id && (
+            <button
+              onClick={createDraftVersion}
+              disabled={creatingDraft}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+              title="Create a draft version to edit without affecting learners"
+            >
+              {creatingDraft ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Creating...</> : <><FilePlus className="w-3.5 h-3.5" /> Create Draft</>}
+            </button>
+          )}
+          {course.status === 'published' && course.draft_version_id && (
+            <>
+              <button
+                onClick={() => onNavigateToDraft && onNavigateToDraft(course.draft_slug)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-600 text-white hover:bg-emerald-700"
+              >
+                <Edit3 className="w-3.5 h-3.5" /> Go to Draft
+              </button>
+              {confirmDelete?.type === 'draft' ? (
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={deleteDraftVersion}
+                    disabled={deletingDraft}
+                    className="text-xs bg-red-600 text-white px-3 py-1.5 rounded-lg hover:bg-red-700 disabled:opacity-50"
+                  >
+                    {deletingDraft ? 'Deleting...' : 'Confirm'}
+                  </button>
+                  <button onClick={() => setConfirmDelete(null)} disabled={deletingDraft} className="text-xs bg-slate-100 text-slate-600 px-2 py-1.5 rounded-lg"><X className="w-3.5 h-3.5" /></button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmDelete({ type: 'draft', id: course.draft_slug })}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white border border-red-300 text-red-600 hover:bg-red-50"
+                  title="Discard the draft version (published course is untouched)"
+                >
+                  <Trash2 className="w-3.5 h-3.5" /> Delete Draft
+                </button>
+              )}
+            </>
+          )}
+
+          {/* Creator / Learner view toggle (pushed right) */}
+          <div className="ml-auto flex items-center bg-slate-100 rounded-lg p-1">
+            <button
+              onClick={() => setPreviewMode('creator')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                previewMode === 'creator' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              <Eye className="w-3.5 h-3.5" /> Creator
+            </button>
+            <button
+              onClick={() => setPreviewMode('learner')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                previewMode === 'learner' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              <GraduationCap className="w-3.5 h-3.5" /> Learner
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Learner preview mode */}
-      {previewMode === 'learner' && (
+      {mainTab === 'builder' && previewMode === 'learner' && (
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
           <div className="bg-amber-50 border-b border-amber-200 px-4 py-3 flex items-center gap-3">
             <Info className="w-4 h-4 text-amber-600 flex-shrink-0" />
@@ -616,7 +706,7 @@ export const CourseDetail = ({ courseId, token, onBack, onCourseDeleted, onNavig
       )}
 
       {/* Creator mode: sidebar + main editor */}
-      {previewMode === 'creator' && (
+      {mainTab === 'builder' && previewMode === 'creator' && (
         <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4">
           {/* Sidebar: Modules tree */}
           <div className="bg-white rounded-xl border border-slate-200 p-3 space-y-1 max-h-[calc(100vh-240px)] overflow-y-auto">
@@ -638,7 +728,23 @@ export const CourseDetail = ({ courseId, token, onBack, onCourseDeleted, onNavig
               const lessons = lessonsBySection[section.id] || [];
               return (
                 <div key={section.id} className="rounded-lg overflow-hidden">
-                  <div className="flex items-center gap-1 hover:bg-slate-50 rounded-lg px-1">
+                  <div
+                    className={`flex items-center gap-1 hover:bg-slate-50 rounded-lg px-1 ${
+                      dragModuleId === section.id ? 'opacity-40' : ''
+                    }`}
+                    draggable={isEditable && editingSectionId !== section.id}
+                    onDragStart={() => setDragModuleId(section.id)}
+                    onDragEnd={() => setDragModuleId(null)}
+                    onDragOver={(e) => { if (dragModuleId) e.preventDefault(); }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      if (dragModuleId) handleModuleDrop(section.id);
+                      else if (dragLesson) handleLessonDrop(section.id);
+                    }}
+                  >
+                    {isEditable && (
+                      <GripVertical className="w-3 h-3 text-slate-300 flex-shrink-0 cursor-grab" />
+                    )}
                     <button
                       onClick={() => toggleSection(section.id)}
                       className="p-1 flex-shrink-0"
@@ -716,13 +822,25 @@ export const CourseDetail = ({ courseId, token, onBack, onCourseDeleted, onNavig
                         <button
                           key={lesson.id}
                           onClick={() => setSelectedLessonId(lesson.id)}
+                          draggable={isEditable}
+                          onDragStart={(e) => { e.stopPropagation(); setDragLesson({ lessonId: lesson.id, fromSectionId: section.id }); }}
+                          onDragEnd={() => setDragLesson(null)}
+                          onDragOver={(e) => { if (dragLesson) { e.preventDefault(); e.stopPropagation(); } }}
+                          onDrop={(e) => {
+                            if (!dragLesson) return;
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleLessonDrop(section.id, lesson.id);
+                          }}
                           className={`w-full text-left px-2 py-1.5 rounded-lg text-xs flex items-center gap-2 transition-colors ${
                             selectedLessonId === lesson.id
                               ? 'bg-primary/10 text-primary font-medium'
                               : 'text-slate-600 hover:bg-slate-50'
-                          }`}
+                          } ${dragLesson?.lessonId === lesson.id ? 'opacity-40' : ''}`}
                         >
-                          <BookOpen className="w-3 h-3 flex-shrink-0" />
+                          {isEditable
+                            ? <GripVertical className="w-3 h-3 flex-shrink-0 text-slate-300 cursor-grab" />
+                            : <BookOpen className="w-3 h-3 flex-shrink-0" />}
                           <span className="flex-1 truncate">{lesson.title}</span>
                           {lesson.status === 'draft' && (
                             <span className="text-[9px] bg-amber-100 text-amber-700 px-1 rounded">draft</span>
