@@ -500,26 +500,9 @@ export const CourseDetail = ({ courseId, token, onBack, onCourseDeleted, onNavig
               <span className="text-xs text-blue-800 font-medium">
                 This course is <span className="font-bold">published</span> and in read-only mode.
               </span>
-              <span className="text-xs text-blue-700 block mt-0.5">Create a draft version to make edits without affecting learners.</span>
+              <span className="text-xs text-blue-700 block mt-0.5">Use <span className="font-semibold">Create Draft</span> in the header to make edits without affecting learners.</span>
             </div>
           </div>
-          <button
-            onClick={createDraftVersion}
-            disabled={creatingDraft}
-            className="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1.5 font-medium"
-          >
-            {creatingDraft ? (
-              <>
-                <RefreshCw className="w-4 h-4 animate-spin" />
-                Creating...
-              </>
-            ) : (
-              <>
-                <FilePlus className="w-4 h-4" />
-                Create Draft
-              </>
-            )}
-          </button>
         </div>
       )}
 
@@ -628,6 +611,28 @@ export const CourseDetail = ({ courseId, token, onBack, onCourseDeleted, onNavig
             </button>
           </div>
 
+          {/* Create Draft — editable copy of a published course (header action) */}
+          {course.status === 'published' && !course.draft_version_id && (
+            <button
+              onClick={createDraftVersion}
+              disabled={creatingDraft}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+              title="Create a draft version to edit without affecting learners"
+            >
+              {creatingDraft ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <FilePlus className="w-3.5 h-3.5" />
+                  Create Draft
+                </>
+              )}
+            </button>
+          )}
+
           {/* Publish button for draft courses */}
           {mainTab === 'builder' && course.status === 'draft' && (
             <button
@@ -649,16 +654,19 @@ export const CourseDetail = ({ courseId, token, onBack, onCourseDeleted, onNavig
             </button>
           )}
 
-          {/* Clone course — deep-copies into a new independent draft */}
-          <button
-            onClick={cloneCourse}
-            disabled={cloning}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-            title="Duplicate this course into a new draft"
-          >
-            {cloning ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Copy className="w-3.5 h-3.5" />}
-            Clone
-          </button>
+          {/* Clone course — deep-copies into a new independent draft.
+              UI hidden for now (cloneCourse handler retained for re-enable). */}
+          {false && (
+            <button
+              onClick={cloneCourse}
+              disabled={cloning}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              title="Duplicate this course into a new draft"
+            >
+              {cloning ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Copy className="w-3.5 h-3.5" />}
+              Clone
+            </button>
+          )}
 
           {/* Delete course */}
           {isEditable && (
