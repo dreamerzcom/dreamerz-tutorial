@@ -8,6 +8,7 @@ import { useAuth } from '../hooks/useAuth';
 import { ProgressDashboard } from '../components/ProgressDashboard';
 import { computeProfileCompletion } from './Account';
 import { toast } from 'sonner';
+import { SEO } from '../components/SEO';
 import { BookOpen, Search, ArrowRight, ArrowLeft, Layers, HelpCircle, Signal, CheckCircle2, Sparkles, GraduationCap, Grid3X3, User, Lightbulb } from 'lucide-react';
 
 const CATEGORY_META = {
@@ -422,8 +423,22 @@ export const LearnHub = ({ viewMode: initialViewMode = 'catalog' }) => {
     );
   }
 
+  // Tab title: category-specific when browsing a category, "My Progress" in
+  // the progress view, otherwise the courses catalog. Falls back gracefully
+  // for category slugs that aren't in CATEGORY_META.
+  const seoTitle =
+    viewMode === 'progress'
+      ? 'My Progress | DreamerZ'
+      : selectedCategory
+        ? `${CATEGORY_META[selectedCategory]?.title || 'Courses'} | DreamerZ`
+        : 'Courses | DreamerZ — AI Career Learning';
+
   return (
     <div className="min-h-screen bg-slate-50 pt-16 sm:pt-20 pb-12 sm:pb-16">
+      <SEO
+        title={seoTitle}
+        description="Explore DreamerZ courses — AI tools, communication and career skills with guided lessons, projects and progress tracking."
+      />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6 sm:mb-8">
           {!selectedCategory && (
