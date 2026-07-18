@@ -1,10 +1,10 @@
 import { Helmet } from 'react-helmet-async';
 
 const defaultMeta = {
-  title: 'DreamerZ — AI & Conversational English Learning',
-  description: 'Learn AI responsibly with DreamerZ. Hands-on prompt engineering, AI tools, and conversational English skills for learners 11 years and above.',
+  title: 'DreamerZ | AI Career Skills for Students and Young Adults',
+  description: 'DreamerZ helps students and young adults build AI-ready career skills through practical courses, projects, communication training and creator-led learning.',
   image: '/og-image.png',
-  url: 'https://dreamerz.com',
+  url: 'https://www.dreamer-z.com/',
   type: 'website'
 };
 
